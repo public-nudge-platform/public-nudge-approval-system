@@ -1,0 +1,132 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  ADMIN
+  PRESIDENT
+  FOUNDER_AGENT
+  FINANCE
+  APPLICANT
+}
+
+enum RequestType {
+  REIMBURSEMENT
+  PREPAID
+}
+
+enum RequestStatus {
+  DRAFT
+  PENDING
+  APPROVED
+  REJECTED
+  RETURNED
+  PAID
+  CLOSED
+}
+
+enum ApprovalAction {
+  APPROVED
+  REJECTED
+  RETURNED
+}
+
+model User {
+  id           String           @id @default(cuid())
+  name         String
+  email        String           @unique
+  passwordHash String
+  role         UserRole         @default(APPLICANT)
+  department   String?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  requests     Request[]
+  approvals    ApprovalRecord[]
+
+  @@map("users")
+}
+
+model Request {
+  id             String         @id @default(cuid())
+  requestNumber  String?        @unique
+  type           RequestType
+  status         RequestStatus  @default(DRAFT)
+  title          String
+  projectName    String?
+  description    String?
+  purpose        String?
+  amount         Decimal        @db.Decimal(12, 2)
+  currency       String         @default("TWD")
+  requestDate    DateTime       @default(now())
+  neededBy       DateTime?
+  submittedAt    DateTime?
+  paidAt         DateTime?
+  paymentMethod  String?
+  bankAccount    String?
+  bankName       String?
+  recipientName  String?
+  submitterId    String
+  submitter      User           @relation(fields: [submitterId], references: [id])
+  items          RequestItem[]
+  attachments    Attachment[]
+  approvalSteps  ApprovalStep[]
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  @@map("requests")
+}
+
+model RequestItem {
+  id          String  @id @default(cuid())
+  requestId   String
+  request     Request @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  description String
+  quantity    Int     @default(1)
+  unitPrice   Decimal @db.Decimal(12, 2)
+  amount      Decimal @db.Decimal(12, 2)
+  note        String?
+
+  @@map("request_items")
+}
+
+model Attachment {
+  id         String   @id @default(cuid())
+  requestId  String
+  request    Request  @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  filename   String
+  url        String
+  mimeType   String
+  size       Int
+  uploadedAt DateTime @default(now())
+
+  @@map("attachments")
+}
+
+model ApprovalStep {
+  id        String           @id @default(cuid())
+  requestId String
+  request   Request          @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  stepOrder Int
+  title     String
+  records   ApprovalRecord[]
+
+  @@unique([requestId, stepOrder])
+  @@map("approval_steps")
+}
+
+model ApprovalRecord {
+  id         String         @id @default(cuid())
+  stepId     String
+  step       ApprovalStep   @relation(fields: [stepId], references: [id], onDelete: Cascade)
+  approverId String
+  approver   User           @relation(fields: [approverId], references: [id])
+  action     ApprovalAction
+  comment    String?
+  actedAt    DateTime       @default(now())
+
+  @@map("approval_records")
+}

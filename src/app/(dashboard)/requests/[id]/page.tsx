@@ -1,0 +1,255 @@
+import { notFound } from "next/navigation";
+import { auth } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+import { StatusBadge, TypeBadge } from "@/components/ui/Badge";
+import { Timeline } from "@/components/ui/Timeline";
+import { AttachmentGrid } from "@/components/ui/AttachmentViewer";
+import { ApprovalActionForm } from "@/components/forms/ApprovalActionForm";
+import type { TimelineStep } from "@/components/ui/Timeline";
+import type { UserRole } from "@prisma/client";
+import { APPROVAL_ROLES } from "@/lib/constants";
+import Link from "next/link";
+import { ChevronLeft, Calendar, User, Building2, CreditCard } from "lucide-react";
+
+function buildTimeline(request: Awaited<ReturnType<typeof getRequest>>): TimelineStep[] {
+  const steps: TimelineStep[] = [];
+
+  steps.push({
+    id: "created",
+    title: "申請人建立",
+    person: request!.submitter.name,
+    date: request!.createdAt.toLocaleString("zh-TW"),
+    status: "completed",
+  });
+
+  if (request!.submittedAt) {
+    steps.push({
+      id: "submitted",
+      title: "送出申請",
+      person: request!.submitter.name,
+      date: request!.submittedAt.toLocaleString("zh-TW"),
+      status: "completed",
+    });
+  }
+
+  for (const step of request!.approvalSteps) {
+    const lastRecord = step.records[step.records.length - 1];
+    if (lastRecord) {
+      const actionMap = { APPROVED: "completed", REJECTED: "rejected", RETURNED: "returned" } as const;
+      const actionLabel = { APPROVED: "核准", REJECTED: "拒絕", RETURNED: "退回修改" }[lastRecord.action];
+      steps.push({
+        id: step.id,
+        title: `${step.title}：${actionLabel}`,
+        person: lastRecord.approver.name,
+        date: lastRecord.actedAt.toLocaleString("zh-TW"),
+        comment: lastRecord.comment ?? undefined,
+        status: actionMap[lastRecord.action],
+      });
+    } else if (request!.status === "PENDING") {
+      steps.push({
+        id: step.id,
+        title: step.title,
+        status: "current",
+      });
+    }
+  }
+
+  if (request!.status === "PAID") {
+    steps.push({
+      id: "paid",
+      title: "財務付款完成",
+      date: request!.paidAt?.toLocaleString("zh-TW"),
+      status: "completed",
+    });
+  }
+
+  if (request!.status === "CLOSED") {
+    steps.push({ id: "closed", title: "案件結案", status: "completed" });
+  }
+
+  return steps;
+}
+
+async function getRequest(id: string) {
+  return prisma.request.findUnique({
+    where: { id },
+    include: {
+      submitter: { select: { name: true, email: true, department: true } },
+      items: true,
+      attachments: true,
+      approvalSteps: {
+        orderBy: { stepOrder: "asc" },
+        include: {
+          records: {
+            orderBy: { actedAt: "asc" },
+            include: { approver: { select: { name: true } } },
+          },
+        },
+      },
+    },
+  });
+}
+
+export default async function RequestDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+  const [request, session] = await Promise.all([getRequest(id), auth()]);
+
+  if (!request) notFound();
+
+  const role = session!.user.role as UserRole;
+  const isApprover = APPROVAL_ROLES.includes(role) || role === "ADMIN";
+  const pendingStep = request.status === "PENDING"
+    ? request.approvalSteps.find((s) => s.records.length === 0)
+    : null;
+  const canApprove = isApprover && !!pendingStep;
+
+  const timeline = buildTimeline(request);
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div>
+        <Link href="/requests" className="flex items-center gap-1 text-sm text-gray-400 hover:text-gray-600 mb-3">
+          <ChevronLeft size={14} />返回列表
+        </Link>
+        <div className="flex items-start justify-between flex-wrap gap-3">
+          <div>
+            <div className="flex items-center gap-2.5 flex-wrap">
+              {request.requestNumber && (
+                <span className="font-mono text-sm text-gray-400">{request.requestNumber}</span>
+              )}
+              <TypeBadge type={request.type} />
+              <StatusBadge status={request.status} />
+            </div>
+            <h1 className="text-xl font-bold text-gray-900 mt-1">{request.title}</h1>
+            {request.projectName && (
+              <p className="text-sm text-gray-500 mt-0.5">{request.projectName}</p>
+            )}
+          </div>
+          <div className="text-right">
+            <p className="text-xs text-gray-400">申請金額</p>
+            <p className="text-3xl font-bold text-gray-900 tabular-nums">
+              {Number(request.amount).toLocaleString()}
+              <span className="text-base font-normal text-gray-400 ml-1">元</span>
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        {/* Left column */}
+        <div className="lg:col-span-2 space-y-5">
+          {/* Basic info */}
+          <div className="bg-white rounded-xl border border-gray-200 p-5">
+            <h2 className="text-sm font-semibold text-gray-700 mb-4">申請資訊</h2>
+            <dl className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
+              <InfoRow icon={User} label="申請人" value={`${request.submitter.name}${request.submitter.department ? ` · ${request.submitter.department}` : ""}`} />
+              <InfoRow icon={Calendar} label="申請日期" value={request.requestDate.toLocaleDateString("zh-TW")} />
+              {request.neededBy && (
+                <InfoRow icon={Calendar} label="需款期限" value={request.neededBy.toLocaleDateString("zh-TW")} />
+              )}
+              {request.purpose && (
+                <div className="col-span-2">
+                  <dt className="text-xs text-gray-400 mb-0.5">支出用途</dt>
+                  <dd className="text-gray-700">{request.purpose}</dd>
+                </div>
+              )}
+            </dl>
+          </div>
+
+          {/* Items */}
+          <div className="bg-white rounded-xl border border-gray-200 p-5">
+            <h2 className="text-sm font-semibold text-gray-700 mb-4">費用明細</h2>
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-gray-100 text-xs text-gray-400">
+                  <th className="text-left pb-2 font-medium">品項</th>
+                  <th className="text-center pb-2 font-medium w-16">數量</th>
+                  <th className="text-right pb-2 font-medium w-24">單價</th>
+                  <th className="text-right pb-2 font-medium w-24">小計</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {request.items.map((item) => (
+                  <tr key={item.id}>
+                    <td className="py-2.5">
+                      <p className="text-gray-900">{item.description}</p>
+                      {item.note && <p className="text-xs text-gray-400 mt-0.5">{item.note}</p>}
+                    </td>
+                    <td className="py-2.5 text-center text-gray-600 tabular-nums">{item.quantity}</td>
+                    <td className="py-2.5 text-right text-gray-600 tabular-nums">{Number(item.unitPrice).toLocaleString()}</td>
+                    <td className="py-2.5 text-right font-medium text-gray-900 tabular-nums">{Number(item.amount).toLocaleString()}</td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot className="border-t border-gray-200">
+                <tr>
+                  <td colSpan={3} className="pt-3 text-right text-sm font-semibold text-gray-600">合計</td>
+                  <td className="pt-3 text-right text-base font-bold text-gray-900 tabular-nums">
+                    {Number(request.amount).toLocaleString()}
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+
+          {/* Attachments */}
+          <div className="bg-white rounded-xl border border-gray-200 p-5">
+            <h2 className="text-sm font-semibold text-gray-700 mb-4">附件</h2>
+            <AttachmentGrid attachments={request.attachments} />
+          </div>
+
+          {/* Payment info (if available) */}
+          {(request.recipientName || request.bankName || request.bankAccount) && (
+            <div className="bg-white rounded-xl border border-gray-200 p-5">
+              <h2 className="text-sm font-semibold text-gray-700 mb-4">收款資訊</h2>
+              <dl className="grid grid-cols-3 gap-4 text-sm">
+                {request.recipientName && (
+                  <InfoRow icon={User} label="收款人" value={request.recipientName} />
+                )}
+                {request.bankName && (
+                  <InfoRow icon={Building2} label="銀行" value={request.bankName} />
+                )}
+                {request.bankAccount && (
+                  <InfoRow icon={CreditCard} label="帳號末五碼" value={request.bankAccount} />
+                )}
+              </dl>
+            </div>
+          )}
+        </div>
+
+        {/* Right column */}
+        <div className="space-y-5">
+          {/* Approval actions */}
+          {canApprove && (
+            <div className="bg-white rounded-xl border border-blue-200 p-5 ring-1 ring-blue-100">
+              <ApprovalActionForm requestId={request.id} stepId={pendingStep!.id} />
+            </div>
+          )}
+
+          {/* Timeline */}
+          <div className="bg-white rounded-xl border border-gray-200 p-5">
+            <h2 className="text-sm font-semibold text-gray-700 mb-4">簽核流程記錄</h2>
+            <Timeline steps={timeline} />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function InfoRow({ icon: Icon, label, value }: { icon: React.ComponentType<{ size?: number; className?: string }>; label: string; value: string }) {
+  return (
+    <div>
+      <dt className="flex items-center gap-1 text-xs text-gray-400 mb-0.5">
+        <Icon size={11} />
+        {label}
+      </dt>
+      <dd className="text-gray-800">{value}</dd>
+    </div>
+  );
+}
