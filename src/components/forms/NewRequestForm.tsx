@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { UploadZone } from "@/components/ui/UploadZone";
 import { createRequest } from "@/lib/actions/request";
 import type { RequestType } from "@prisma/client";
+import { useRouter } from "next/navigation";
 
 type Item = {
   id: string;
@@ -33,8 +34,10 @@ export function NewRequestForm() {
   const [bankName, setBankName] = useState("");
   const [bankAccount, setBankAccount] = useState("");
   const [items, setItems] = useState<Item[]>([newItem()]);
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const router = useRouter();
 
   const total = items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
 
@@ -73,7 +76,16 @@ export function NewRequestForm() {
         submit,
       });
 
-      if (result?.error) setError(result.error);
+      if (!result || "error" in result) { setError(("error" in result ? result.error : null) ?? "建立失敗"); return; }
+
+      for (const file of pendingFiles) {
+        const fd = new FormData();
+        fd.append("file", file);
+        fd.append("requestId", result.id);
+        await fetch("/api/upload", { method: "POST", body: fd });
+      }
+
+      router.push(`/requests/${result.id}`);
     });
   }
 
@@ -264,7 +276,7 @@ export function NewRequestForm() {
       {/* Attachments */}
       <div className="bg-white rounded-xl border border-gray-200 p-5">
         <h2 className="text-sm font-semibold text-gray-700 mb-3">附件上傳</h2>
-        <UploadZone />
+        <UploadZone onFilesChange={setPendingFiles} />
         <p className="text-xs text-gray-400 mt-2">* 請附上發票、收據或相關憑證</p>
       </div>
 

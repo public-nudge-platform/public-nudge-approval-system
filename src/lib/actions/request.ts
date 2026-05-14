@@ -83,7 +83,7 @@ export async function createRequest(data: CreateRequestInput) {
 
   revalidatePath("/requests");
   revalidatePath("/dashboard");
-  redirect(`/requests/${request.id}`);
+  return { id: request.id };
 }
 
 export async function submitRequest(requestId: string) {

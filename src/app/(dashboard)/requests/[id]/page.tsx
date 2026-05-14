@@ -12,6 +12,7 @@ import type { UserRole } from "@prisma/client";
 import { APPROVAL_ROLES } from "@/lib/constants";
 import Link from "next/link";
 import { ChevronLeft, Calendar, User, Building2, CreditCard } from "lucide-react";
+import { UploadZone } from "@/components/ui/UploadZone";
 
 function buildTimeline(request: Awaited<ReturnType<typeof getRequest>>): TimelineStep[] {
   const steps: TimelineStep[] = [];
@@ -103,11 +104,18 @@ export default async function RequestDetailPage({
   if (!request) notFound();
 
   const role = session!.user.role as UserRole;
+  const userId = session!.user.id;
   const isApprover = APPROVAL_ROLES.includes(role) || role === "ADMIN";
   const pendingStep = request.status === "PENDING"
     ? request.approvalSteps.find((s) => s.records.length === 0)
     : null;
   const canApprove = isApprover && !!pendingStep;
+
+  const isOwner = request.submitterId === userId;
+  const lockedStatuses = ["APPROVED", "PAID", "CLOSED"] as const;
+  const isLocked = (lockedStatuses as readonly string[]).includes(request.status);
+  const canUpload = (isOwner || role === "ADMIN") && !isLocked;
+  const canDelete = (isOwner || role === "ADMIN") && !isLocked;
 
   const timeline = buildTimeline(request);
 
@@ -202,7 +210,13 @@ export default async function RequestDetailPage({
           {/* Attachments */}
           <div className="bg-white rounded-xl border border-gray-200 p-5">
             <h2 className="text-sm font-semibold text-gray-700 mb-4">附件</h2>
-            <AttachmentGrid attachments={request.attachments} />
+            <AttachmentGrid attachments={request.attachments} canDelete={canDelete} />
+            {canUpload && (
+              <div className="mt-4 pt-4 border-t border-gray-100">
+                <p className="text-xs font-medium text-gray-500 mb-2">新增附件</p>
+                <UploadZone requestId={request.id} />
+              </div>
+            )}
           </div>
 
           {/* Payment info (if available) */}
