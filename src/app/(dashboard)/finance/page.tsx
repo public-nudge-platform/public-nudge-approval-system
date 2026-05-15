@@ -4,12 +4,34 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { StatusBadge, TypeBadge } from "@/components/ui/Badge";
 import Link from "next/link";
-import { Banknote, Clock, CheckCircle2, Receipt, AlertTriangle, RotateCcw } from "lucide-react";
+import {
+  Banknote,
+  Clock,
+  CheckCircle2,
+  Receipt,
+  AlertTriangle,
+  RotateCcw,
+  Search,
+} from "lucide-react";
 import type { UserRole } from "@prisma/client";
 import { redirect } from "next/navigation";
 import { FINANCE_ROLES } from "@/lib/constants";
+import { FilterSelect } from "@/components/ui/FilterSelect";
+import { FilterInput } from "@/components/ui/FilterInput";
+import { Suspense } from "react";
 
-export default async function FinancePage() {
+type SearchParams = {
+  dateFrom?: string;
+  dateTo?: string;
+  project?: string;
+  submitter?: string;
+};
+
+export default async function FinancePage({
+  searchParams,
+}: {
+  searchParams: Promise<SearchParams>;
+}) {
   const session = await auth();
   const role = session!.user.role as UserRole;
 
@@ -17,36 +39,69 @@ export default async function FinancePage() {
     redirect("/dashboard");
   }
 
-  const [pendingPayment, offsetSubmitted, pendingSettlement, offsetReturned, paidRequests] = await Promise.all([
-    prisma.request.findMany({
-      where: { status: "APPROVED" },
-      orderBy: { updatedAt: "asc" },
-      include: { submitter: { select: { name: true } }, project: { select: { name: true } } },
+  const params = await searchParams;
+
+  const sharedWhere = {
+    ...(params.project && { projectId: params.project }),
+    ...(params.submitter && {
+      submitter: { name: { contains: params.submitter, mode: "insensitive" as const } },
     }),
-    prisma.request.findMany({
-      where: { status: "OFFSET_SUBMITTED" },
-      orderBy: { reimbursementSubmittedAt: "asc" },
-      include: { submitter: { select: { name: true } }, project: { select: { name: true } } },
+    ...((params.dateFrom || params.dateTo) && {
+      requestDate: {
+        ...(params.dateFrom && { gte: new Date(params.dateFrom) }),
+        ...(params.dateTo && { lte: new Date(`${params.dateTo}T23:59:59`) }),
+      },
     }),
-    prisma.request.findMany({
-      where: { status: "PENDING_SETTLEMENT" },
-      orderBy: { updatedAt: "asc" },
-      include: { submitter: { select: { name: true } }, project: { select: { name: true } } },
-    }),
-    prisma.request.findMany({
-      where: { status: "OFFSET_RETURNED" },
-      orderBy: { updatedAt: "desc" },
-      include: { submitter: { select: { name: true } }, project: { select: { name: true } } },
-    }),
-    prisma.request.findMany({
-      where: { status: { in: ["PAID", "CLOSED"] } },
-      orderBy: { paidAt: "desc" },
-      take: 50,
-      include: { submitter: { select: { name: true } } },
-    }),
-  ]);
+  };
+
+  const [pendingPayment, offsetSubmitted, pendingSettlement, offsetReturned, paidRequests, projects] =
+    await Promise.all([
+      prisma.request.findMany({
+        where: { status: "APPROVED", ...sharedWhere },
+        orderBy: { updatedAt: "asc" },
+        include: {
+          submitter: { select: { name: true } },
+          project: { select: { name: true } },
+        },
+      }),
+      prisma.request.findMany({
+        where: { status: "OFFSET_SUBMITTED", ...sharedWhere },
+        orderBy: { reimbursementSubmittedAt: "asc" },
+        include: {
+          submitter: { select: { name: true } },
+          project: { select: { name: true } },
+        },
+      }),
+      prisma.request.findMany({
+        where: { status: "PENDING_SETTLEMENT", ...sharedWhere },
+        orderBy: { updatedAt: "asc" },
+        include: {
+          submitter: { select: { name: true } },
+          project: { select: { name: true } },
+        },
+      }),
+      prisma.request.findMany({
+        where: { status: "OFFSET_RETURNED", ...sharedWhere },
+        orderBy: { updatedAt: "desc" },
+        include: {
+          submitter: { select: { name: true } },
+          project: { select: { name: true } },
+        },
+      }),
+      prisma.request.findMany({
+        where: { status: { in: ["PAID", "CLOSED"] }, ...sharedWhere },
+        orderBy: { paidAt: "desc" },
+        take: 100,
+        include: {
+          submitter: { select: { name: true } },
+          project: { select: { name: true } },
+        },
+      }),
+      prisma.project.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } }),
+    ]);
 
   const totalOffsetCount = offsetSubmitted.length + pendingSettlement.length + offsetReturned.length;
+  const hasFilters = !!(params.dateFrom || params.dateTo || params.project || params.submitter);
 
   return (
     <div className="space-y-6">
@@ -54,6 +109,38 @@ export default async function FinancePage() {
         <Banknote size={20} className="text-blue-600" />
         <h1 className="text-xl font-semibold text-gray-900">財務管理</h1>
       </div>
+
+      {/* Filters */}
+      <Suspense>
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="relative">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+            <FilterInput
+              name="submitter"
+              value={params.submitter}
+              placeholder="搜尋申請人…"
+              className="pl-8 pr-3 py-1.5 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <FilterSelect
+            name="project"
+            value={params.project}
+            label="全部專案"
+            options={projects.map((p) => ({ value: p.id, label: p.name }))}
+          />
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs text-gray-500 whitespace-nowrap">申請日期</span>
+            <FilterInput name="dateFrom" type="date" value={params.dateFrom} />
+            <span className="text-xs text-gray-400">—</span>
+            <FilterInput name="dateTo" type="date" value={params.dateTo} />
+          </div>
+          {hasFilters && (
+            <Link href="/finance" className="text-xs text-gray-400 hover:text-gray-600 underline">
+              清除篩選
+            </Link>
+          )}
+        </div>
+      </Suspense>
 
       {/* Pending payment */}
       <section className="space-y-3">
@@ -70,7 +157,9 @@ export default async function FinancePage() {
         {pendingPayment.length === 0 ? (
           <div className="bg-white rounded-xl border border-gray-200 py-12 text-center">
             <CheckCircle2 size={36} className="mx-auto text-green-300 mb-2" />
-            <p className="text-gray-500 font-medium text-sm">目前沒有待付款項目</p>
+            <p className="text-gray-500 font-medium text-sm">
+              {hasFilters ? "找不到符合條件的待付款項目" : "目前沒有待付款項目"}
+            </p>
           </div>
         ) : (
           <div className="space-y-2">
@@ -123,7 +212,9 @@ export default async function FinancePage() {
         {totalOffsetCount === 0 ? (
           <div className="bg-white rounded-xl border border-gray-200 py-10 text-center">
             <CheckCircle2 size={28} className="mx-auto text-green-300 mb-2" />
-            <p className="text-gray-500 font-medium text-sm">目前沒有待沖銷項目</p>
+            <p className="text-gray-500 font-medium text-sm">
+              {hasFilters ? "找不到符合條件的沖銷項目" : "目前沒有待沖銷項目"}
+            </p>
           </div>
         ) : (
           <div className="space-y-4">
@@ -155,12 +246,16 @@ export default async function FinancePage() {
                           <tr key={req.id} className="hover:bg-indigo-50/40 transition-colors">
                             <td className="px-4 py-3">
                               <Link href={`/requests/${req.id}`} className="hover:text-indigo-600">
-                                <p className="font-medium text-gray-900 truncate max-w-[160px]">{req.title}</p>
+                                <p className="font-medium text-gray-900 truncate max-w-[160px]">
+                                  {req.title}
+                                </p>
                                 {req.requestNumber && (
                                   <p className="font-mono text-xs text-gray-400">{req.requestNumber}</p>
                                 )}
                                 {req.project && (
-                                  <p className="text-xs text-gray-400 truncate max-w-[160px]">{req.project.name}</p>
+                                  <p className="text-xs text-gray-400 truncate max-w-[160px]">
+                                    {req.project.name}
+                                  </p>
                                 )}
                               </Link>
                             </td>
@@ -176,10 +271,17 @@ export default async function FinancePage() {
                               )}
                             </td>
                             <td className="px-4 py-3 text-right tabular-nums text-xs">
-                              {diff === null ? <span className="text-gray-400">—</span> :
-                               diff === 0 ? <span className="text-green-600 font-medium">相符</span> :
-                               diff < 0 ? <span className="text-amber-600 font-medium">-{Math.abs(diff).toLocaleString()}</span> :
-                               <span className="text-red-600 font-medium">+{diff.toLocaleString()}</span>}
+                              {diff === null ? (
+                                <span className="text-gray-400">—</span>
+                              ) : diff === 0 ? (
+                                <span className="text-green-600 font-medium">相符</span>
+                              ) : diff < 0 ? (
+                                <span className="text-amber-600 font-medium">
+                                  -{Math.abs(diff).toLocaleString()}
+                                </span>
+                              ) : (
+                                <span className="text-red-600 font-medium">+{diff.toLocaleString()}</span>
+                              )}
                             </td>
                             <td className="px-4 py-3 text-gray-500 text-xs">
                               {req.reimbursementSubmittedAt?.toLocaleDateString("zh-TW") ?? "—"}
@@ -275,7 +377,9 @@ export default async function FinancePage() {
 
         {paidRequests.length === 0 ? (
           <div className="bg-white rounded-xl border border-gray-200 py-10 text-center">
-            <p className="text-sm text-gray-400">尚無付款紀錄</p>
+            <p className="text-sm text-gray-400">
+              {hasFilters ? "找不到符合條件的付款紀錄" : "尚無付款紀錄"}
+            </p>
           </div>
         ) : (
           <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
@@ -300,12 +404,17 @@ export default async function FinancePage() {
                         {req.requestNumber && (
                           <p className="font-mono text-xs text-gray-400">{req.requestNumber}</p>
                         )}
+                        {req.project && (
+                          <p className="text-xs text-gray-400">{req.project.name}</p>
+                        )}
                       </Link>
                       <StatusBadge status={req.status} />
                     </td>
                     <td className="px-4 py-3 text-gray-600">{req.submitter.name}</td>
                     <td className="px-4 py-3 text-gray-600">{req.paymentMethod || "—"}</td>
-                    <td className="px-4 py-3 text-gray-500 font-mono text-xs">{req.paymentReference || "—"}</td>
+                    <td className="px-4 py-3 text-gray-500 font-mono text-xs">
+                      {req.paymentReference || "—"}
+                    </td>
                     <td className="px-4 py-3 text-gray-600">{req.paidBy || "—"}</td>
                     <td className="px-5 py-3 text-right font-semibold text-gray-900 tabular-nums">
                       {Number(req.amount).toLocaleString()} 元

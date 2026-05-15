@@ -8,6 +8,8 @@ import { PlusCircle, Search } from "lucide-react";
 import type { RequestStatus, RequestType, UserRole } from "@prisma/client";
 import { REQUEST_STATUS_LABEL, REQUEST_TYPE_LABEL } from "@/lib/constants";
 import { FilterSelect } from "@/components/ui/FilterSelect";
+import { FilterInput } from "@/components/ui/FilterInput";
+import { AdvancedFiltersPanel } from "@/components/ui/AdvancedFiltersPanel";
 import { Suspense } from "react";
 
 type SearchParams = {
@@ -15,33 +17,84 @@ type SearchParams = {
   type?: string;
   q?: string;
   project?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  amountMin?: string;
+  amountMax?: string;
+  sortBy?: string;
+  sortDir?: string;
 };
 
 const ALL_STATUSES = Object.keys(REQUEST_STATUS_LABEL) as RequestStatus[];
 const ALL_TYPES = Object.keys(REQUEST_TYPE_LABEL) as RequestType[];
+
+const SORT_OPTIONS = [
+  { value: "updatedAt", label: "更新時間" },
+  { value: "createdAt", label: "建立時間" },
+  { value: "requestDate", label: "申請日期" },
+  { value: "amount", label: "金額" },
+];
+
+const SORT_DIR_OPTIONS = [
+  { value: "desc", label: "降冪" },
+  { value: "asc", label: "升冪" },
+];
+
+type SortField = "updatedAt" | "createdAt" | "requestDate" | "amount";
+const VALID_SORT_FIELDS: string[] = SORT_OPTIONS.map((o) => o.value);
 
 async function getRequests(userId: string, role: UserRole, params: SearchParams) {
   const isAdmin = role === "ADMIN";
   const isApprover = ["PRESIDENT", "FOUNDER_AGENT"].includes(role);
   const isFinance = role === "FINANCE";
 
+  const sortBy: SortField = VALID_SORT_FIELDS.includes(params.sortBy ?? "")
+    ? (params.sortBy as SortField)
+    : "updatedAt";
+  const sortDir = params.sortDir === "asc" ? "asc" : "desc";
+
+  const orderByMap: Record<SortField, object> = {
+    updatedAt: { updatedAt: sortDir },
+    createdAt: { createdAt: sortDir },
+    requestDate: { requestDate: sortDir },
+    amount: { amount: sortDir },
+  };
+
   const where = {
     ...((!isAdmin && !isApprover && !isFinance) && { submitterId: userId }),
-    ...(params.status && ALL_STATUSES.includes(params.status as RequestStatus) && { status: params.status as RequestStatus }),
-    ...(params.type && ALL_TYPES.includes(params.type as RequestType) && { type: params.type as RequestType }),
+    ...(params.status && ALL_STATUSES.includes(params.status as RequestStatus) && {
+      status: params.status as RequestStatus,
+    }),
+    ...(params.type && ALL_TYPES.includes(params.type as RequestType) && {
+      type: params.type as RequestType,
+    }),
     ...(params.project && { projectId: params.project }),
     ...(params.q && {
       OR: [
         { title: { contains: params.q, mode: "insensitive" as const } },
         { requestNumber: { contains: params.q, mode: "insensitive" as const } },
         { project: { name: { contains: params.q, mode: "insensitive" as const } } },
+        { description: { contains: params.q, mode: "insensitive" as const } },
+        { submitter: { name: { contains: params.q, mode: "insensitive" as const } } },
       ],
+    }),
+    ...((params.dateFrom || params.dateTo) && {
+      requestDate: {
+        ...(params.dateFrom && { gte: new Date(params.dateFrom) }),
+        ...(params.dateTo && { lte: new Date(`${params.dateTo}T23:59:59`) }),
+      },
+    }),
+    ...((params.amountMin || params.amountMax) && {
+      amount: {
+        ...(params.amountMin && !isNaN(Number(params.amountMin)) && { gte: Number(params.amountMin) }),
+        ...(params.amountMax && !isNaN(Number(params.amountMax)) && { lte: Number(params.amountMax) }),
+      },
     }),
   };
 
   return prisma.request.findMany({
     where,
-    orderBy: { updatedAt: "desc" },
+    orderBy: orderByMap[sortBy],
     include: {
       submitter: { select: { name: true } },
       project: { select: { id: true, name: true } },
@@ -62,7 +115,10 @@ export default async function RequestsPage({
     prisma.project.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } }),
   ]);
 
-  const hasFilters = !!(params.status || params.type || params.q || params.project);
+  const hasBasicFilters = !!(params.status || params.type || params.q || params.project);
+  const hasAdvancedFilters = !!(params.dateFrom || params.dateTo || params.amountMin || params.amountMax);
+  const hasSortOverride = !!(params.sortBy || (params.sortDir && params.sortDir !== "desc"));
+  const hasFilters = hasBasicFilters || hasAdvancedFilters || hasSortOverride;
 
   return (
     <div className="space-y-4">
@@ -79,36 +135,87 @@ export default async function RequestsPage({
       </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap items-center gap-3">
-        <form className="flex-1 min-w-52 max-w-72 relative">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-          <input
-            name="q"
-            defaultValue={params.q}
-            placeholder="搜尋標題、流水編號、專案…"
-            className="w-full pl-8 pr-3 py-1.5 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </form>
-
+      <div className="space-y-2">
         <Suspense>
-          <div className="flex items-center gap-2">
-            <FilterSelect name="project" value={params.project} label="全部專案" options={
-              projects.map((p) => ({ value: p.id, label: p.name }))
-            } />
-            <FilterSelect name="status" value={params.status} label="全部狀態" options={
-              ALL_STATUSES.map((s) => ({ value: s, label: REQUEST_STATUS_LABEL[s] }))
-            } />
-            <FilterSelect name="type" value={params.type} label="全部類型" options={
-              ALL_TYPES.map((t) => ({ value: t, label: REQUEST_TYPE_LABEL[t] }))
-            } />
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="relative flex-1 min-w-48 max-w-64">
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+              <FilterInput
+                name="q"
+                value={params.q}
+                placeholder="搜尋標題、流水編號、申請人…"
+                className="w-full pl-8 pr-3 py-1.5 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <FilterSelect
+              name="project"
+              value={params.project}
+              label="全部專案"
+              options={projects.map((p) => ({ value: p.id, label: p.name }))}
+            />
+            <FilterSelect
+              name="status"
+              value={params.status}
+              label="全部狀態"
+              options={ALL_STATUSES.map((s) => ({ value: s, label: REQUEST_STATUS_LABEL[s] }))}
+            />
+            <FilterSelect
+              name="type"
+              value={params.type}
+              label="全部類型"
+              options={ALL_TYPES.map((t) => ({ value: t, label: REQUEST_TYPE_LABEL[t] }))}
+            />
+            <FilterSelect
+              name="sortBy"
+              value={params.sortBy}
+              label="排序依據"
+              options={SORT_OPTIONS}
+            />
+            <FilterSelect
+              name="sortDir"
+              value={params.sortDir}
+              label="降冪"
+              options={SORT_DIR_OPTIONS}
+            />
+          </div>
+
+          <div className="flex items-center gap-4">
+            <AdvancedFiltersPanel defaultOpen={hasAdvancedFilters}>
+              <div className="p-3 bg-gray-50 rounded-lg border border-gray-200 flex flex-wrap gap-4">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-gray-500 whitespace-nowrap">申請日期</span>
+                  <FilterInput name="dateFrom" type="date" value={params.dateFrom} />
+                  <span className="text-xs text-gray-400">—</span>
+                  <FilterInput name="dateTo" type="date" value={params.dateTo} />
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-gray-500 whitespace-nowrap">金額範圍</span>
+                  <FilterInput
+                    name="amountMin"
+                    type="number"
+                    value={params.amountMin}
+                    placeholder="最低"
+                    className="w-24 text-sm border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <span className="text-xs text-gray-400">—</span>
+                  <FilterInput
+                    name="amountMax"
+                    type="number"
+                    value={params.amountMax}
+                    placeholder="最高"
+                    className="w-24 text-sm border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+            </AdvancedFiltersPanel>
+
+            {hasFilters && (
+              <Link href="/requests" className="text-xs text-gray-400 hover:text-gray-600 underline">
+                清除篩選
+              </Link>
+            )}
           </div>
         </Suspense>
-
-        {hasFilters && (
-          <Link href="/requests" className="text-xs text-gray-400 hover:text-gray-600 underline">
-            清除篩選
-          </Link>
-        )}
       </div>
 
       {/* Table */}
@@ -117,9 +224,9 @@ export default async function RequestsPage({
           <div className="py-16 text-center">
             <Search size={32} className="mx-auto text-gray-200 mb-3" />
             <p className="text-sm text-gray-400">
-              {hasFilters ? "找不到符合條件的申請單" : "尚無申請單"}
+              {hasBasicFilters || hasAdvancedFilters ? "找不到符合條件的申請單" : "尚無申請單"}
             </p>
-            {!hasFilters && (
+            {!hasBasicFilters && !hasAdvancedFilters && (
               <Link href="/requests/new" className="text-sm text-blue-600 hover:underline mt-1 block">
                 建立第一筆申請單 →
               </Link>
