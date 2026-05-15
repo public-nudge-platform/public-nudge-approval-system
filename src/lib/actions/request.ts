@@ -148,24 +148,41 @@ export async function approveRequest(requestId: string, stepId: string, action: 
   revalidatePath("/dashboard");
 }
 
-export async function markAsPaid(requestId: string, paymentMethod: string, bankAccount?: string) {
+type MarkAsPaidInput = {
+  paymentMethod: string;
+  paymentReference?: string;
+  paymentNote?: string;
+  paidAt?: string;
+};
+
+export async function markAsPaid(requestId: string, input: MarkAsPaidInput) {
   const session = await auth();
   if (!session) return { error: "未登入" };
 
   const role = session.user.role;
   if (!["FINANCE", "ADMIN"].includes(role)) return { error: "無財務權限" };
 
+  const request = await prisma.request.findUnique({
+    where: { id: requestId },
+    select: { status: true },
+  });
+  if (!request) return { error: "找不到申請單" };
+  if (request.status !== "APPROVED") return { error: "只能標記已核准的申請單" };
+
   await prisma.request.update({
-    where: { id: requestId, status: "APPROVED" },
+    where: { id: requestId },
     data: {
       status: "PAID",
-      paymentMethod,
-      bankAccount: bankAccount || null,
-      paidAt: new Date(),
+      paymentMethod: input.paymentMethod,
+      paymentReference: input.paymentReference || null,
+      paymentNote: input.paymentNote || null,
+      paidBy: session.user.name || session.user.email,
+      paidAt: input.paidAt ? new Date(input.paidAt) : new Date(),
     },
   });
 
   revalidatePath(`/requests/${requestId}`);
   revalidatePath("/requests");
+  revalidatePath("/finance");
   revalidatePath("/dashboard");
 }

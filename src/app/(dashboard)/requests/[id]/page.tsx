@@ -7,11 +7,12 @@ import { StatusBadge, TypeBadge } from "@/components/ui/Badge";
 import { Timeline } from "@/components/ui/Timeline";
 import { AttachmentGrid } from "@/components/ui/AttachmentViewer";
 import { ApprovalActionForm } from "@/components/forms/ApprovalActionForm";
+import { MarkAsPaidForm } from "@/components/forms/MarkAsPaidForm";
 import type { TimelineStep } from "@/components/ui/Timeline";
 import type { UserRole } from "@prisma/client";
-import { APPROVAL_ROLES } from "@/lib/constants";
+import { APPROVAL_ROLES, FINANCE_ROLES } from "@/lib/constants";
 import Link from "next/link";
-import { ChevronLeft, Calendar, User, Building2, CreditCard } from "lucide-react";
+import { ChevronLeft, Calendar, User, Building2, CreditCard, Banknote } from "lucide-react";
 import { UploadZone } from "@/components/ui/UploadZone";
 
 function buildTimeline(request: Awaited<ReturnType<typeof getRequest>>): TimelineStep[] {
@@ -61,6 +62,7 @@ function buildTimeline(request: Awaited<ReturnType<typeof getRequest>>): Timelin
     steps.push({
       id: "paid",
       title: "財務付款完成",
+      person: request!.paidBy ?? undefined,
       date: request!.paidAt?.toLocaleString("zh-TW"),
       status: "completed",
     });
@@ -106,10 +108,12 @@ export default async function RequestDetailPage({
   const role = session!.user.role as UserRole;
   const userId = session!.user.id;
   const isApprover = APPROVAL_ROLES.includes(role) || role === "ADMIN";
+  const isFinance = FINANCE_ROLES.includes(role);
   const pendingStep = request.status === "PENDING"
     ? request.approvalSteps.find((s) => s.records.length === 0)
     : null;
   const canApprove = isApprover && !!pendingStep;
+  const canMarkPaid = isFinance && request.status === "APPROVED";
 
   const isOwner = request.submitterId === userId;
   const lockedStatuses = ["APPROVED", "PAID", "CLOSED"] as const;
@@ -244,6 +248,53 @@ export default async function RequestDetailPage({
           {canApprove && (
             <div className="bg-white rounded-xl border border-blue-200 p-5 ring-1 ring-blue-100">
               <ApprovalActionForm requestId={request.id} stepId={pendingStep!.id} />
+            </div>
+          )}
+
+          {/* Payment action */}
+          {canMarkPaid && (
+            <div className="bg-white rounded-xl border border-green-200 p-5 ring-1 ring-green-100">
+              <MarkAsPaidForm requestId={request.id} />
+            </div>
+          )}
+
+          {/* Payment record (if paid) */}
+          {request.status === "PAID" && request.paidAt && (
+            <div className="bg-white rounded-xl border border-gray-200 p-5">
+              <div className="flex items-center gap-2 mb-3">
+                <Banknote size={14} className="text-blue-600" />
+                <h2 className="text-sm font-semibold text-gray-700">付款資訊</h2>
+              </div>
+              <dl className="space-y-2 text-sm">
+                {request.paymentMethod && (
+                  <div className="flex justify-between">
+                    <dt className="text-gray-400">付款方式</dt>
+                    <dd className="text-gray-800 font-medium">{request.paymentMethod}</dd>
+                  </div>
+                )}
+                {request.paymentReference && (
+                  <div className="flex justify-between">
+                    <dt className="text-gray-400">憑證編號</dt>
+                    <dd className="text-gray-800 font-mono text-xs">{request.paymentReference}</dd>
+                  </div>
+                )}
+                {request.paidBy && (
+                  <div className="flex justify-between">
+                    <dt className="text-gray-400">付款人</dt>
+                    <dd className="text-gray-800">{request.paidBy}</dd>
+                  </div>
+                )}
+                <div className="flex justify-between">
+                  <dt className="text-gray-400">付款日期</dt>
+                  <dd className="text-gray-800">{request.paidAt.toLocaleDateString("zh-TW")}</dd>
+                </div>
+                {request.paymentNote && (
+                  <div className="pt-1 border-t border-gray-100">
+                    <dt className="text-gray-400 mb-0.5">備註</dt>
+                    <dd className="text-gray-700">{request.paymentNote}</dd>
+                  </div>
+                )}
+              </dl>
             </div>
           )}
 

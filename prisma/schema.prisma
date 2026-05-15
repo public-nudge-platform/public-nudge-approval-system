@@ -64,11 +64,14 @@ model Request {
   requestDate    DateTime       @default(now())
   neededBy       DateTime?
   submittedAt    DateTime?
-  paidAt         DateTime?
-  paymentMethod  String?
-  bankAccount    String?
-  bankName       String?
-  recipientName  String?
+  paidAt             DateTime?
+  paymentMethod      String?
+  paymentReference   String?
+  paymentNote        String?
+  paidBy             String?
+  bankAccount        String?
+  bankName           String?
+  recipientName      String?
   submitterId    String
   submitter      User           @relation(fields: [submitterId], references: [id])
   items          RequestItem[]
