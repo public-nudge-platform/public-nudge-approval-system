@@ -7,7 +7,9 @@ export const REQUEST_STATUS_LABEL: Record<RequestStatus, string> = {
   REJECTED:           "已拒絕",
   RETURNED:           "退回修改",
   PAID:               "已付款",
-  PENDING_SETTLEMENT: "待核銷",
+  PENDING_SETTLEMENT: "待沖銷",
+  OFFSET_SUBMITTED:   "沖銷待確認",
+  OFFSET_RETURNED:    "沖銷退回補件",
   CLOSED:             "已結案",
 };
 
@@ -19,6 +21,8 @@ export const REQUEST_STATUS_COLOR: Record<RequestStatus, string> = {
   RETURNED:           "bg-orange-50 text-orange-700 ring-1 ring-orange-200",
   PAID:               "bg-blue-50 text-blue-700 ring-1 ring-blue-200",
   PENDING_SETTLEMENT: "bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200",
+  OFFSET_SUBMITTED:   "bg-violet-50 text-violet-700 ring-1 ring-violet-200",
+  OFFSET_RETURNED:    "bg-orange-50 text-orange-700 ring-1 ring-orange-200",
   CLOSED:             "bg-purple-50 text-purple-700 ring-1 ring-purple-200",
 };
 

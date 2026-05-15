@@ -4,7 +4,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { StatusBadge, TypeBadge } from "@/components/ui/Badge";
 import Link from "next/link";
-import { Banknote, Clock, CheckCircle2, Receipt, AlertTriangle } from "lucide-react";
+import { Banknote, Clock, CheckCircle2, Receipt, AlertTriangle, RotateCcw } from "lucide-react";
 import type { UserRole } from "@prisma/client";
 import { redirect } from "next/navigation";
 import { FINANCE_ROLES } from "@/lib/constants";
@@ -17,16 +17,26 @@ export default async function FinancePage() {
     redirect("/dashboard");
   }
 
-  const [pendingPayment, pendingSettlement, paidRequests] = await Promise.all([
+  const [pendingPayment, offsetSubmitted, pendingSettlement, offsetReturned, paidRequests] = await Promise.all([
     prisma.request.findMany({
       where: { status: "APPROVED" },
       orderBy: { updatedAt: "asc" },
-      include: { submitter: { select: { name: true } } },
+      include: { submitter: { select: { name: true } }, project: { select: { name: true } } },
+    }),
+    prisma.request.findMany({
+      where: { status: "OFFSET_SUBMITTED" },
+      orderBy: { reimbursementSubmittedAt: "asc" },
+      include: { submitter: { select: { name: true } }, project: { select: { name: true } } },
     }),
     prisma.request.findMany({
       where: { status: "PENDING_SETTLEMENT" },
       orderBy: { updatedAt: "asc" },
-      include: { submitter: { select: { name: true } } },
+      include: { submitter: { select: { name: true } }, project: { select: { name: true } } },
+    }),
+    prisma.request.findMany({
+      where: { status: "OFFSET_RETURNED" },
+      orderBy: { updatedAt: "desc" },
+      include: { submitter: { select: { name: true } }, project: { select: { name: true } } },
     }),
     prisma.request.findMany({
       where: { status: { in: ["PAID", "CLOSED"] } },
@@ -36,8 +46,7 @@ export default async function FinancePage() {
     }),
   ]);
 
-  const awaitingSettlementReview = pendingSettlement.filter((r) => r.reimbursementSubmittedAt !== null);
-  const awaitingApplicantSettlement = pendingSettlement.filter((r) => r.reimbursementSubmittedAt === null);
+  const totalOffsetCount = offsetSubmitted.length + pendingSettlement.length + offsetReturned.length;
 
   return (
     <div className="space-y-6">
@@ -99,73 +108,96 @@ export default async function FinancePage() {
         )}
       </section>
 
-      {/* Pending settlement */}
+      {/* Offset section */}
       <section className="space-y-3">
         <div className="flex items-center gap-2">
           <Receipt size={15} className="text-indigo-500" />
-          <h2 className="text-sm font-semibold text-gray-700">待核銷</h2>
-          {pendingSettlement.length > 0 && (
+          <h2 className="text-sm font-semibold text-gray-700">預付款沖銷</h2>
+          {totalOffsetCount > 0 && (
             <span className="bg-indigo-100 text-indigo-700 text-xs font-semibold px-2 py-0.5 rounded-full">
-              {pendingSettlement.length}
+              {totalOffsetCount}
             </span>
           )}
         </div>
 
-        {pendingSettlement.length === 0 ? (
+        {totalOffsetCount === 0 ? (
           <div className="bg-white rounded-xl border border-gray-200 py-10 text-center">
             <CheckCircle2 size={28} className="mx-auto text-green-300 mb-2" />
-            <p className="text-gray-500 font-medium text-sm">目前沒有待核銷項目</p>
+            <p className="text-gray-500 font-medium text-sm">目前沒有待沖銷項目</p>
           </div>
         ) : (
-          <div className="space-y-2">
-            {awaitingSettlementReview.length > 0 && (
-              <>
+          <div className="space-y-4">
+            {/* OFFSET_SUBMITTED: ready for review */}
+            {offsetSubmitted.length > 0 && (
+              <div className="space-y-2">
                 <p className="text-xs text-indigo-700 font-medium flex items-center gap-1">
                   <AlertTriangle size={11} />
-                  以下核銷單已由申請人送出，待財務審核
+                  以下沖銷單已由申請人送出，待財務確認
                 </p>
-                {awaitingSettlementReview.map((req) => (
-                  <Link
-                    key={req.id}
-                    href={`/requests/${req.id}`}
-                    className="flex items-center gap-4 bg-white rounded-xl border border-indigo-200 px-5 py-4 hover:border-indigo-400 hover:shadow-sm transition-all"
-                  >
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <TypeBadge type={req.type} />
-                        {req.requestNumber && (
-                          <span className="font-mono text-xs text-gray-400">{req.requestNumber}</span>
-                        )}
-                        <span className="text-xs text-indigo-600 font-medium bg-indigo-50 px-1.5 py-0.5 rounded">待審核</span>
-                      </div>
-                      <p className="font-semibold text-gray-900 mt-1">{req.title}</p>
-                      <p className="text-sm text-gray-500 mt-0.5">{req.submitter.name}</p>
-                      {req.reimbursementSubmittedAt && (
-                        <p className="text-xs text-indigo-600 mt-0.5">
-                          核銷送出：{req.reimbursementSubmittedAt.toLocaleDateString("zh-TW")}
-                        </p>
-                      )}
-                    </div>
-                    <div className="text-right flex-shrink-0">
-                      <p className="text-lg font-bold text-gray-900 tabular-nums">
-                        {Number(req.amount).toLocaleString()} 元
-                      </p>
-                      {req.actualAmount && (
-                        <p className="text-xs text-gray-500 mt-0.5">
-                          實際：{Number(req.actualAmount).toLocaleString()} 元
-                        </p>
-                      )}
-                      <StatusBadge status={req.status} />
-                    </div>
-                  </Link>
-                ))}
-              </>
+                <div className="bg-white rounded-xl border border-indigo-200 overflow-hidden">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-gray-100 bg-indigo-50">
+                        <th className="text-left px-4 py-2.5 text-xs font-semibold text-indigo-700">申請單</th>
+                        <th className="text-left px-4 py-2.5 text-xs font-semibold text-indigo-700">申請人</th>
+                        <th className="text-right px-4 py-2.5 text-xs font-semibold text-indigo-700">預付金額</th>
+                        <th className="text-right px-4 py-2.5 text-xs font-semibold text-indigo-700">實際支出</th>
+                        <th className="text-right px-4 py-2.5 text-xs font-semibold text-indigo-700">差額</th>
+                        <th className="text-left px-4 py-2.5 text-xs font-semibold text-indigo-700">送出日期</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-50">
+                      {offsetSubmitted.map((req) => {
+                        const prepaid = Number(req.amount);
+                        const actual = req.actualAmount ? Number(req.actualAmount) : null;
+                        const diff = actual !== null ? actual - prepaid : null;
+                        return (
+                          <tr key={req.id} className="hover:bg-indigo-50/40 transition-colors">
+                            <td className="px-4 py-3">
+                              <Link href={`/requests/${req.id}`} className="hover:text-indigo-600">
+                                <p className="font-medium text-gray-900 truncate max-w-[160px]">{req.title}</p>
+                                {req.requestNumber && (
+                                  <p className="font-mono text-xs text-gray-400">{req.requestNumber}</p>
+                                )}
+                                {req.project && (
+                                  <p className="text-xs text-gray-400 truncate max-w-[160px]">{req.project.name}</p>
+                                )}
+                              </Link>
+                            </td>
+                            <td className="px-4 py-3 text-gray-600 text-sm">{req.submitter.name}</td>
+                            <td className="px-4 py-3 text-right font-medium text-gray-900 tabular-nums">
+                              {prepaid.toLocaleString()}
+                            </td>
+                            <td className="px-4 py-3 text-right tabular-nums">
+                              {actual !== null ? (
+                                <span className="font-medium text-gray-900">{actual.toLocaleString()}</span>
+                              ) : (
+                                <span className="text-gray-400">—</span>
+                              )}
+                            </td>
+                            <td className="px-4 py-3 text-right tabular-nums text-xs">
+                              {diff === null ? <span className="text-gray-400">—</span> :
+                               diff === 0 ? <span className="text-green-600 font-medium">相符</span> :
+                               diff < 0 ? <span className="text-amber-600 font-medium">-{Math.abs(diff).toLocaleString()}</span> :
+                               <span className="text-red-600 font-medium">+{diff.toLocaleString()}</span>}
+                            </td>
+                            <td className="px-4 py-3 text-gray-500 text-xs">
+                              {req.reimbursementSubmittedAt?.toLocaleDateString("zh-TW") ?? "—"}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             )}
 
-            {awaitingApplicantSettlement.length > 0 && (
-              <>
-                <p className="text-xs text-gray-500 font-medium mt-2">申請人尚未送出核銷</p>
-                {awaitingApplicantSettlement.map((req) => (
+            {/* PENDING_SETTLEMENT: waiting for applicant */}
+            {pendingSettlement.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-xs text-gray-500 font-medium">申請人尚未送出沖銷</p>
+                {pendingSettlement.map((req) => (
                   <Link
                     key={req.id}
                     href={`/requests/${req.id}`}
@@ -189,7 +221,41 @@ export default async function FinancePage() {
                     </div>
                   </Link>
                 ))}
-              </>
+              </div>
+            )}
+
+            {/* OFFSET_RETURNED: returned, waiting for re-submission */}
+            {offsetReturned.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-xs text-orange-600 font-medium flex items-center gap-1">
+                  <RotateCcw size={11} />
+                  以下沖銷已退回補件，等待申請人重新送出
+                </p>
+                {offsetReturned.map((req) => (
+                  <Link
+                    key={req.id}
+                    href={`/requests/${req.id}`}
+                    className="flex items-center gap-4 bg-white rounded-xl border border-orange-200 px-5 py-4 hover:border-orange-400 hover:shadow-sm transition-all"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <TypeBadge type={req.type} />
+                        {req.requestNumber && (
+                          <span className="font-mono text-xs text-gray-400">{req.requestNumber}</span>
+                        )}
+                      </div>
+                      <p className="font-semibold text-gray-900 mt-1">{req.title}</p>
+                      <p className="text-sm text-gray-500 mt-0.5">{req.submitter.name}</p>
+                    </div>
+                    <div className="text-right flex-shrink-0">
+                      <p className="text-lg font-bold text-gray-900 tabular-nums">
+                        {Number(req.amount).toLocaleString()} 元
+                      </p>
+                      <StatusBadge status={req.status} />
+                    </div>
+                  </Link>
+                ))}
+              </div>
             )}
           </div>
         )}

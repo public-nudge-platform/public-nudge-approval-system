@@ -17,6 +17,9 @@ import Link from "next/link";
 import { ChevronLeft, Calendar, User, Building2, Banknote, FolderOpen, Hash, Receipt, Info } from "lucide-react";
 import { UploadZone } from "@/components/ui/UploadZone";
 
+const OFFSET_STATUSES = ["PENDING_SETTLEMENT", "OFFSET_SUBMITTED", "OFFSET_RETURNED", "CLOSED"] as const;
+const PAID_STATUSES = ["PAID", "PENDING_SETTLEMENT", "OFFSET_SUBMITTED", "OFFSET_RETURNED", "CLOSED"] as const;
+
 function buildTimeline(request: Awaited<ReturnType<typeof getRequest>>): TimelineStep[] {
   const status = request!.status;
   const steps: TimelineStep[] = [];
@@ -69,7 +72,7 @@ function buildTimeline(request: Awaited<ReturnType<typeof getRequest>>): Timelin
 
   if (status === "REJECTED") return steps;
 
-  const isPaid = ["PAID", "PENDING_SETTLEMENT", "CLOSED"].includes(status);
+  const isPaid = (PAID_STATUSES as readonly string[]).includes(status);
   if (isPaid) {
     steps.push({
       id: "paid",
@@ -90,27 +93,33 @@ function buildTimeline(request: Awaited<ReturnType<typeof getRequest>>): Timelin
     if (status === "CLOSED") {
       steps.push({
         id: "settlement",
-        title: "核銷完成",
-        date: undefined,
+        title: "沖銷完成",
+        person: request!.offsetReviewedBy ?? undefined,
+        date: request!.offsetReviewedAt?.toLocaleString("zh-TW"),
         status: "completed",
       });
+    } else if (status === "OFFSET_SUBMITTED") {
+      steps.push({
+        id: "settlement",
+        title: "沖銷待財務確認",
+        date: request!.reimbursementSubmittedAt?.toLocaleString("zh-TW"),
+        status: "current",
+      });
+    } else if (status === "OFFSET_RETURNED") {
+      steps.push({
+        id: "settlement",
+        title: "沖銷退回補件",
+        comment: request!.offsetReviewNote ?? undefined,
+        status: "returned",
+      });
     } else if (status === "PENDING_SETTLEMENT") {
-      if (request!.reimbursementSubmittedAt) {
-        steps.push({
-          id: "settlement",
-          title: "核銷待財務審核",
-          date: request!.reimbursementSubmittedAt.toLocaleString("zh-TW"),
-          status: "current",
-        });
-      } else {
-        steps.push({
-          id: "settlement",
-          title: "待申請人送出核銷",
-          status: "current",
-        });
-      }
+      steps.push({
+        id: "settlement",
+        title: "待申請人送出沖銷",
+        status: "current",
+      });
     } else {
-      steps.push({ id: "settlement", title: "核銷", status: "pending" });
+      steps.push({ id: "settlement", title: "沖銷", status: "pending" });
     }
 
     steps.push({
@@ -171,19 +180,26 @@ export default async function RequestDetailPage({
   const canMarkPaid = isFinance && request.status === "APPROVED";
 
   const isOwner = request.submitterId === userId;
-  const lockedStatuses = ["APPROVED", "PAID", "PENDING_SETTLEMENT", "CLOSED"] as const;
+  const lockedStatuses = ["APPROVED", "PAID", "PENDING_SETTLEMENT", "OFFSET_SUBMITTED", "OFFSET_RETURNED", "CLOSED"] as const;
   const isLocked = (lockedStatuses as readonly string[]).includes(request.status);
   const canUpload = (isOwner || role === "ADMIN") && !isLocked;
   const canDelete = (isOwner || role === "ADMIN") && !isLocked;
 
   const isPrepaid = request.type === "PREPAID";
-  const isPendingSettlement = request.status === "PENDING_SETTLEMENT";
+  const isInOffsetFlow = isPrepaid && (OFFSET_STATUSES as readonly string[]).includes(request.status);
 
   const settlementAttachments = request.attachments.filter((a) => a.isSettlement);
   const regularAttachments = request.attachments.filter((a) => !a.isSettlement);
 
-  const canSubmitSettlement = isPrepaid && isPendingSettlement && isOwner && !request.reimbursementSubmittedAt;
-  const canReviewSettlement = isPrepaid && isPendingSettlement && isFinance && !!request.reimbursementSubmittedAt;
+  const canSubmitOffset =
+    isPrepaid &&
+    isOwner &&
+    (request.status === "PENDING_SETTLEMENT" || request.status === "OFFSET_RETURNED");
+
+  const canReviewOffset =
+    isPrepaid &&
+    isFinance &&
+    request.status === "OFFSET_SUBMITTED";
 
   const prepaidAmount = Number(request.amount);
   const actualAmount = request.actualAmount ? Number(request.actualAmount) : null;
@@ -297,16 +313,20 @@ export default async function RequestDetailPage({
             )}
           </div>
 
-          {/* Settlement section — PREPAID only */}
-          {isPrepaid && isPendingSettlement && (
-            <div className="bg-white rounded-xl border border-indigo-200 p-5 ring-1 ring-indigo-100">
+          {/* Offset section — PREPAID only, in offset flow */}
+          {isInOffsetFlow && (
+            <div className={`bg-white rounded-xl border p-5 ${
+              request.status === "OFFSET_RETURNED"
+                ? "border-orange-200 ring-1 ring-orange-100"
+                : "border-indigo-200 ring-1 ring-indigo-100"
+            }`}>
               <div className="flex items-center gap-2 mb-4">
-                <Receipt size={15} className="text-indigo-600" />
-                <h2 className="text-sm font-semibold text-gray-700">核銷資訊</h2>
+                <Receipt size={15} className={request.status === "OFFSET_RETURNED" ? "text-orange-600" : "text-indigo-600"} />
+                <h2 className="text-sm font-semibold text-gray-700">沖銷資訊</h2>
               </div>
 
-              {/* Show settlement data if submitted */}
-              {request.reimbursementSubmittedAt && (
+              {/* Show submitted offset data */}
+              {(request.status === "OFFSET_SUBMITTED" || request.status === "CLOSED" || (request.status === "OFFSET_RETURNED" && actualAmount !== null)) && (
                 <div className="space-y-3 mb-4">
                   <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
                     <div>
@@ -336,88 +356,59 @@ export default async function RequestDetailPage({
 
                   {request.reimbursementNote && (
                     <div>
-                      <dt className="text-xs text-gray-400 mb-0.5">核銷說明</dt>
+                      <dt className="text-xs text-gray-400 mb-0.5">沖銷說明</dt>
                       <dd className="text-sm text-gray-700">{request.reimbursementNote}</dd>
                     </div>
                   )}
 
-                  <div>
-                    <dt className="text-xs text-gray-400 mb-0.5">核銷送出時間</dt>
-                    <dd className="text-sm text-gray-700">{request.reimbursementSubmittedAt.toLocaleString("zh-TW")}</dd>
-                  </div>
+                  {request.reimbursementSubmittedAt && (
+                    <div>
+                      <dt className="text-xs text-gray-400 mb-0.5">沖銷送出時間</dt>
+                      <dd className="text-sm text-gray-700">{request.reimbursementSubmittedAt.toLocaleString("zh-TW")}</dd>
+                    </div>
+                  )}
 
-                  {/* Settlement attachments preview */}
                   {settlementAttachments.length > 0 && (
                     <div>
-                      <p className="text-xs text-gray-400 mb-2">核銷附件</p>
+                      <p className="text-xs text-gray-400 mb-2">沖銷附件</p>
                       <AttachmentGrid attachments={settlementAttachments} canDelete={false} />
                     </div>
                   )}
                 </div>
               )}
 
-              {/* Upload settlement attachments (when not yet submitted) */}
-              {isOwner && !request.reimbursementSubmittedAt && (
+              {/* CLOSED: show review info */}
+              {request.status === "CLOSED" && request.offsetReviewedAt && (
+                <div className="border-t border-gray-100 pt-3 space-y-1 text-sm">
+                  {request.offsetReviewedBy && (
+                    <div className="flex justify-between text-xs">
+                      <dt className="text-gray-400">確認人</dt>
+                      <dd className="text-gray-700">{request.offsetReviewedBy}</dd>
+                    </div>
+                  )}
+                  <div className="flex justify-between text-xs">
+                    <dt className="text-gray-400">確認時間</dt>
+                    <dd className="text-gray-700">{request.offsetReviewedAt.toLocaleString("zh-TW")}</dd>
+                  </div>
+                </div>
+              )}
+
+              {/* PENDING_SETTLEMENT or OFFSET_RETURNED: show attachment list before submission */}
+              {(request.status === "PENDING_SETTLEMENT" || request.status === "OFFSET_RETURNED") && isOwner && settlementAttachments.length > 0 && (
                 <div className="mb-4">
-                  <p className="text-xs text-gray-500 mb-2">已上傳核銷附件</p>
+                  <p className="text-xs text-gray-500 mb-2">已上傳沖銷附件</p>
                   <AttachmentGrid attachments={settlementAttachments} canDelete={true} />
                 </div>
               )}
             </div>
           )}
 
-          {/* Show settlement summary if CLOSED */}
-          {isPrepaid && request.status === "CLOSED" && (actualAmount !== null || settlementAttachments.length > 0) && (
-            <div className="bg-white rounded-xl border border-gray-200 p-5">
-              <div className="flex items-center gap-2 mb-4">
-                <Receipt size={15} className="text-purple-600" />
-                <h2 className="text-sm font-semibold text-gray-700">核銷記錄</h2>
-              </div>
-              <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm mb-3">
-                <div>
-                  <dt className="text-xs text-gray-400 mb-0.5">預付金額</dt>
-                  <dd className="font-semibold text-gray-900 tabular-nums">{prepaidAmount.toLocaleString()} 元</dd>
-                </div>
-                {actualAmount !== null && (
-                  <div>
-                    <dt className="text-xs text-gray-400 mb-0.5">實際支出</dt>
-                    <dd className="font-semibold text-gray-900 tabular-nums">{actualAmount.toLocaleString()} 元</dd>
-                  </div>
-                )}
-              </div>
-              {amountDiff !== null && (
-                <div className={`px-3 py-2 rounded-lg text-xs font-medium border flex items-center gap-1.5 mb-3 ${
-                  amountDiff === 0 ? "bg-green-50 text-green-700 border-green-200" :
-                  amountDiff < 0 ? "bg-amber-50 text-amber-700 border-amber-200" :
-                  "bg-red-50 text-red-700 border-red-200"
-                }`}>
-                  <Info size={12} />
-                  {amountDiff === 0 && "金額相符"}
-                  {amountDiff < 0 && `需繳回差額 ${Math.abs(amountDiff).toLocaleString()} 元`}
-                  {amountDiff > 0 && `超支 ${amountDiff.toLocaleString()} 元，需另行請款`}
-                </div>
-              )}
-              {request.reimbursementNote && (
-                <div className="mb-3">
-                  <dt className="text-xs text-gray-400 mb-0.5">核銷說明</dt>
-                  <dd className="text-sm text-gray-700">{request.reimbursementNote}</dd>
-                </div>
-              )}
-              {settlementAttachments.length > 0 && (
-                <div>
-                  <p className="text-xs text-gray-400 mb-2">核銷附件</p>
-                  <AttachmentGrid attachments={settlementAttachments} canDelete={false} />
-                </div>
-              )}
-            </div>
-          )}
-
           {/* Payment info (if available) */}
-          {(request.recipientName || request.bankName || request.bankCode || request.branchName || request.branchCode || request.paymentInfoNote || (request.paymentMethod && !["PAID", "PENDING_SETTLEMENT", "CLOSED"].includes(request.status))) && (
+          {(request.recipientName || request.bankName || request.bankCode || request.branchName || request.branchCode || request.paymentInfoNote || (request.paymentMethod && !(PAID_STATUSES as readonly string[]).includes(request.status))) && (
             <div className="bg-white rounded-xl border border-gray-200 p-5">
               <h2 className="text-sm font-semibold text-gray-700 mb-4">收款資訊</h2>
               <dl className="grid grid-cols-3 gap-x-6 gap-y-3 text-sm">
-                {request.paymentMethod && !["PAID", "PENDING_SETTLEMENT", "CLOSED"].includes(request.status) && (
+                {request.paymentMethod && !(PAID_STATUSES as readonly string[]).includes(request.status) && (
                   <InfoRow icon={Banknote} label="希望付款方式" value={request.paymentMethod} />
                 )}
                 {request.recipientName && (
@@ -462,26 +453,28 @@ export default async function RequestDetailPage({
             </div>
           )}
 
-          {/* Settlement form (applicant submits) */}
-          {canSubmitSettlement && (
+          {/* Offset form (applicant submits) */}
+          {canSubmitOffset && (
             <div className="bg-white rounded-xl border border-indigo-200 p-5 ring-1 ring-indigo-100">
               <SettlementForm
                 requestId={request.id}
                 prepaidAmount={prepaidAmount}
                 settlementAttachmentsCount={settlementAttachments.length}
+                status={request.status as "PENDING_SETTLEMENT" | "OFFSET_RETURNED"}
+                offsetReviewNote={request.offsetReviewNote}
               />
             </div>
           )}
 
-          {/* Settlement review form (finance reviews) */}
-          {canReviewSettlement && (
+          {/* Offset review form (finance reviews) */}
+          {canReviewOffset && (
             <div className="bg-white rounded-xl border border-teal-200 p-5 ring-1 ring-teal-100">
               <SettlementReviewForm requestId={request.id} />
             </div>
           )}
 
-          {/* Payment record (if paid / pending settlement / closed) */}
-          {["PAID", "PENDING_SETTLEMENT", "CLOSED"].includes(request.status) && request.paidAt && (
+          {/* Payment record */}
+          {(PAID_STATUSES as readonly string[]).includes(request.status) && request.paidAt && (
             <div className="bg-white rounded-xl border border-gray-200 p-5">
               <div className="flex items-center gap-2 mb-3">
                 <Banknote size={14} className="text-blue-600" />

@@ -24,7 +24,7 @@ export function SettlementReviewForm({ requestId }: Props) {
       if (result?.error) {
         setError(result.error);
       } else {
-        setSuccess(action === "APPROVED" ? "核銷已確認完成" : "已退回補件");
+        setSuccess(action === "APPROVED" ? "沖銷已確認完成" : "已退回補件");
         router.refresh();
       }
     });
@@ -40,10 +40,10 @@ export function SettlementReviewForm({ requestId }: Props) {
 
   return (
     <div className="space-y-3">
-      <h3 className="text-sm font-semibold text-gray-800">審核核銷</h3>
+      <h3 className="text-sm font-semibold text-gray-800">確認沖銷</h3>
 
       <div>
-        <label className="block text-xs text-gray-500 mb-1">備註（退回時必填建議）</label>
+        <label className="block text-xs text-gray-500 mb-1">審核意見（退回時建議填寫）</label>
         <textarea
           rows={2}
           value={comment}
@@ -63,7 +63,7 @@ export function SettlementReviewForm({ requestId }: Props) {
           className="flex-1 flex items-center justify-center gap-1.5 bg-green-600 hover:bg-green-700"
         >
           <CheckCircle2 size={14} />
-          {pending ? "處理中…" : "確認核銷完成"}
+          {pending ? "處理中…" : "確認沖銷完成"}
         </Button>
         <Button
           type="button"

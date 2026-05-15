@@ -36,6 +36,8 @@ enum RequestStatus {
   RETURNED
   PAID
   PENDING_SETTLEMENT
+  OFFSET_SUBMITTED
+  OFFSET_RETURNED
   CLOSED
 }
 
@@ -115,6 +117,9 @@ model Request {
   actualAmount             Decimal?  @db.Decimal(12, 2)
   reimbursementNote        String?
   reimbursementSubmittedAt DateTime?
+  offsetReviewedAt         DateTime?
+  offsetReviewedBy         String?
+  offsetReviewNote         String?
   submitterId    String
   submitter      User           @relation(fields: [submitterId], references: [id])
   items          RequestItem[]

@@ -16,14 +16,19 @@ async function getDashboardStats(userId: string, role: UserRole) {
   const isApprover = APPROVAL_ROLES.includes(role) || role === "ADMIN";
   const isFinance = FINANCE_ROLES.includes(role);
 
-  const [myTotal, myPending, myApproved, myDraft, myPaid, myPendingSettlement, pendingApprovals, recentRequests] =
+  const [myTotal, myPending, myApproved, myDraft, myPaid, myPendingOffset, pendingApprovals, recentRequests] =
     await Promise.all([
       prisma.request.count({ where: { submitterId: userId } }),
       prisma.request.count({ where: { submitterId: userId, status: "PENDING" } }),
       prisma.request.count({ where: { submitterId: userId, status: "APPROVED" } }),
       prisma.request.count({ where: { submitterId: userId, status: "DRAFT" } }),
       prisma.request.count({ where: { submitterId: userId, status: "PAID" } }),
-      prisma.request.count({ where: { submitterId: userId, status: "PENDING_SETTLEMENT" } }),
+      prisma.request.count({
+        where: {
+          submitterId: userId,
+          status: { in: ["PENDING_SETTLEMENT", "OFFSET_SUBMITTED", "OFFSET_RETURNED"] },
+        },
+      }),
       isApprover ? prisma.request.count({ where: { status: "PENDING" } }) : Promise.resolve(0),
       prisma.request.findMany({
         where: role === "ADMIN" || isApprover ? {} : { submitterId: userId },
@@ -35,21 +40,21 @@ async function getDashboardStats(userId: string, role: UserRole) {
       }),
     ]);
 
-  const [awaitingPayment, awaitingSettlement] = isFinance
+  const [awaitingPayment, awaitingOffsetReview] = isFinance
     ? await Promise.all([
         prisma.request.count({ where: { status: "APPROVED" } }),
-        prisma.request.count({ where: { status: "PENDING_SETTLEMENT", reimbursementSubmittedAt: { not: null } } }),
+        prisma.request.count({ where: { status: "OFFSET_SUBMITTED" } }),
       ])
     : [0, 0];
 
-  return { myTotal, myPending, myApproved, myDraft, myPaid, myPendingSettlement, pendingApprovals, awaitingPayment, awaitingSettlement, recentRequests };
+  return { myTotal, myPending, myApproved, myDraft, myPaid, myPendingOffset, pendingApprovals, awaitingPayment, awaitingOffsetReview, recentRequests };
 }
 
 export default async function DashboardPage() {
   const session = await auth();
   const role = session!.user.role as UserRole;
   const [stats, recentNotifications] = await Promise.all([
-    getDashboardStats(session!.user.id, role),
+    getDashboardStats(session!.user.id, role as UserRole),
     prisma.notification.findMany({
       where: { userId: session!.user.id },
       orderBy: { createdAt: "desc" },
@@ -75,8 +80,8 @@ export default async function DashboardPage() {
         <StatsCard label="已核准，待付款" value={stats.myApproved} icon={CheckCircle} color="green" href="/requests?status=APPROVED" />
         <StatsCard label="已付款" value={stats.myPaid} icon={BadgeCheck} color="blue" href="/requests?status=PAID" />
         <StatsCard label="草稿" value={stats.myDraft} icon={AlertCircle} color="slate" href="/requests?status=DRAFT" />
-        {stats.myPendingSettlement > 0 && (
-          <StatsCard label="待核銷" value={stats.myPendingSettlement} icon={Receipt} color="purple" href="/requests?status=PENDING_SETTLEMENT" />
+        {stats.myPendingOffset > 0 && (
+          <StatsCard label="待沖銷" value={stats.myPendingOffset} icon={Receipt} color="purple" href="/requests?status=PENDING_SETTLEMENT" />
         )}
         {isApprover && (
           <StatsCard label="待我簽核" value={stats.pendingApprovals} icon={Users} color="blue" href="/approvals" />
@@ -84,8 +89,8 @@ export default async function DashboardPage() {
         {isFinance && (
           <StatsCard label="待付款" value={stats.awaitingPayment} icon={Banknote} color="purple" href="/finance" />
         )}
-        {isFinance && stats.awaitingSettlement > 0 && (
-          <StatsCard label="待核銷審核" value={stats.awaitingSettlement} icon={Receipt} color="blue" href="/finance" />
+        {isFinance && stats.awaitingOffsetReview > 0 && (
+          <StatsCard label="沖銷待確認" value={stats.awaitingOffsetReview} icon={Receipt} color="blue" href="/finance" />
         )}
       </div>
 

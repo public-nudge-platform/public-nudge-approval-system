@@ -267,8 +267,8 @@ export async function markAsPaid(requestId: string, input: MarkAsPaidInput) {
 
   if (request.type === "PREPAID") {
     await createNotificationsForUsers([request.submitterId], {
-      title: "預付款待核銷",
-      message: `您的預付請款「${request.title}」已付款，請上傳核銷單據並填寫實際支出金額。`,
+      title: "預付款待沖銷",
+      message: `您的預付請款「${request.title}」已付款，請上傳沖銷單據並填寫實際支出金額。`,
       type: "REIMBURSEMENT_REQUIRED",
       relatedRequestId: requestId,
     });
@@ -289,22 +289,26 @@ export async function submitSettlement(requestId: string, data: { actualAmount: 
     select: { status: true, title: true, type: true },
   });
   if (!request) return { error: "找不到申請單" };
-  if (request.type !== "PREPAID") return { error: "只有預付請款需要核銷" };
-  if (request.status !== "PENDING_SETTLEMENT") return { error: "此申請單不在待核銷狀態" };
+  if (request.type !== "PREPAID") return { error: "只有預付請款需要沖銷" };
+  if (request.status !== "PENDING_SETTLEMENT" && request.status !== "OFFSET_RETURNED") {
+    return { error: "此申請單不在待沖銷或沖銷退回狀態" };
+  }
   if (!data.actualAmount || data.actualAmount <= 0) return { error: "實際支出金額必須大於 0" };
 
   await prisma.request.update({
     where: { id: requestId },
     data: {
+      status: "OFFSET_SUBMITTED",
       actualAmount: data.actualAmount,
       reimbursementNote: data.reimbursementNote || null,
       reimbursementSubmittedAt: new Date(),
+      offsetReviewNote: null,
     },
   });
 
   await createNotificationsForRoles(["FINANCE", "PRESIDENT", "FOUNDER_AGENT"], {
-    title: "核銷單據待審核",
-    message: `${session.user.name} 已送出「${request.title}」的核銷單據，請前往審核。`,
+    title: "沖銷單據待確認",
+    message: `${session.user.name} 已送出「${request.title}」的沖銷單據，請前往確認。`,
     type: "SETTLEMENT_SUBMITTED",
     relatedRequestId: requestId,
   });
@@ -321,40 +325,47 @@ export async function reviewSettlement(requestId: string, action: "APPROVED" | "
 
   const role = session.user.role;
   if (!["FINANCE", "PRESIDENT", "FOUNDER_AGENT", "ADMIN"].includes(role)) {
-    return { error: "無核銷審核權限" };
+    return { error: "無沖銷審核權限" };
   }
 
   const request = await prisma.request.findUnique({
     where: { id: requestId },
-    select: { status: true, title: true, submitterId: true, type: true, reimbursementSubmittedAt: true },
+    select: { status: true, title: true, submitterId: true, type: true },
   });
   if (!request) return { error: "找不到申請單" };
-  if (request.type !== "PREPAID") return { error: "只有預付請款需要核銷審核" };
-  if (request.status !== "PENDING_SETTLEMENT") return { error: "此申請單不在待核銷狀態" };
-  if (!request.reimbursementSubmittedAt) return { error: "申請人尚未送出核銷" };
+  if (request.type !== "PREPAID") return { error: "只有預付請款需要沖銷審核" };
+  if (request.status !== "OFFSET_SUBMITTED") return { error: "此申請單不在沖銷待確認狀態" };
 
   if (action === "APPROVED") {
     await prisma.request.update({
       where: { id: requestId },
-      data: { status: "CLOSED" },
+      data: {
+        status: "CLOSED",
+        offsetReviewedAt: new Date(),
+        offsetReviewedBy: session.user.name || session.user.email,
+      },
     });
 
     await createNotificationsForUsers([request.submitterId], {
-      title: "核銷已確認完成",
-      message: `您的預付請款「${request.title}」核銷已確認完成，案件結案。`,
+      title: "沖銷已確認完成",
+      message: `您的預付請款「${request.title}」沖銷已確認完成，案件結案。`,
       type: "SETTLEMENT_APPROVED",
       relatedRequestId: requestId,
     });
   } else {
+    const reviewNote = comment || "請補充沖銷單據後重新送出";
     await prisma.request.update({
       where: { id: requestId },
-      data: { reimbursementSubmittedAt: null },
+      data: {
+        status: "OFFSET_RETURNED",
+        offsetReviewNote: reviewNote,
+        reimbursementSubmittedAt: null,
+      },
     });
 
-    const commentSuffix = comment ? `。備註：${comment}` : "";
     await createNotificationsForUsers([request.submitterId], {
-      title: "核銷退回補件",
-      message: `您的預付請款「${request.title}」核銷被退回，請補充單據後重新送出${commentSuffix}。`,
+      title: "沖銷退回補件",
+      message: `您的預付請款「${request.title}」沖銷被退回，請補充單據後重新送出。備註：${reviewNote}`,
       type: "SETTLEMENT_RETURNED",
       relatedRequestId: requestId,
     });
