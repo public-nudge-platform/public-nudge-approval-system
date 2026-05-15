@@ -2,13 +2,13 @@
 
 import { useState, useTransition } from "react";
 import {
-  PlusCircle, Pencil, Trash2, XCircle, RotateCcw,
+  PlusCircle, Pencil, Trash2,
   X, AlertCircle, ChevronRight, ExternalLink,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { StatusBadge, TypeBadge } from "@/components/ui/Badge";
 import { PROJECT_STATUS_LABEL, PROJECT_STATUS_COLOR } from "@/lib/constants";
-import { createProject, updateProject, closeProject, reopenProject, deleteProject } from "@/lib/actions/project";
+import { createProject, updateProject, setProjectStatus, deleteProject } from "@/lib/actions/project";
 import type { ProjectStatus, RequestStatus, RequestType } from "@prisma/client";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -145,8 +145,7 @@ function ProjectRow({
   canManage,
   pending,
   onEdit,
-  onClose,
-  onReopen,
+  onSetStatus,
   onDelete,
 }: {
   project: Project;
@@ -155,8 +154,7 @@ function ProjectRow({
   canManage: boolean;
   pending: boolean;
   onEdit: (p: Project) => void;
-  onClose: (id: string) => void;
-  onReopen: (id: string) => void;
+  onSetStatus: (id: string, status: ProjectStatus) => void;
   onDelete: (p: Project) => void;
 }) {
   return (
@@ -181,7 +179,18 @@ function ProjectRow({
 
         {/* Action buttons */}
         {canManage && (
-          <div className="flex items-center gap-0.5 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+          <div className="flex items-center gap-1 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+            {/* Inline status selector */}
+            <select
+              value={project.status}
+              onChange={(e) => onSetStatus(project.id, e.target.value as ProjectStatus)}
+              disabled={pending}
+              className="text-xs border border-gray-200 rounded-md px-1.5 py-1 bg-white text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:opacity-50"
+            >
+              <option value="NOT_STARTED">尚未啟動</option>
+              <option value="IN_PROGRESS">進行中</option>
+              <option value="CLOSED">已結案</option>
+            </select>
             <button
               onClick={() => onEdit(project)}
               className="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
@@ -190,25 +199,6 @@ function ProjectRow({
             >
               <Pencil size={13} />
             </button>
-            {project.status === "ACTIVE" ? (
-              <button
-                onClick={() => onClose(project.id)}
-                className="p-1.5 rounded-lg text-gray-400 hover:text-orange-600 hover:bg-orange-50 transition-colors"
-                title="結案"
-                disabled={pending}
-              >
-                <XCircle size={13} />
-              </button>
-            ) : (
-              <button
-                onClick={() => onReopen(project.id)}
-                className="p-1.5 rounded-lg text-gray-400 hover:text-green-600 hover:bg-green-50 transition-colors"
-                title="重新啟用"
-                disabled={pending}
-              >
-                <RotateCcw size={13} />
-              </button>
-            )}
             <button
               onClick={() => onDelete(project)}
               className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
@@ -319,8 +309,7 @@ export function ProjectsClient({ projects, canManage }: { projects: Project[]; c
               canManage={canManage}
               pending={pending}
               onEdit={(p) => { setError(null); setEditProject(p); }}
-              onClose={(id) => startTransition(async () => { await closeProject(id); refresh(); })}
-              onReopen={(id) => startTransition(async () => { await reopenProject(id); refresh(); })}
+              onSetStatus={(id, status) => startTransition(async () => { await setProjectStatus(id, status); refresh(); })}
               onDelete={handleDelete}
             />
           ))

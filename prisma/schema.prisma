@@ -18,7 +18,8 @@ enum UserRole {
 }
 
 enum ProjectStatus {
-  ACTIVE
+  NOT_STARTED
+  IN_PROGRESS
   CLOSED
 }
 
@@ -61,7 +62,7 @@ model User {
 model Project {
   id        String        @id @default(cuid())
   name      String        @unique
-  status    ProjectStatus @default(ACTIVE)
+  status    ProjectStatus @default(IN_PROGRESS)
   createdAt DateTime      @default(now())
   updatedAt DateTime      @updatedAt
   requests  Request[]

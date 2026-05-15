@@ -3,7 +3,7 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
-import type { UserRole } from "@prisma/client";
+import type { ProjectStatus, UserRole } from "@prisma/client";
 
 const MANAGE_ROLES: UserRole[] = ["ADMIN", "PRESIDENT", "FOUNDER_AGENT"];
 
@@ -24,7 +24,7 @@ export async function createProject(name: string) {
   const existing = await prisma.project.findUnique({ where: { name: name.trim() } });
   if (existing) return { error: "專案名稱已存在" };
 
-  await prisma.project.create({ data: { name: name.trim() } });
+  await prisma.project.create({ data: { name: name.trim(), status: "IN_PROGRESS" } });
   revalidatePath("/projects");
 }
 
@@ -41,19 +41,11 @@ export async function updateProject(id: string, name: string) {
   revalidatePath("/projects");
 }
 
-export async function closeProject(id: string) {
+export async function setProjectStatus(id: string, status: ProjectStatus) {
   const session = await requireManageRole();
   if (!session) return { error: "無權限" };
 
-  await prisma.project.update({ where: { id }, data: { status: "CLOSED" } });
-  revalidatePath("/projects");
-}
-
-export async function reopenProject(id: string) {
-  const session = await requireManageRole();
-  if (!session) return { error: "無權限" };
-
-  await prisma.project.update({ where: { id }, data: { status: "ACTIVE" } });
+  await prisma.project.update({ where: { id }, data: { status } });
   revalidatePath("/projects");
 }
 

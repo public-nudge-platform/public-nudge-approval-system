@@ -5,7 +5,7 @@ CREATE SCHEMA IF NOT EXISTS "public";
 CREATE TYPE "public"."ApprovalAction" AS ENUM ('APPROVED', 'REJECTED', 'RETURNED');
 
 -- CreateEnum
-CREATE TYPE "public"."ProjectStatus" AS ENUM ('ACTIVE', 'CLOSED');
+CREATE TYPE "public"."ProjectStatus" AS ENUM ('NOT_STARTED', 'IN_PROGRESS', 'CLOSED');
 
 -- CreateEnum
 CREATE TYPE "public"."RequestStatus" AS ENUM ('DRAFT', 'PENDING', 'APPROVED', 'REJECTED', 'RETURNED', 'PAID', 'CLOSED');
@@ -56,7 +56,7 @@ CREATE TABLE "public"."attachments" (
 CREATE TABLE "public"."projects" (
     "id" TEXT NOT NULL,
     "name" TEXT NOT NULL,
-    "status" "public"."ProjectStatus" NOT NULL DEFAULT 'ACTIVE',
+    "status" "public"."ProjectStatus" NOT NULL DEFAULT 'IN_PROGRESS',
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 

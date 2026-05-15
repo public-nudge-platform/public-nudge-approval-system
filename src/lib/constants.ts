@@ -42,13 +42,15 @@ export const USER_ROLE_LABEL: Record<UserRole, string> = {
 };
 
 export const PROJECT_STATUS_LABEL: Record<ProjectStatus, string> = {
-  ACTIVE: "進行中",
-  CLOSED: "已結案",
+  NOT_STARTED: "尚未啟動",
+  IN_PROGRESS: "進行中",
+  CLOSED:      "已結案",
 };
 
 export const PROJECT_STATUS_COLOR: Record<ProjectStatus, string> = {
-  ACTIVE: "bg-green-50 text-green-700 ring-1 ring-green-200",
-  CLOSED: "bg-gray-100 text-gray-500",
+  NOT_STARTED: "bg-yellow-50 text-yellow-700 ring-1 ring-yellow-200",
+  IN_PROGRESS: "bg-green-50 text-green-700 ring-1 ring-green-200",
+  CLOSED:      "bg-gray-100 text-gray-500",
 };
 
 export const APPROVAL_ROLES: UserRole[] = ["PRESIDENT", "FOUNDER_AGENT"];

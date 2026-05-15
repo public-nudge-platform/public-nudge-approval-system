@@ -8,7 +8,7 @@ export default async function NewRequestPage() {
   await auth();
 
   const projects = await prisma.project.findMany({
-    where: { status: "ACTIVE" },
+    where: { status: "IN_PROGRESS" },
     orderBy: { name: "asc" },
     select: { id: true, name: true },
   });
