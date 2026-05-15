@@ -1,30 +1,47 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { PlusCircle, Pencil, Trash2, XCircle, RotateCcw, X, AlertCircle } from "lucide-react";
+import {
+  PlusCircle, Pencil, Trash2, XCircle, RotateCcw,
+  X, AlertCircle, ChevronRight, ExternalLink,
+} from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { StatusBadge, TypeBadge } from "@/components/ui/Badge";
 import { PROJECT_STATUS_LABEL, PROJECT_STATUS_COLOR } from "@/lib/constants";
 import { createProject, updateProject, closeProject, reopenProject, deleteProject } from "@/lib/actions/project";
-import type { ProjectStatus } from "@prisma/client";
+import type { ProjectStatus, RequestStatus, RequestType } from "@prisma/client";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { clsx } from "clsx";
+
+type RequestRow = {
+  id: string;
+  requestNumber: string | null;
+  type: RequestType;
+  title: string;
+  amount: unknown; // Decimal serialised as string from server
+  status: RequestStatus;
+  requestDate: Date;
+  paidAt: Date | null;
+  submitter: { name: string };
+};
 
 type Project = {
   id: string;
   name: string;
   status: ProjectStatus;
   _count: { requests: number };
+  requests: RequestRow[];
 };
 
+// ── Modal ──────────────────────────────────────────────────────────────────
 function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 space-y-4" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between">
           <h2 className="text-base font-semibold text-gray-900">{title}</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
-            <X size={18} />
-          </button>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
         </div>
         {children}
       </div>
@@ -34,14 +51,208 @@ function Modal({ title, onClose, children }: { title: string; onClose: () => voi
 
 const inputCls = "w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500";
 
+// ── Request mini-table ─────────────────────────────────────────────────────
+function RequestsTable({ requests, projectId, totalCount }: {
+  requests: RequestRow[];
+  projectId: string;
+  totalCount: number;
+}) {
+  if (requests.length === 0) {
+    return <p className="text-xs text-gray-400 px-5 py-4">此專案尚無請款單</p>;
+  }
+
+  return (
+    <div>
+      <div className="overflow-x-auto">
+        <table className="w-full text-xs">
+          <thead>
+            <tr className="bg-gray-50/80 border-b border-gray-100">
+              <th className="px-4 py-2 text-left font-semibold text-gray-400">流水編號</th>
+              <th className="px-3 py-2 text-left font-semibold text-gray-400">類型</th>
+              <th className="px-3 py-2 text-left font-semibold text-gray-400">標題</th>
+              <th className="px-3 py-2 text-left font-semibold text-gray-400">申請人</th>
+              <th className="px-3 py-2 text-right font-semibold text-gray-400">金額</th>
+              <th className="px-3 py-2 text-left font-semibold text-gray-400">狀態</th>
+              <th className="px-3 py-2 text-left font-semibold text-gray-400">申請日期</th>
+              <th className="px-3 py-2 text-left font-semibold text-gray-400">付款狀態</th>
+              <th className="px-4 py-2 text-right font-semibold text-gray-400" />
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-50">
+            {requests.map((req) => (
+              <tr key={req.id} className="hover:bg-gray-50/60 transition-colors">
+                <td className="px-4 py-2 font-mono text-gray-400">{req.requestNumber ?? "—"}</td>
+                <td className="px-3 py-2"><TypeBadge type={req.type} /></td>
+                <td className="px-3 py-2 text-gray-700 max-w-[160px] truncate" title={req.title}>{req.title}</td>
+                <td className="px-3 py-2 text-gray-600">{req.submitter.name}</td>
+                <td className="px-3 py-2 text-right font-medium text-gray-800 tabular-nums">
+                  {Number(req.amount).toLocaleString()} 元
+                </td>
+                <td className="px-3 py-2"><StatusBadge status={req.status} /></td>
+                <td className="px-3 py-2 text-gray-500 tabular-nums">
+                  {new Date(req.requestDate).toLocaleDateString("zh-TW")}
+                </td>
+                <td className="px-3 py-2">
+                  {req.status === "PAID" ? (
+                    <span className="text-blue-600 font-medium">
+                      {req.paidAt ? new Date(req.paidAt).toLocaleDateString("zh-TW") : "已付款"}
+                    </span>
+                  ) : req.status === "APPROVED" ? (
+                    <span className="text-amber-600">待付款</span>
+                  ) : (
+                    <span className="text-gray-300">—</span>
+                  )}
+                </td>
+                <td className="px-4 py-2 text-right">
+                  <Link
+                    href={`/requests/${req.id}`}
+                    className="inline-flex items-center gap-0.5 text-blue-500 hover:text-blue-700 transition-colors"
+                  >
+                    <ExternalLink size={12} />
+                  </Link>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {totalCount > 10 && (
+        <div className="px-4 py-3 border-t border-gray-100 flex items-center justify-between">
+          <p className="text-xs text-gray-400">顯示最新 {requests.length} 筆，共 {totalCount} 筆</p>
+          <Link
+            href={`/projects/${projectId}/requests`}
+            className="text-xs text-blue-600 hover:text-blue-700 font-medium transition-colors"
+          >
+            顯示更多 →
+          </Link>
+        </div>
+      )}
+      {totalCount <= 10 && totalCount > 0 && (
+        <div className="px-4 py-3 border-t border-gray-100">
+          <p className="text-xs text-gray-400">共 {totalCount} 筆</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Accordion row ──────────────────────────────────────────────────────────
+function ProjectRow({
+  project,
+  isOpen,
+  onToggle,
+  canManage,
+  pending,
+  onEdit,
+  onClose,
+  onReopen,
+  onDelete,
+}: {
+  project: Project;
+  isOpen: boolean;
+  onToggle: () => void;
+  canManage: boolean;
+  pending: boolean;
+  onEdit: (p: Project) => void;
+  onClose: (id: string) => void;
+  onReopen: (id: string) => void;
+  onDelete: (p: Project) => void;
+}) {
+  return (
+    <div className={clsx("border-b border-gray-100 last:border-0", project.status === "CLOSED" && "opacity-70")}>
+      {/* Header */}
+      <div className="flex items-center gap-2 px-4 py-3 hover:bg-gray-50/80 transition-colors">
+        {/* Expand toggle */}
+        <button
+          onClick={onToggle}
+          className="flex items-center gap-2 flex-1 min-w-0 text-left"
+        >
+          <ChevronRight
+            size={16}
+            className={clsx("flex-shrink-0 text-gray-400 transition-transform duration-150", isOpen && "rotate-90")}
+          />
+          <span className="font-medium text-gray-900 truncate">{project.name}</span>
+          <span className={clsx("inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium flex-shrink-0", PROJECT_STATUS_COLOR[project.status])}>
+            {PROJECT_STATUS_LABEL[project.status]}
+          </span>
+          <span className="text-xs text-gray-400 flex-shrink-0">{project._count.requests} 筆</span>
+        </button>
+
+        {/* Action buttons */}
+        {canManage && (
+          <div className="flex items-center gap-0.5 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+            <button
+              onClick={() => onEdit(project)}
+              className="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+              title="編輯名稱"
+              disabled={pending}
+            >
+              <Pencil size={13} />
+            </button>
+            {project.status === "ACTIVE" ? (
+              <button
+                onClick={() => onClose(project.id)}
+                className="p-1.5 rounded-lg text-gray-400 hover:text-orange-600 hover:bg-orange-50 transition-colors"
+                title="結案"
+                disabled={pending}
+              >
+                <XCircle size={13} />
+              </button>
+            ) : (
+              <button
+                onClick={() => onReopen(project.id)}
+                className="p-1.5 rounded-lg text-gray-400 hover:text-green-600 hover:bg-green-50 transition-colors"
+                title="重新啟用"
+                disabled={pending}
+              >
+                <RotateCcw size={13} />
+              </button>
+            )}
+            <button
+              onClick={() => onDelete(project)}
+              className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+              title="刪除"
+              disabled={pending || project._count.requests > 0}
+            >
+              <Trash2 size={13} />
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Expanded content */}
+      {isOpen && (
+        <div className="border-t border-gray-100 bg-gray-50/30">
+          <RequestsTable
+            requests={project.requests}
+            projectId={project.id}
+            totalCount={project._count.requests}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Main component ─────────────────────────────────────────────────────────
 export function ProjectsClient({ projects, canManage }: { projects: Project[]; canManage: boolean }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+  const [openIds, setOpenIds] = useState<Set<string>>(new Set());
   const [showCreate, setShowCreate] = useState(false);
   const [editProject, setEditProject] = useState<Project | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   function refresh() { router.refresh(); }
+
+  function toggleOpen(id: string) {
+    setOpenIds((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  }
 
   async function handleCreate(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -68,21 +279,7 @@ export function ProjectsClient({ projects, canManage }: { projects: Project[]; c
     });
   }
 
-  async function handleClose(id: string) {
-    startTransition(async () => {
-      await closeProject(id);
-      refresh();
-    });
-  }
-
-  async function handleReopen(id: string) {
-    startTransition(async () => {
-      await reopenProject(id);
-      refresh();
-    });
-  }
-
-  async function handleDelete(project: Project) {
+  function handleDelete(project: Project) {
     if (project._count.requests > 0) {
       alert("此專案已有請款單，無法刪除，只能結案。");
       return;
@@ -113,72 +310,20 @@ export function ProjectsClient({ projects, canManage }: { projects: Project[]; c
             <p className="text-sm text-gray-400">尚無專案</p>
           </div>
         ) : (
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-gray-50 border-b border-gray-200">
-                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500">專案名稱</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500">狀態</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500">請款筆數</th>
-                {canManage && <th className="px-5 py-3 text-right text-xs font-semibold text-gray-500">操作</th>}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {projects.map((proj) => (
-                <tr key={proj.id} className={clsx("transition-colors hover:bg-gray-50/80", proj.status === "CLOSED" && "opacity-60")}>
-                  <td className="px-5 py-3">
-                    <span className="font-medium text-gray-900">{proj.name}</span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className={clsx("inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium", PROJECT_STATUS_COLOR[proj.status])}>
-                      {PROJECT_STATUS_LABEL[proj.status]}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-gray-500">{proj._count.requests} 筆</td>
-                  {canManage && (
-                    <td className="px-5 py-3">
-                      <div className="flex items-center gap-1 justify-end">
-                        <button
-                          onClick={() => { setError(null); setEditProject(proj); }}
-                          className="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
-                          title="編輯名稱"
-                          disabled={pending}
-                        >
-                          <Pencil size={14} />
-                        </button>
-                        {proj.status === "ACTIVE" ? (
-                          <button
-                            onClick={() => handleClose(proj.id)}
-                            className="p-1.5 rounded-lg text-gray-400 hover:text-orange-600 hover:bg-orange-50 transition-colors"
-                            title="結案"
-                            disabled={pending}
-                          >
-                            <XCircle size={14} />
-                          </button>
-                        ) : (
-                          <button
-                            onClick={() => handleReopen(proj.id)}
-                            className="p-1.5 rounded-lg text-gray-400 hover:text-green-600 hover:bg-green-50 transition-colors"
-                            title="重新啟用"
-                            disabled={pending}
-                          >
-                            <RotateCcw size={14} />
-                          </button>
-                        )}
-                        <button
-                          onClick={() => handleDelete(proj)}
-                          className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
-                          title="刪除"
-                          disabled={pending || proj._count.requests > 0}
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
-                    </td>
-                  )}
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          projects.map((proj) => (
+            <ProjectRow
+              key={proj.id}
+              project={proj}
+              isOpen={openIds.has(proj.id)}
+              onToggle={() => toggleOpen(proj.id)}
+              canManage={canManage}
+              pending={pending}
+              onEdit={(p) => { setError(null); setEditProject(p); }}
+              onClose={(id) => startTransition(async () => { await closeProject(id); refresh(); })}
+              onReopen={(id) => startTransition(async () => { await reopenProject(id); refresh(); })}
+              onDelete={handleDelete}
+            />
+          ))
         )}
       </div>
 
@@ -188,7 +333,9 @@ export function ProjectsClient({ projects, canManage }: { projects: Project[]; c
         <Modal title="新增專案" onClose={() => setShowCreate(false)}>
           <form onSubmit={handleCreate} className="space-y-4">
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">專案名稱 <span className="text-red-500">*</span></label>
+              <label className="block text-xs font-medium text-gray-600 mb-1">
+                專案名稱 <span className="text-red-500">*</span>
+              </label>
               <input name="name" autoFocus className={inputCls} placeholder="例：2026 年度行銷計畫" />
             </div>
             {error && (
@@ -209,7 +356,9 @@ export function ProjectsClient({ projects, canManage }: { projects: Project[]; c
         <Modal title="編輯專案名稱" onClose={() => setEditProject(null)}>
           <form onSubmit={handleEdit} className="space-y-4">
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">專案名稱 <span className="text-red-500">*</span></label>
+              <label className="block text-xs font-medium text-gray-600 mb-1">
+                專案名稱 <span className="text-red-500">*</span>
+              </label>
               <input name="name" autoFocus defaultValue={editProject.name} className={inputCls} />
             </div>
             {error && (

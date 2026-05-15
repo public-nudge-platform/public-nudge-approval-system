@@ -17,7 +17,24 @@ export default async function ProjectsPage() {
 
   const projects = await prisma.project.findMany({
     orderBy: [{ status: "asc" }, { name: "asc" }],
-    include: { _count: { select: { requests: true } } },
+    include: {
+      _count: { select: { requests: true } },
+      requests: {
+        orderBy: { createdAt: "desc" },
+        take: 10,
+        select: {
+          id: true,
+          requestNumber: true,
+          type: true,
+          title: true,
+          amount: true,
+          status: true,
+          requestDate: true,
+          paidAt: true,
+          submitter: { select: { name: true } },
+        },
+      },
+    },
   });
 
   const canManage = PROJECT_MANAGE_ROLES.includes(role);
