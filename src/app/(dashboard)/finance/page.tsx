@@ -20,11 +20,18 @@ import { FilterSelect } from "@/components/ui/FilterSelect";
 import { FilterInput } from "@/components/ui/FilterInput";
 import { Suspense } from "react";
 
+const VIEW_OPTIONS = [
+  { value: "pending", label: "待付款" },
+  { value: "offset", label: "待沖銷" },
+  { value: "paid", label: "已付款" },
+];
+
 type SearchParams = {
   dateFrom?: string;
   dateTo?: string;
   project?: string;
   submitter?: string;
+  view?: string; // "pending" | "offset" | "paid" | undefined (all)
 };
 
 export default async function FinancePage({
@@ -101,7 +108,10 @@ export default async function FinancePage({
     ]);
 
   const totalOffsetCount = offsetSubmitted.length + pendingSettlement.length + offsetReturned.length;
-  const hasFilters = !!(params.dateFrom || params.dateTo || params.project || params.submitter);
+  const hasFilters = !!(params.dateFrom || params.dateTo || params.project || params.submitter || params.view);
+  const showPending = !params.view || params.view === "pending";
+  const showOffset = !params.view || params.view === "offset";
+  const showPaid = !params.view || params.view === "paid";
 
   return (
     <div className="space-y-6">
@@ -128,6 +138,12 @@ export default async function FinancePage({
             label="全部專案"
             options={projects.map((p) => ({ value: p.id, label: p.name }))}
           />
+          <FilterSelect
+            name="view"
+            value={params.view}
+            label="全部分類"
+            options={VIEW_OPTIONS}
+          />
           <div className="flex items-center gap-1.5">
             <span className="text-xs text-gray-500 whitespace-nowrap">申請日期</span>
             <FilterInput name="dateFrom" type="date" value={params.dateFrom} />
@@ -143,7 +159,7 @@ export default async function FinancePage({
       </Suspense>
 
       {/* Pending payment */}
-      <section className="space-y-3">
+      {showPending && <section className="space-y-3">
         <div className="flex items-center gap-2">
           <Clock size={15} className="text-amber-500" />
           <h2 className="text-sm font-semibold text-gray-700">待付款</h2>
@@ -195,10 +211,10 @@ export default async function FinancePage({
             ))}
           </div>
         )}
-      </section>
+      </section>}
 
       {/* Offset section */}
-      <section className="space-y-3">
+      {showOffset && <section className="space-y-3">
         <div className="flex items-center gap-2">
           <Receipt size={15} className="text-indigo-500" />
           <h2 className="text-sm font-semibold text-gray-700">預付款沖銷</h2>
@@ -361,10 +377,10 @@ export default async function FinancePage({
             )}
           </div>
         )}
-      </section>
+      </section>}
 
       {/* Paid records */}
-      <section className="space-y-3">
+      {showPaid && <section className="space-y-3">
         <div className="flex items-center gap-2">
           <CheckCircle2 size={15} className="text-green-500" />
           <h2 className="text-sm font-semibold text-gray-700">已付款／已結案紀錄</h2>
@@ -428,7 +444,7 @@ export default async function FinancePage({
             </table>
           </div>
         )}
-      </section>
+      </section>}
     </div>
   );
 }

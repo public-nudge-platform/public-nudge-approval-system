@@ -23,6 +23,8 @@ type SearchParams = {
   amountMax?: string;
   sortBy?: string;
   sortDir?: string;
+  payStatus?: string;
+  offsetStatus?: string;
 };
 
 const ALL_STATUSES = Object.keys(REQUEST_STATUS_LABEL) as RequestStatus[];
@@ -60,11 +62,21 @@ async function getRequests(userId: string, role: UserRole, params: SearchParams)
     amount: { amount: sortDir },
   };
 
+  const PAY_STATUSES: RequestStatus[] = ["APPROVED", "PAID"];
+  const OFFSET_STATUSES: RequestStatus[] = ["PENDING_SETTLEMENT", "OFFSET_SUBMITTED", "OFFSET_RETURNED", "CLOSED"];
+
+  const effectiveStatus: RequestStatus | undefined =
+    params.status && ALL_STATUSES.includes(params.status as RequestStatus)
+      ? (params.status as RequestStatus)
+      : params.payStatus && PAY_STATUSES.includes(params.payStatus as RequestStatus)
+      ? (params.payStatus as RequestStatus)
+      : params.offsetStatus && OFFSET_STATUSES.includes(params.offsetStatus as RequestStatus)
+      ? (params.offsetStatus as RequestStatus)
+      : undefined;
+
   const where = {
     ...((!isAdmin && !isApprover && !isFinance) && { submitterId: userId }),
-    ...(params.status && ALL_STATUSES.includes(params.status as RequestStatus) && {
-      status: params.status as RequestStatus,
-    }),
+    ...(effectiveStatus && { status: effectiveStatus }),
     ...(params.type && ALL_TYPES.includes(params.type as RequestType) && {
       type: params.type as RequestType,
     }),
@@ -76,6 +88,7 @@ async function getRequests(userId: string, role: UserRole, params: SearchParams)
         { project: { name: { contains: params.q, mode: "insensitive" as const } } },
         { description: { contains: params.q, mode: "insensitive" as const } },
         { submitter: { name: { contains: params.q, mode: "insensitive" as const } } },
+        { reimbursementNote: { contains: params.q, mode: "insensitive" as const } },
       ],
     }),
     ...((params.dateFrom || params.dateTo) && {
@@ -116,7 +129,7 @@ export default async function RequestsPage({
   ]);
 
   const hasBasicFilters = !!(params.status || params.type || params.q || params.project);
-  const hasAdvancedFilters = !!(params.dateFrom || params.dateTo || params.amountMin || params.amountMax);
+  const hasAdvancedFilters = !!(params.dateFrom || params.dateTo || params.amountMin || params.amountMax || params.payStatus || params.offsetStatus);
   const hasSortOverride = !!(params.sortBy || (params.sortDir && params.sortDir !== "desc"));
   const hasFilters = hasBasicFilters || hasAdvancedFilters || hasSortOverride;
 
@@ -204,6 +217,28 @@ export default async function RequestsPage({
                     value={params.amountMax}
                     placeholder="最高"
                     className="w-24 text-sm border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <FilterSelect
+                    name="payStatus"
+                    value={params.payStatus}
+                    label="付款狀態"
+                    options={[
+                      { value: "APPROVED", label: "待付款" },
+                      { value: "PAID", label: "已付款" },
+                    ]}
+                  />
+                  <FilterSelect
+                    name="offsetStatus"
+                    value={params.offsetStatus}
+                    label="沖銷狀態"
+                    options={[
+                      { value: "PENDING_SETTLEMENT", label: "待沖銷" },
+                      { value: "OFFSET_SUBMITTED", label: "沖銷待確認" },
+                      { value: "OFFSET_RETURNED", label: "沖銷退回" },
+                      { value: "CLOSED", label: "已結案" },
+                    ]}
                   />
                 </div>
               </div>
