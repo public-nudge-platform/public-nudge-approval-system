@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { saveFile } from "@/lib/storage";
+import { fileUrl } from "@/lib/storage";
 
 const MAX_SIZE = 10 * 1024 * 1024;
 const ALLOWED = new Set(["image/jpeg", "image/png", "image/gif", "image/webp", "application/pdf"]);
@@ -21,17 +21,26 @@ export async function POST(req: NextRequest) {
   const request = await prisma.request.findUnique({ where: { id: requestId }, select: { submitterId: true } });
   if (!request) return NextResponse.json({ error: "找不到申請單" }, { status: 404 });
 
-  const role = session.user.role;
-  if (request.submitterId !== session.user.id && role !== "ADMIN") {
+  if (request.submitterId !== session.user.id && session.user.role !== "ADMIN") {
     return NextResponse.json({ error: "無上傳權限" }, { status: 403 });
   }
 
   const buffer = Buffer.from(await file.arrayBuffer());
-  const url = await saveFile(buffer, requestId, file.name, file.type);
 
   const attachment = await prisma.attachment.create({
-    data: { requestId, filename: file.name, url, mimeType: file.type, size: file.size },
+    data: {
+      requestId,
+      filename: file.name,
+      url: "",
+      mimeType: file.type,
+      size: file.size,
+      data: buffer,
+    },
   });
 
-  return NextResponse.json({ attachment });
+  // Update url now that we have the id
+  const url = fileUrl(attachment.id);
+  await prisma.attachment.update({ where: { id: attachment.id }, data: { url } });
+
+  return NextResponse.json({ attachment: { ...attachment, url, data: undefined } });
 }

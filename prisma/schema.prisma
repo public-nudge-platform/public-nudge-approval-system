@@ -101,6 +101,7 @@ model Attachment {
   url        String
   mimeType   String
   size       Int
+  data       Bytes?
   uploadedAt DateTime @default(now())
 
   @@map("attachments")

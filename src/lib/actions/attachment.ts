@@ -2,7 +2,6 @@
 
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { deleteFile } from "@/lib/storage";
 import { revalidatePath } from "next/cache";
 
 const LOCKED = new Set(["APPROVED", "PAID", "CLOSED"]);
@@ -13,7 +12,7 @@ export async function deleteAttachment(attachmentId: string) {
 
   const attachment = await prisma.attachment.findUnique({
     where: { id: attachmentId },
-    include: { request: { select: { id: true, status: true, submitterId: true } } },
+    select: { request: { select: { id: true, status: true, submitterId: true } } },
   });
 
   if (!attachment) return { error: "找不到附件" };
@@ -24,7 +23,6 @@ export async function deleteAttachment(attachmentId: string) {
     return { error: "無刪除權限" };
   }
 
-  await deleteFile(attachment.url);
   await prisma.attachment.delete({ where: { id: attachmentId } });
   revalidatePath(`/requests/${attachment.request.id}`);
 }
