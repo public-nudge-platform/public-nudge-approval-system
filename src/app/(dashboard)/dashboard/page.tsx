@@ -40,14 +40,17 @@ async function getDashboardStats(userId: string, role: UserRole) {
       }),
     ]);
 
-  const [awaitingPayment, awaitingOffsetReview] = isFinance
+  const [awaitingPayment, awaitingOffsetReview, allPendingOffset] = isFinance
     ? await Promise.all([
         prisma.request.count({ where: { status: "APPROVED" } }),
         prisma.request.count({ where: { status: "OFFSET_SUBMITTED" } }),
+        prisma.request.count({
+          where: { status: { in: ["PENDING_SETTLEMENT", "OFFSET_SUBMITTED", "OFFSET_RETURNED"] } },
+        }),
       ])
-    : [0, 0];
+    : [0, 0, 0];
 
-  return { myTotal, myPending, myApproved, myDraft, myPaid, myPendingOffset, pendingApprovals, awaitingPayment, awaitingOffsetReview, recentRequests };
+  return { myTotal, myPending, myApproved, myDraft, myPaid, myPendingOffset, pendingApprovals, awaitingPayment, awaitingOffsetReview, allPendingOffset, recentRequests };
 }
 
 export default async function DashboardPage() {
@@ -80,9 +83,12 @@ export default async function DashboardPage() {
         <StatsCard label="已核准，待付款" value={stats.myApproved} icon={CheckCircle} color="green" href="/requests?status=APPROVED" />
         <StatsCard label="已付款" value={stats.myPaid} icon={BadgeCheck} color="blue" href="/requests?status=PAID" />
         <StatsCard label="草稿" value={stats.myDraft} icon={AlertCircle} color="slate" href="/requests?status=DRAFT" />
-        {stats.myPendingOffset > 0 && (
+        {/* Finance/Admin see system-wide offset count; others see their own */}
+        {isFinance ? (
+          <StatsCard label="待沖銷" value={stats.allPendingOffset} icon={Receipt} color="purple" href="/finance" />
+        ) : stats.myPendingOffset > 0 ? (
           <StatsCard label="待沖銷" value={stats.myPendingOffset} icon={Receipt} color="purple" href="/requests?status=PENDING_SETTLEMENT" />
-        )}
+        ) : null}
         {isApprover && (
           <StatsCard label="待我簽核" value={stats.pendingApprovals} icon={Users} color="blue" href="/approvals" />
         )}
