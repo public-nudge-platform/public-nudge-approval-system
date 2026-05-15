@@ -1,4 +1,6 @@
 @import "tailwindcss";
+@source "../**/*.{tsx,ts}";
+@source inline("bg-purple-100 text-purple-700 bg-blue-100 text-blue-700 bg-indigo-100 text-indigo-700 bg-emerald-100 text-emerald-700 bg-orange-100 text-orange-700 bg-gray-100 text-gray-600 bg-teal-100 text-teal-700");
 
 :root {
   --background: #ffffff;

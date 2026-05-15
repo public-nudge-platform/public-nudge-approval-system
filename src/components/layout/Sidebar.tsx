@@ -12,6 +12,7 @@ import {
   Settings,
   PlusCircle,
   ChevronRight,
+  FolderOpen,
 } from "lucide-react";
 import type { UserRole } from "@prisma/client";
 
@@ -103,7 +104,7 @@ export function Sidebar({ role }: { role: UserRole }) {
       </div>
 
       {/* Quick action */}
-      {["APPLICANT", "ADMIN"].includes(role) && (
+      {(
         <div className="px-3 pt-4">
           <Link
             href="/requests/new"
@@ -120,6 +121,7 @@ export function Sidebar({ role }: { role: UserRole }) {
         <NavSection items={mainNav} pathname={pathname} />
         {isApprover && <NavSection title="簽核" items={approverNav} pathname={pathname} />}
         {isFinance && <NavSection title="財務" items={financeNav} pathname={pathname} />}
+        {isFinance && <NavSection title="專案" items={[{ href: "/projects", label: "專案管理", icon: FolderOpen }]} pathname={pathname} />}
         {canManageUsers && <NavSection title="管理" items={[{ href: "/admin/users", label: "使用者管理", icon: Users }]} pathname={pathname} />}
         {isAdmin && <NavSection items={[{ href: "/admin/settings", label: "系統設定", icon: Settings }]} pathname={pathname} />}
       </nav>

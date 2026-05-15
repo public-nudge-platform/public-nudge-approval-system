@@ -21,13 +21,13 @@ export default async function FinancePage() {
     prisma.request.findMany({
       where: { status: "APPROVED" },
       orderBy: { updatedAt: "asc" },
-      include: { submitter: { select: { name: true, department: true } } },
+      include: { submitter: { select: { name: true } } },
     }),
     prisma.request.findMany({
       where: { status: "PAID" },
       orderBy: { paidAt: "desc" },
       take: 50,
-      include: { submitter: { select: { name: true, department: true } } },
+      include: { submitter: { select: { name: true } } },
     }),
   ]);
 
@@ -73,7 +73,6 @@ export default async function FinancePage() {
                   <p className="font-semibold text-gray-900 mt-1">{req.title}</p>
                   <p className="text-sm text-gray-500 mt-0.5">
                     {req.submitter.name}
-                    {req.submitter.department && ` · ${req.submitter.department}`}
                   </p>
                   {req.neededBy && (
                     <p className="text-xs text-amber-600 mt-0.5">
@@ -135,12 +134,7 @@ export default async function FinancePage() {
                         )}
                       </Link>
                     </td>
-                    <td className="px-4 py-3 text-gray-600">
-                      {req.submitter.name}
-                      {req.submitter.department && (
-                        <p className="text-xs text-gray-400">{req.submitter.department}</p>
-                      )}
-                    </td>
+                    <td className="px-4 py-3 text-gray-600">{req.submitter.name}</td>
                     <td className="px-4 py-3 text-gray-600">{req.paymentMethod || "—"}</td>
                     <td className="px-4 py-3 text-gray-500 font-mono text-xs">{req.paymentReference || "—"}</td>
                     <td className="px-4 py-3 text-gray-600">{req.paidBy || "—"}</td>

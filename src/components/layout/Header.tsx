@@ -13,7 +13,7 @@ type Props = {
 
 export function Header({ user }: Props) {
   const [open, setOpen] = useState(false);
-  const roleLabel = USER_ROLE_LABEL[(user.role as UserRole) ?? "APPLICANT"];
+  const roleLabel = USER_ROLE_LABEL[user.role as UserRole] ?? "";
 
   return (
     <header className="h-14 flex items-center justify-between px-6 bg-white border-b border-gray-200 flex-shrink-0">

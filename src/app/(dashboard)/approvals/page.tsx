@@ -21,7 +21,7 @@ export default async function ApprovalsPage() {
     where: { status: "PENDING" },
     orderBy: { submittedAt: "asc" },
     include: {
-      submitter: { select: { name: true, department: true } },
+      submitter: { select: { name: true } },
       approvalSteps: {
         where: { records: { none: {} } },
         take: 1,
@@ -71,7 +71,6 @@ export default async function ApprovalsPage() {
                   <p className="font-semibold text-gray-900 mt-1">{req.title}</p>
                   <p className="text-sm text-gray-500 mt-0.5">
                     {req.submitter.name}
-                    {req.submitter.department && ` · ${req.submitter.department}`}
                   </p>
                   {req.neededBy && (
                     <p className="text-xs text-amber-600 mt-0.5">

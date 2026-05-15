@@ -1,17 +1,17 @@
 import { auth } from "@/lib/auth";
-import { redirect } from "next/navigation";
+import { prisma } from "@/lib/prisma";
 import { NewRequestForm } from "@/components/forms/NewRequestForm";
 import { ChevronLeft } from "lucide-react";
 import Link from "next/link";
-import type { UserRole } from "@prisma/client";
 
 export default async function NewRequestPage() {
-  const session = await auth();
-  const role = session!.user.role as UserRole;
+  await auth();
 
-  if (!["APPLICANT", "ADMIN", "FINANCE"].includes(role)) {
-    redirect("/requests");
-  }
+  const projects = await prisma.project.findMany({
+    where: { status: "ACTIVE" },
+    orderBy: { name: "asc" },
+    select: { id: true, name: true },
+  });
 
   return (
     <div>
@@ -23,7 +23,7 @@ export default async function NewRequestPage() {
         <span className="text-gray-300">/</span>
         <h1 className="text-lg font-semibold text-gray-900">新增申請單</h1>
       </div>
-      <NewRequestForm />
+      <NewRequestForm projects={projects} />
     </div>
   );
 }

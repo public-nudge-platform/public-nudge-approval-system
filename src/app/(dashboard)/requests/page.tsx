@@ -14,6 +14,7 @@ type SearchParams = {
   status?: string;
   type?: string;
   q?: string;
+  project?: string;
 };
 
 const ALL_STATUSES = Object.keys(REQUEST_STATUS_LABEL) as RequestStatus[];
@@ -28,11 +29,12 @@ async function getRequests(userId: string, role: UserRole, params: SearchParams)
     ...((!isAdmin && !isApprover && !isFinance) && { submitterId: userId }),
     ...(params.status && ALL_STATUSES.includes(params.status as RequestStatus) && { status: params.status as RequestStatus }),
     ...(params.type && ALL_TYPES.includes(params.type as RequestType) && { type: params.type as RequestType }),
+    ...(params.project && { projectId: params.project }),
     ...(params.q && {
       OR: [
         { title: { contains: params.q, mode: "insensitive" as const } },
         { requestNumber: { contains: params.q, mode: "insensitive" as const } },
-        { projectName: { contains: params.q, mode: "insensitive" as const } },
+        { project: { name: { contains: params.q, mode: "insensitive" as const } } },
       ],
     }),
   };
@@ -40,7 +42,10 @@ async function getRequests(userId: string, role: UserRole, params: SearchParams)
   return prisma.request.findMany({
     where,
     orderBy: { updatedAt: "desc" },
-    include: { submitter: { select: { name: true, department: true } } },
+    include: {
+      submitter: { select: { name: true } },
+      project: { select: { id: true, name: true } },
+    },
   });
 }
 
@@ -52,24 +57,25 @@ export default async function RequestsPage({
   const session = await auth();
   const role = session!.user.role as UserRole;
   const params = await searchParams;
-  const requests = await getRequests(session!.user.id, role, params);
+  const [requests, projects] = await Promise.all([
+    getRequests(session!.user.id, role, params),
+    prisma.project.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } }),
+  ]);
 
-  const canCreate = ["APPLICANT", "ADMIN", "FINANCE"].includes(role);
+  const hasFilters = !!(params.status || params.type || params.q || params.project);
 
   return (
     <div className="space-y-4">
       {/* Page header */}
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold text-gray-900">請款單管理</h1>
-        {canCreate && (
-          <Link
-            href="/requests/new"
-            className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            <PlusCircle size={15} />
-            新增申請單
-          </Link>
-        )}
+        <Link
+          href="/requests/new"
+          className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+        >
+          <PlusCircle size={15} />
+          新增申請單
+        </Link>
       </div>
 
       {/* Filters */}
@@ -79,13 +85,16 @@ export default async function RequestsPage({
           <input
             name="q"
             defaultValue={params.q}
-            placeholder="搜尋標題、編號、專案…"
+            placeholder="搜尋標題、流水編號、專案…"
             className="w-full pl-8 pr-3 py-1.5 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </form>
 
         <Suspense>
           <div className="flex items-center gap-2">
+            <FilterSelect name="project" value={params.project} label="全部專案" options={
+              projects.map((p) => ({ value: p.id, label: p.name }))
+            } />
             <FilterSelect name="status" value={params.status} label="全部狀態" options={
               ALL_STATUSES.map((s) => ({ value: s, label: REQUEST_STATUS_LABEL[s] }))
             } />
@@ -95,7 +104,7 @@ export default async function RequestsPage({
           </div>
         </Suspense>
 
-        {(params.status || params.type || params.q) && (
+        {hasFilters && (
           <Link href="/requests" className="text-xs text-gray-400 hover:text-gray-600 underline">
             清除篩選
           </Link>
@@ -108,9 +117,9 @@ export default async function RequestsPage({
           <div className="py-16 text-center">
             <Search size={32} className="mx-auto text-gray-200 mb-3" />
             <p className="text-sm text-gray-400">
-              {params.q || params.status || params.type ? "找不到符合條件的申請單" : "尚無申請單"}
+              {hasFilters ? "找不到符合條件的申請單" : "尚無申請單"}
             </p>
-            {canCreate && !params.q && !params.status && !params.type && (
+            {!hasFilters && (
               <Link href="/requests/new" className="text-sm text-blue-600 hover:underline mt-1 block">
                 建立第一筆申請單 →
               </Link>
@@ -121,7 +130,7 @@ export default async function RequestsPage({
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-200">
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">編號</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">專案</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">標題</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">類型</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">申請人</th>
@@ -134,15 +143,19 @@ export default async function RequestsPage({
                 {requests.map((req) => (
                   <tr key={req.id} className="hover:bg-gray-50/80 transition-colors cursor-pointer">
                     <td className="p-0">
-                      <Link href={`/requests/${req.id}`} className="block px-4 py-3 font-mono text-xs text-gray-400">
-                        {req.requestNumber ?? "—"}
+                      <Link href={`/requests/${req.id}`} className="block px-4 py-3">
+                        {req.project ? (
+                          <span className="text-sm text-gray-700">{req.project.name}</span>
+                        ) : (
+                          <span className="text-xs text-gray-300">—</span>
+                        )}
                       </Link>
                     </td>
                     <td className="p-0">
                       <Link href={`/requests/${req.id}`} className="block px-4 py-3">
                         <span className="font-medium text-gray-900">{req.title}</span>
-                        {req.projectName && (
-                          <p className="text-xs text-gray-400 mt-0.5">{req.projectName}</p>
+                        {req.requestNumber && (
+                          <p className="text-xs text-gray-400 mt-0.5 font-mono">{req.requestNumber}</p>
                         )}
                       </Link>
                     </td>
@@ -154,9 +167,6 @@ export default async function RequestsPage({
                     <td className="p-0">
                       <Link href={`/requests/${req.id}`} className="block px-4 py-3">
                         <span className="text-gray-700">{req.submitter.name}</span>
-                        {req.submitter.department && (
-                          <span className="text-xs text-gray-400 ml-1">· {req.submitter.department}</span>
-                        )}
                       </Link>
                     </td>
                     <td className="p-0 text-right">

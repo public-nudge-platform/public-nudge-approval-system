@@ -16,7 +16,7 @@ type RequestItemInput = {
 type CreateRequestInput = {
   type: RequestType;
   title: string;
-  projectName?: string;
+  projectId?: string;
   description?: string;
   purpose?: string;
   neededBy?: string;
@@ -31,11 +31,24 @@ type CreateRequestInput = {
   submit: boolean;
 };
 
-async function generateRequestNumber(type: RequestType): Promise<string> {
-  const year = new Date().getFullYear();
-  const prefix = type === "PREPAID" ? "AP" : "CL";
-  const count = await prisma.request.count({ where: { type } });
-  return `${prefix}-${year}-${String(count + 1).padStart(4, "0")}`;
+async function generateRequestNumber(): Promise<string> {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const prefix = `${year}${month}`;
+
+  const lastInMonth = await prisma.request.findFirst({
+    where: { requestNumber: { startsWith: prefix } },
+    orderBy: { requestNumber: "desc" },
+  });
+
+  let seq = 1;
+  if (lastInMonth?.requestNumber) {
+    const last = parseInt(lastInMonth.requestNumber.slice(-3), 10);
+    seq = isNaN(last) ? 1 : last + 1;
+  }
+
+  return `${prefix}${String(seq).padStart(3, "0")}`;
 }
 
 export async function createRequest(data: CreateRequestInput) {
@@ -50,13 +63,13 @@ export async function createRequest(data: CreateRequestInput) {
   if (totalAmount <= 0) return { error: "金額必須大於 0" };
   if (data.items.length === 0) return { error: "請至少新增一個品項" };
 
-  const requestNumber = data.submit ? await generateRequestNumber(data.type) : undefined;
+  const requestNumber = data.submit ? await generateRequestNumber() : undefined;
 
   const request = await prisma.request.create({
     data: {
       type: data.type,
       title: data.title,
-      projectName: data.projectName || null,
+      projectId: data.projectId || null,
       description: data.description || null,
       purpose: data.purpose || null,
       neededBy: data.neededBy ? new Date(data.neededBy) : null,
@@ -104,7 +117,7 @@ export async function submitRequest(requestId: string) {
   if (!request) return { error: "找不到申請單" };
   if (request.status !== "DRAFT") return { error: "只能送出草稿" };
 
-  const requestNumber = await generateRequestNumber(request.type);
+  const requestNumber = await generateRequestNumber();
 
   await prisma.request.update({
     where: { id: requestId },

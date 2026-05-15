@@ -1,3 +1,4 @@
+import "dotenv/config";
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import bcrypt from "bcryptjs";
@@ -6,12 +7,22 @@ const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! });
 const prisma = new PrismaClient({ adapter });
 
 const USERS = [
-  { name: "系統管理員", email: "admin@publicnudge.org", password: "admin1234", role: "ADMIN" as const, department: "管理部" },
-  { name: "王理事長", email: "president@publicnudge.org", password: "pres1234", role: "PRESIDENT" as const, department: "董事會" },
-  { name: "陳創辦人", email: "founder@publicnudge.org", password: "founder1234", role: "FOUNDER_AGENT" as const, department: "董事會" },
-  { name: "林財務", email: "finance@publicnudge.org", password: "fin1234", role: "FINANCE" as const, department: "財務部" },
-  { name: "李美玲", email: "alice@publicnudge.org", password: "pass1234", role: "APPLICANT" as const, department: "活動部" },
-  { name: "張大偉", email: "bob@publicnudge.org", password: "pass1234", role: "APPLICANT" as const, department: "行政部" },
+  { name: "系統管理員", email: "admin@publicnudge.org", password: "admin1234", role: "ADMIN" as const },
+  { name: "王理事長", email: "president@publicnudge.org", password: "pres1234", role: "PRESIDENT" as const },
+  { name: "陳創辦人", email: "founder@publicnudge.org", password: "founder1234", role: "FOUNDER_AGENT" as const },
+  { name: "林財務", email: "finance@publicnudge.org", password: "fin1234", role: "FINANCE" as const },
+  { name: "李美玲", email: "alice@publicnudge.org", password: "pass1234", role: "APPLICANT" as const },
+  { name: "張大偉", email: "bob@publicnudge.org", password: "pass1234", role: "APPLICANT" as const },
+];
+
+const DEFAULT_PROJECTS = [
+  "行政",
+  "北宜新軌道社會溝通計劃",
+  "道路安全設計講座",
+  "零碳交通論壇",
+  "Project Sidewalk",
+  "在宅安寧",
+  "博愛路改造計畫",
 ];
 
 async function main() {
@@ -23,26 +34,40 @@ async function main() {
     const passwordHash = await bcrypt.hash(u.password, 10);
     const user = await prisma.user.upsert({
       where: { email: u.email },
-      update: { name: u.name, role: u.role, department: u.department, passwordHash },
-      create: { name: u.name, email: u.email, passwordHash, role: u.role, department: u.department },
+      update: { name: u.name, role: u.role, passwordHash },
+      create: { name: u.name, email: u.email, passwordHash, role: u.role },
     });
     userMap[u.email] = user.id;
     console.log(`  ✓ ${u.role.padEnd(14)} ${u.name} (${u.email})`);
   }
 
+  console.log("\n🌱 Seeding projects...");
+
+  const projectMap: Record<string, string> = {};
+
+  for (const name of DEFAULT_PROJECTS) {
+    const project = await prisma.project.upsert({
+      where: { name },
+      update: {},
+      create: { name },
+    });
+    projectMap[name] = project.id;
+    console.log(`  ✓ ${name}`);
+  }
+
+  const adminProjectId = projectMap["行政"];
   const alice = userMap["alice@publicnudge.org"];
   const bob = userMap["bob@publicnudge.org"];
   const president = userMap["president@publicnudge.org"];
 
   console.log("\n🌱 Seeding requests...");
 
-  // Helper to create a request with optional approval
   async function seed(data: {
     requestNumber: string;
     type: "REIMBURSEMENT" | "PREPAID";
     status: "DRAFT" | "PENDING" | "APPROVED" | "REJECTED" | "RETURNED" | "PAID" | "CLOSED";
     title: string;
-    projectName?: string;
+    projectId?: string;
     purpose?: string;
     submitterId: string;
     amount: number;
@@ -52,7 +77,16 @@ async function main() {
     submittedAt?: Date;
   }) {
     const existing = await prisma.request.findUnique({ where: { requestNumber: data.requestNumber } });
-    if (existing) { console.log(`  ⏭  ${data.requestNumber} (skip)`); return; }
+    if (existing) {
+      // Update projectId if missing
+      if (!existing.projectId && data.projectId) {
+        await prisma.request.update({ where: { id: existing.id }, data: { projectId: data.projectId } });
+        console.log(`  ↺  ${data.requestNumber} (updated projectId)`);
+      } else {
+        console.log(`  ⏭  ${data.requestNumber} (skip)`);
+      }
+      return;
+    }
 
     const created = await prisma.request.create({
       data: {
@@ -60,7 +94,7 @@ async function main() {
         type: data.type,
         status: data.status,
         title: data.title,
-        projectName: data.projectName ?? null,
+        projectId: data.projectId ?? null,
         purpose: data.purpose ?? null,
         amount: data.amount,
         submitterId: data.submitterId,
@@ -99,8 +133,8 @@ async function main() {
   }
 
   await seed({
-    requestNumber: "CL-2026-0001", type: "REIMBURSEMENT", status: "APPROVED",
-    title: "辦公用品採購", projectName: "日常行政", purpose: "辦公室文具及耗材補充",
+    requestNumber: "202605001", type: "REIMBURSEMENT", status: "APPROVED",
+    title: "辦公用品採購", projectId: adminProjectId, purpose: "辦公室文具及耗材補充",
     submitterId: alice, amount: 3500,
     items: [
       { description: "A4 影印紙 10包", quantity: 10, unitPrice: 150 },
@@ -111,8 +145,8 @@ async function main() {
   });
 
   await seed({
-    requestNumber: "AP-2026-0001", type: "PREPAID", status: "PAID",
-    title: "2026 年度會員大會場地費", projectName: "2026 年度會員大會",
+    requestNumber: "202605002", type: "PREPAID", status: "PAID",
+    title: "2026 年度會員大會場地費", projectId: adminProjectId,
     purpose: "租借台北市某場館供大會使用",
     submitterId: alice, amount: 35000,
     items: [{ description: "場地租借費（全天）", quantity: 1, unitPrice: 35000 }],
@@ -121,8 +155,8 @@ async function main() {
   });
 
   await seed({
-    requestNumber: "CL-2026-0002", type: "REIMBURSEMENT", status: "APPROVED",
-    title: "年度大會工作餐費", projectName: "2026 年度會員大會",
+    requestNumber: "202605003", type: "REIMBURSEMENT", status: "APPROVED",
+    title: "年度大會工作餐費", projectId: adminProjectId,
     purpose: "工作人員午餐便當費用",
     submitterId: alice, amount: 8750,
     items: [
@@ -133,15 +167,16 @@ async function main() {
   });
 
   await seed({
-    requestNumber: "CL-2026-0003", type: "REIMBURSEMENT", status: "PENDING",
+    requestNumber: "202605004", type: "REIMBURSEMENT", status: "PENDING",
     title: "交通費報銷", purpose: "出席外部會議交通費",
+    projectId: adminProjectId,
     submitterId: bob, amount: 1200,
     items: [{ description: "高鐵票（台北↔台中 來回）", quantity: 2, unitPrice: 600 }],
   });
 
   await seed({
-    requestNumber: "AP-2026-0002", type: "PREPAID", status: "PENDING",
-    title: "講師費預付", projectName: "Q2 教育訓練計畫",
+    requestNumber: "202605005", type: "PREPAID", status: "PENDING",
+    title: "講師費預付", projectId: adminProjectId,
     purpose: "邀請外部講師進行兩場工作坊，費用預付",
     submitterId: bob, amount: 15000,
     items: [
@@ -151,16 +186,17 @@ async function main() {
   });
 
   await seed({
-    requestNumber: "CL-2026-0004", type: "REIMBURSEMENT", status: "REJECTED",
+    requestNumber: "202605006", type: "REIMBURSEMENT", status: "REJECTED",
     title: "個人書籍採購", purpose: "購買個人參考書",
+    projectId: adminProjectId,
     submitterId: bob, amount: 1980,
     items: [{ description: "書籍採購", quantity: 3, unitPrice: 660 }],
     approvalAction: { action: "REJECTED", comment: "個人用書籍不在核銷範圍內，請重新評估。", approverId: president },
   });
 
   await seed({
-    requestNumber: "CL-2026-0005", type: "REIMBURSEMENT", status: "RETURNED",
-    title: "網站維護費用", projectName: "協會官方網站",
+    requestNumber: "202605007", type: "REIMBURSEMENT", status: "RETURNED",
+    title: "網站維護費用", projectId: adminProjectId,
     purpose: "年度網站主機費及網域費用",
     submitterId: alice, amount: 5000,
     items: [
@@ -171,11 +207,19 @@ async function main() {
   });
 
   await seed({
-    requestNumber: "CL-2026-0006", type: "REIMBURSEMENT", status: "DRAFT",
+    requestNumber: "202605008", type: "REIMBURSEMENT", status: "DRAFT",
     title: "文具費用補充", purpose: "行政部門耗材補充",
+    projectId: adminProjectId,
     submitterId: bob, amount: 450,
     items: [{ description: "各式文具", quantity: 1, unitPrice: 450 }],
   });
+
+  // Also update any existing requests with old request numbers to assign the admin project
+  await prisma.request.updateMany({
+    where: { projectId: null },
+    data: { projectId: adminProjectId },
+  });
+  console.log("  ↺  assigned admin project to all unlinked requests");
 
   console.log("\n✅ Seed complete!");
   console.log("\n測試帳號：");

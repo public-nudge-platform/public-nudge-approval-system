@@ -11,7 +11,15 @@ enum UserRole {
   PRESIDENT
   FOUNDER_AGENT
   FINANCE
+  SECRETARY
+  DIRECTOR
+  SUPERVISOR
   APPLICANT
+}
+
+enum ProjectStatus {
+  ACTIVE
+  CLOSED
 }
 
 enum RequestType {
@@ -40,8 +48,7 @@ model User {
   name         String
   email        String           @unique
   passwordHash String
-  role         UserRole         @default(APPLICANT)
-  department   String?
+  role         UserRole         @default(DIRECTOR)
   isActive     Boolean          @default(true)
   createdAt    DateTime         @default(now())
   updatedAt    DateTime         @updatedAt
@@ -51,12 +58,25 @@ model User {
   @@map("users")
 }
 
+model Project {
+  id        String        @id @default(cuid())
+  name      String        @unique
+  status    ProjectStatus @default(ACTIVE)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  requests  Request[]
+
+  @@map("projects")
+}
+
 model Request {
   id             String         @id @default(cuid())
   requestNumber  String?        @unique
   type           RequestType
   status         RequestStatus  @default(DRAFT)
   title          String
+  projectId      String?
+  project        Project?       @relation(fields: [projectId], references: [id])
   projectName    String?
   description    String?
   purpose        String?

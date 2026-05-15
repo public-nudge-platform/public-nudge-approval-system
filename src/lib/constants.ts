@@ -1,4 +1,4 @@
-import type { RequestStatus, RequestType, UserRole } from "@prisma/client";
+import type { ProjectStatus, RequestStatus, RequestType, UserRole } from "@prisma/client";
 
 export const REQUEST_STATUS_LABEL: Record<RequestStatus, string> = {
   DRAFT:     "草稿",
@@ -35,9 +35,24 @@ export const USER_ROLE_LABEL: Record<UserRole, string> = {
   PRESIDENT:     "理事長",
   FOUNDER_AGENT: "創會理事長",
   FINANCE:       "財務人員",
+  SECRETARY:     "秘書長",
+  DIRECTOR:      "理事",
+  SUPERVISOR:    "監事",
   APPLICANT:     "申請人",
+};
+
+export const PROJECT_STATUS_LABEL: Record<ProjectStatus, string> = {
+  ACTIVE: "進行中",
+  CLOSED: "已結案",
+};
+
+export const PROJECT_STATUS_COLOR: Record<ProjectStatus, string> = {
+  ACTIVE: "bg-green-50 text-green-700 ring-1 ring-green-200",
+  CLOSED: "bg-gray-100 text-gray-500",
 };
 
 export const APPROVAL_ROLES: UserRole[] = ["PRESIDENT", "FOUNDER_AGENT"];
 export const FINANCE_ROLES: UserRole[] = ["FINANCE", "ADMIN", "PRESIDENT", "FOUNDER_AGENT"];
 export const ADMIN_ROLES: UserRole[] = ["ADMIN"];
+export const PROJECT_MANAGE_ROLES: UserRole[] = ["ADMIN", "PRESIDENT", "FOUNDER_AGENT"];
+export const PROJECT_VIEW_ROLES: UserRole[] = ["ADMIN", "PRESIDENT", "FOUNDER_AGENT", "FINANCE"];

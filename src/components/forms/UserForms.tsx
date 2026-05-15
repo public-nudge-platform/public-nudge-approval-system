@@ -35,7 +35,7 @@ export function CreateUserModal({ actorRole, onClose }: { actorRole: UserRole; o
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
-  const allowedRoles = actorRole === "ADMIN" ? ALL_ROLES : (["FINANCE", "APPLICANT"] as UserRole[]);
+  const allowedRoles = actorRole === "ADMIN" ? ALL_ROLES : (["FINANCE", "DIRECTOR", "SUPERVISOR"] as UserRole[]);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -47,7 +47,6 @@ export function CreateUserModal({ actorRole, onClose }: { actorRole: UserRole; o
         email: fd.get("email") as string,
         password: fd.get("password") as string,
         role: fd.get("role") as UserRole,
-        department: fd.get("department") as string,
       });
       if (result?.error) { setError(result.error); return; }
       router.refresh();
@@ -70,19 +69,13 @@ export function CreateUserModal({ actorRole, onClose }: { actorRole: UserRole; o
           <label className={labelCls}>密碼 * （至少 6 字元）</label>
           <input name="password" type="password" required minLength={6} className={inputCls} />
         </div>
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className={labelCls}>角色 *</label>
-            <select name="role" required className={`${inputCls} bg-white`}>
-              {allowedRoles.map((r) => (
-                <option key={r} value={r}>{USER_ROLE_LABEL[r]}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className={labelCls}>部門</label>
-            <input name="department" className={inputCls} placeholder="活動部" />
-          </div>
+        <div>
+          <label className={labelCls}>角色 *</label>
+          <select name="role" required className={`${inputCls} bg-white`}>
+            {allowedRoles.map((r) => (
+              <option key={r} value={r}>{USER_ROLE_LABEL[r]}</option>
+            ))}
+          </select>
         </div>
         {error && <p className="text-xs text-red-500">{error}</p>}
         <div className="flex gap-2 pt-1">
@@ -100,7 +93,6 @@ type UserData = {
   name: string;
   email: string;
   role: UserRole;
-  department: string | null;
   isActive: boolean;
 };
 
@@ -117,7 +109,7 @@ export function EditUserModal({
   const [error, setError] = useState<string | null>(null);
   const [isActive, setIsActive] = useState(user.isActive);
 
-  const allowedRoles = actorRole === "ADMIN" ? ALL_ROLES : (["FINANCE", "APPLICANT"] as UserRole[]);
+  const allowedRoles = actorRole === "ADMIN" ? ALL_ROLES : (["FINANCE", "DIRECTOR", "SUPERVISOR"] as UserRole[]);
   const isSelf = actorId === user.id;
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -129,7 +121,6 @@ export function EditUserModal({
         name: fd.get("name") as string,
         email: fd.get("email") as string,
         role: fd.get("role") as UserRole,
-        department: fd.get("department") as string,
         isActive,
       });
       if (result?.error) { setError(result.error); return; }
@@ -149,19 +140,13 @@ export function EditUserModal({
           <label className={labelCls}>Email *</label>
           <input name="email" type="email" required defaultValue={user.email} className={inputCls} />
         </div>
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className={labelCls}>角色 *</label>
-            <select name="role" required defaultValue={user.role} className={`${inputCls} bg-white`}>
-              {allowedRoles.map((r) => (
-                <option key={r} value={r}>{USER_ROLE_LABEL[r]}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className={labelCls}>部門</label>
-            <input name="department" defaultValue={user.department ?? ""} className={inputCls} />
-          </div>
+        <div>
+          <label className={labelCls}>角色 *</label>
+          <select name="role" required defaultValue={user.role} className={`${inputCls} bg-white`}>
+            {allowedRoles.map((r) => (
+              <option key={r} value={r}>{USER_ROLE_LABEL[r]}</option>
+            ))}
+          </select>
         </div>
 
         <div className="flex items-center justify-between py-1 border-t border-gray-100">

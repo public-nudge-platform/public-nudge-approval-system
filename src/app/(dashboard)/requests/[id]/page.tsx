@@ -12,7 +12,7 @@ import type { TimelineStep } from "@/components/ui/Timeline";
 import type { UserRole } from "@prisma/client";
 import { APPROVAL_ROLES, FINANCE_ROLES } from "@/lib/constants";
 import Link from "next/link";
-import { ChevronLeft, Calendar, User, Building2, Banknote } from "lucide-react";
+import { ChevronLeft, Calendar, User, Building2, Banknote, FolderOpen, Hash } from "lucide-react";
 import { UploadZone } from "@/components/ui/UploadZone";
 
 function buildTimeline(request: Awaited<ReturnType<typeof getRequest>>): TimelineStep[] {
@@ -103,7 +103,8 @@ async function getRequest(id: string) {
   return prisma.request.findUnique({
     where: { id },
     include: {
-      submitter: { select: { name: true, email: true, department: true } },
+      submitter: { select: { name: true, email: true } },
+      project: { select: { id: true, name: true, status: true } },
       items: true,
       attachments: true,
       approvalSteps: {
@@ -164,8 +165,8 @@ export default async function RequestDetailPage({
               <StatusBadge status={request.status} />
             </div>
             <h1 className="text-xl font-bold text-gray-900 mt-1">{request.title}</h1>
-            {request.projectName && (
-              <p className="text-sm text-gray-500 mt-0.5">{request.projectName}</p>
+            {request.project && (
+              <p className="text-sm text-gray-500 mt-0.5">{request.project.name}</p>
             )}
           </div>
           <div className="text-right">
@@ -185,8 +186,14 @@ export default async function RequestDetailPage({
           <div className="bg-white rounded-xl border border-gray-200 p-5">
             <h2 className="text-sm font-semibold text-gray-700 mb-4">申請資訊</h2>
             <dl className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
-              <InfoRow icon={User} label="申請人" value={`${request.submitter.name}${request.submitter.department ? ` · ${request.submitter.department}` : ""}`} />
+              <InfoRow icon={User} label="申請人" value={request.submitter.name} />
               <InfoRow icon={Calendar} label="申請日期" value={request.requestDate.toLocaleDateString("zh-TW")} />
+              {request.project && (
+                <InfoRow icon={FolderOpen} label="專案" value={request.project.name} />
+              )}
+              {request.requestNumber && (
+                <InfoRow icon={Hash} label="流水編號" value={request.requestNumber} />
+              )}
               {request.neededBy && (
                 <InfoRow icon={Calendar} label="需款期限" value={request.neededBy.toLocaleDateString("zh-TW")} />
               )}

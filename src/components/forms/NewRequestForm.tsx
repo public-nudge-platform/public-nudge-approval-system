@@ -8,6 +8,8 @@ import { createRequest } from "@/lib/actions/request";
 import type { RequestType } from "@prisma/client";
 import { useRouter } from "next/navigation";
 
+type ActiveProject = { id: string; name: string };
+
 type Item = {
   id: string;
   description: string;
@@ -24,10 +26,10 @@ function formatNumber(n: number) {
   return n.toLocaleString("zh-TW");
 }
 
-export function NewRequestForm() {
+export function NewRequestForm({ projects = [] }: { projects?: ActiveProject[] }) {
   const [type, setType] = useState<RequestType>("REIMBURSEMENT");
   const [title, setTitle] = useState("");
-  const [projectName, setProjectName] = useState("");
+  const [projectId, setProjectId] = useState("");
   const [purpose, setPurpose] = useState("");
   const [neededBy, setNeededBy] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("");
@@ -58,6 +60,7 @@ export function NewRequestForm() {
     setError(null);
 
     if (!title.trim()) { setError("請填寫標題"); return; }
+    if (!projectId) { setError("請選擇專案"); return; }
     if (items.some((i) => !i.description.trim())) { setError("請填寫所有品項說明"); return; }
     if (items.some((i) => i.quantity <= 0 || i.unitPrice <= 0)) { setError("品項數量與單價必須大於 0"); return; }
 
@@ -65,7 +68,7 @@ export function NewRequestForm() {
       const result = await createRequest({
         type,
         title: title.trim(),
-        projectName: projectName.trim() || undefined,
+        projectId: projectId || undefined,
         purpose: purpose.trim() || undefined,
         neededBy: neededBy || undefined,
         paymentMethod: paymentMethod || undefined,
@@ -141,13 +144,19 @@ export function NewRequestForm() {
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">專案／活動名稱</label>
-            <input
-              value={projectName}
-              onChange={(e) => setProjectName(e.target.value)}
-              placeholder="例：2026 年度會員大會"
-              className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+            <label className="block text-xs font-medium text-gray-600 mb-1">
+              專案 <span className="text-red-500">*</span>
+            </label>
+            <select
+              value={projectId}
+              onChange={(e) => setProjectId(e.target.value)}
+              className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+            >
+              <option value="">請選擇專案</option>
+              {projects.map((p) => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">

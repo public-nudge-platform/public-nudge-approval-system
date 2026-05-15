@@ -9,7 +9,7 @@ import type { UserRole } from "@prisma/client";
 const MANAGE_ROLES: UserRole[] = ["ADMIN", "PRESIDENT", "FOUNDER_AGENT"];
 
 // Roles a non-ADMIN manager can assign/manage
-const NON_ADMIN_MANAGEABLE: UserRole[] = ["FINANCE", "APPLICANT"];
+const NON_ADMIN_MANAGEABLE: UserRole[] = ["FINANCE", "DIRECTOR", "SUPERVISOR"];
 
 function canManage(actorRole: UserRole, targetRole: UserRole): boolean {
   if (actorRole === "ADMIN") return true;
@@ -32,7 +32,6 @@ export async function createUser(data: {
   email: string;
   password: string;
   role: UserRole;
-  department?: string;
 }) {
   const actor = await getActor();
   if (!actor) return { error: "無權限" };
@@ -54,7 +53,6 @@ export async function createUser(data: {
       email: data.email,
       passwordHash,
       role: data.role,
-      department: data.department || null,
     },
   });
 
@@ -65,7 +63,6 @@ export async function updateUser(userId: string, data: {
   name: string;
   email: string;
   role: UserRole;
-  department?: string;
   isActive: boolean;
 }) {
   const actor = await getActor();
@@ -102,7 +99,6 @@ export async function updateUser(userId: string, data: {
       name: data.name,
       email: data.email,
       role: data.role,
-      department: data.department || null,
       isActive: data.isActive,
     },
   });
