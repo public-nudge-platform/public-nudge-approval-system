@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
   }
 
   const buffer = Buffer.from(await file.arrayBuffer());
-  const url = await saveFile(buffer, requestId, file.name);
+  const url = await saveFile(buffer, requestId, file.name, file.type);
 
   const attachment = await prisma.attachment.create({
     data: { requestId, filename: file.name, url, mimeType: file.type, size: file.size },

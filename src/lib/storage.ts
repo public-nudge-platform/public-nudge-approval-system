@@ -1,27 +1,44 @@
-import fs from "fs/promises";
+import { S3Client, PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import path from "path";
 
-const UPLOAD_DIR = path.join(process.cwd(), "public", "uploads");
+function getClient() {
+  return new S3Client({
+    region: "auto",
+    endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+    credentials: {
+      accessKeyId: process.env.R2_ACCESS_KEY_ID!,
+      secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!,
+    },
+  });
+}
 
 export async function saveFile(
   buffer: Buffer,
   requestId: string,
-  originalName: string
+  originalName: string,
+  mimeType: string
 ): Promise<string> {
   const ext = path.extname(originalName).toLowerCase();
   const base = path.basename(originalName, ext).replace(/[^\w一-鿿-]/g, "_").slice(0, 50);
   const uid = crypto.randomUUID().split("-")[0];
-  const stored = `${uid}-${base}${ext}`;
+  const key = `uploads/${requestId}/${uid}-${base}${ext}`;
 
-  const dir = path.join(UPLOAD_DIR, requestId);
-  await fs.mkdir(dir, { recursive: true });
-  await fs.writeFile(path.join(dir, stored), buffer);
+  await getClient().send(new PutObjectCommand({
+    Bucket: process.env.R2_BUCKET_NAME!,
+    Key: key,
+    Body: buffer,
+    ContentType: mimeType,
+  }));
 
-  return `/uploads/${requestId}/${stored}`;
+  return `${process.env.R2_PUBLIC_URL}/${key}`;
 }
 
 export async function deleteFile(url: string): Promise<void> {
-  const relative = url.replace(/^\/uploads\//, "");
-  const filepath = path.join(UPLOAD_DIR, relative);
-  await fs.unlink(filepath).catch(() => {});
+  const prefix = process.env.R2_PUBLIC_URL ?? "";
+  const key = url.startsWith(prefix) ? url.slice(prefix.length + 1) : url;
+
+  await getClient().send(new DeleteObjectCommand({
+    Bucket: process.env.R2_BUCKET_NAME!,
+    Key: key,
+  }));
 }
