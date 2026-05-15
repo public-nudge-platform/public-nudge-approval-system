@@ -47,6 +47,29 @@ enum ApprovalAction {
   RETURNED
 }
 
+enum AuditAction {
+  USER_LOGIN
+  REQUEST_CREATED
+  REQUEST_SUBMITTED
+  REQUEST_APPROVED
+  REQUEST_RETURNED
+  REQUEST_REJECTED
+  PAYMENT_MARKED
+  SETTLEMENT_SUBMITTED
+  SETTLEMENT_RETURNED
+  SETTLEMENT_APPROVED
+  ATTACHMENT_UPLOADED
+  ATTACHMENT_DELETED
+  PROJECT_CREATED
+  PROJECT_UPDATED
+  PROJECT_STATUS_CHANGED
+  PROJECT_DELETED
+  USER_CREATED
+  USER_UPDATED
+  USER_DEACTIVATED
+  PASSWORD_RESET
+}
+
 enum NotificationType {
   REQUEST_SUBMITTED
   APPROVAL_ASSIGNED
@@ -183,6 +206,27 @@ model Notification {
   createdAt        DateTime         @default(now())
 
   @@map("notifications")
+}
+
+model AuditLog {
+  id          String      @id @default(cuid())
+  userId      String
+  userName    String
+  action      AuditAction
+  entityType  String
+  entityId    String?
+  description String
+  beforeData  Json?
+  afterData   Json?
+  ipAddress   String?
+  userAgent   String?
+  createdAt   DateTime    @default(now())
+
+  @@index([userId])
+  @@index([action])
+  @@index([entityType])
+  @@index([createdAt])
+  @@map("audit_logs")
 }
 
 model ApprovalRecord {

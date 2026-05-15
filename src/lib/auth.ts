@@ -3,6 +3,7 @@ import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
+import type { AuditAction } from "@prisma/client";
 
 const loginSchema = z.object({
   email: z.string().email(),
@@ -43,6 +44,18 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         const valid = await bcrypt.compare(parsed.data.password, user.passwordHash);
         if (!valid) return null;
+
+        // Log login (fire and forget — don't block auth)
+        prisma.auditLog.create({
+          data: {
+            userId: user.id,
+            userName: user.name,
+            action: "USER_LOGIN" as AuditAction,
+            entityType: "User",
+            entityId: user.id,
+            description: `${user.name} 登入系統`,
+          },
+        }).catch(() => {});
 
         return {
           id: user.id,

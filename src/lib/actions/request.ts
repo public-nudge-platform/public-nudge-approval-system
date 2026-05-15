@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import type { RequestType } from "@prisma/client";
 import { createNotificationsForRoles, createNotificationsForUsers } from "@/lib/notifications";
+import { logAuditAction } from "@/lib/audit";
 
 type RequestItemInput = {
   description: string;
@@ -110,6 +111,25 @@ export async function createRequest(data: CreateRequestInput) {
       type: "REQUEST_SUBMITTED",
       relatedRequestId: request.id,
     });
+    await logAuditAction({
+      userId: session.user.id,
+      userName: session.user.name ?? session.user.email ?? "unknown",
+      action: "REQUEST_SUBMITTED",
+      entityType: "Request",
+      entityId: request.id,
+      description: `送出請款單「${data.title}」`,
+      afterData: { title: data.title, type: data.type, amount: totalAmount, status: "PENDING" },
+    });
+  } else {
+    await logAuditAction({
+      userId: session.user.id,
+      userName: session.user.name ?? session.user.email ?? "unknown",
+      action: "REQUEST_CREATED",
+      entityType: "Request",
+      entityId: request.id,
+      description: `新增請款單草稿「${data.title}」`,
+      afterData: { title: data.title, type: data.type, amount: totalAmount, status: "DRAFT" },
+    });
   }
 
   revalidatePath("/requests");
@@ -146,6 +166,17 @@ export async function submitRequest(requestId: string) {
     message: `${session.user.name} 已送出「${request.title}」，請前往審核。`,
     type: "REQUEST_SUBMITTED",
     relatedRequestId: requestId,
+  });
+
+  await logAuditAction({
+    userId: session.user.id,
+    userName: session.user.name ?? session.user.email ?? "unknown",
+    action: "REQUEST_SUBMITTED",
+    entityType: "Request",
+    entityId: requestId,
+    description: `送出請款單「${request.title}」`,
+    beforeData: { status: "DRAFT" },
+    afterData: { status: "PENDING", requestNumber },
   });
 
   revalidatePath(`/requests/${requestId}`);
@@ -217,6 +248,26 @@ export async function approveRequest(requestId: string, stepId: string, action: 
     });
   }
 
+  const auditActionMap = {
+    APPROVED: "REQUEST_APPROVED",
+    RETURNED: "REQUEST_RETURNED",
+    REJECTED: "REQUEST_REJECTED",
+  } as const;
+  const auditDescMap = {
+    APPROVED: `核准請款單「${request.title}」`,
+    RETURNED: `退回請款單「${request.title}」`,
+    REJECTED: `拒絕請款單「${request.title}」`,
+  };
+  await logAuditAction({
+    userId: session.user.id,
+    userName: session.user.name ?? session.user.email ?? "unknown",
+    action: auditActionMap[action],
+    entityType: "Request",
+    entityId: requestId,
+    description: auditDescMap[action],
+    afterData: { action, ...(comment && { comment }) },
+  });
+
   revalidatePath(`/requests/${requestId}`);
   revalidatePath("/requests");
   revalidatePath("/approvals");
@@ -274,6 +325,16 @@ export async function markAsPaid(requestId: string, input: MarkAsPaidInput) {
     });
   }
 
+  await logAuditAction({
+    userId: session.user.id,
+    userName: session.user.name ?? session.user.email ?? "unknown",
+    action: "PAYMENT_MARKED",
+    entityType: "Request",
+    entityId: requestId,
+    description: `標記付款「${request.title}」`,
+    afterData: { paymentMethod: input.paymentMethod, newStatus },
+  });
+
   revalidatePath(`/requests/${requestId}`);
   revalidatePath("/requests");
   revalidatePath("/finance");
@@ -311,6 +372,16 @@ export async function submitSettlement(requestId: string, data: { actualAmount: 
     message: `${session.user.name} 已送出「${request.title}」的沖銷單據，請前往確認。`,
     type: "SETTLEMENT_SUBMITTED",
     relatedRequestId: requestId,
+  });
+
+  await logAuditAction({
+    userId: session.user.id,
+    userName: session.user.name ?? session.user.email ?? "unknown",
+    action: "SETTLEMENT_SUBMITTED",
+    entityType: "Request",
+    entityId: requestId,
+    description: `送出沖銷「${request.title}」`,
+    afterData: { actualAmount: data.actualAmount, ...(data.reimbursementNote && { note: data.reimbursementNote }) },
   });
 
   revalidatePath(`/requests/${requestId}`);
@@ -352,6 +423,15 @@ export async function reviewSettlement(requestId: string, action: "APPROVED" | "
       type: "SETTLEMENT_APPROVED",
       relatedRequestId: requestId,
     });
+    await logAuditAction({
+      userId: session.user.id,
+      userName: session.user.name ?? session.user.email ?? "unknown",
+      action: "SETTLEMENT_APPROVED",
+      entityType: "Request",
+      entityId: requestId,
+      description: `沖銷完成「${request.title}」`,
+      afterData: { status: "CLOSED" },
+    });
   } else {
     const reviewNote = comment || "請補充沖銷單據後重新送出";
     await prisma.request.update({
@@ -368,6 +448,15 @@ export async function reviewSettlement(requestId: string, action: "APPROVED" | "
       message: `您的預付請款「${request.title}」沖銷被退回，請補充單據後重新送出。備註：${reviewNote}`,
       type: "SETTLEMENT_RETURNED",
       relatedRequestId: requestId,
+    });
+    await logAuditAction({
+      userId: session.user.id,
+      userName: session.user.name ?? session.user.email ?? "unknown",
+      action: "SETTLEMENT_RETURNED",
+      entityType: "Request",
+      entityId: requestId,
+      description: `沖銷退回「${request.title}」`,
+      afterData: { note: reviewNote },
     });
   }
 

@@ -14,6 +14,7 @@ import {
   ChevronRight,
   FolderOpen,
   Bell,
+  ClipboardList,
 } from "lucide-react";
 import type { UserRole } from "@prisma/client";
 
@@ -124,7 +125,16 @@ export function Sidebar({ role }: { role: UserRole }) {
         {isApprover && <NavSection title="簽核" items={approverNav} pathname={pathname} />}
         {isFinance && <NavSection title="財務" items={financeNav} pathname={pathname} />}
         {isFinance && <NavSection title="專案" items={[{ href: "/projects", label: "專案管理", icon: FolderOpen }]} pathname={pathname} />}
-        {canManageUsers && <NavSection title="管理" items={[{ href: "/admin/users", label: "使用者管理", icon: Users }]} pathname={pathname} />}
+        {canManageUsers && (
+          <NavSection
+            title="管理"
+            items={[
+              { href: "/admin/users", label: "使用者管理", icon: Users },
+              { href: "/admin/audit-logs", label: "操作紀錄", icon: ClipboardList },
+            ]}
+            pathname={pathname}
+          />
+        )}
         {isAdmin && <NavSection items={[{ href: "/admin/settings", label: "系統設定", icon: Settings }]} pathname={pathname} />}
       </nav>
     </aside>

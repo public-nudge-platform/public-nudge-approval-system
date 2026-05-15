@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { fileUrl } from "@/lib/storage";
+import { logAuditAction } from "@/lib/audit";
 
 const MAX_SIZE = 10 * 1024 * 1024;
 const ALLOWED = new Set(["image/jpeg", "image/png", "image/gif", "image/webp", "application/pdf"]);
@@ -43,6 +44,16 @@ export async function POST(req: NextRequest) {
   // Update url now that we have the id
   const url = fileUrl(attachment.id);
   await prisma.attachment.update({ where: { id: attachment.id }, data: { url } });
+
+  await logAuditAction({
+    userId: session.user.id,
+    userName: session.user.name ?? session.user.email ?? "unknown",
+    action: "ATTACHMENT_UPLOADED",
+    entityType: "Attachment",
+    entityId: attachment.id,
+    description: `上傳附件「${file.name}」`,
+    afterData: { filename: file.name, mimeType: file.type, size: file.size, requestId },
+  });
 
   return NextResponse.json({ attachment: { ...attachment, url, data: undefined } });
 }
