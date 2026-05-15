@@ -30,6 +30,7 @@ export function NewRequestForm() {
   const [projectName, setProjectName] = useState("");
   const [purpose, setPurpose] = useState("");
   const [neededBy, setNeededBy] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState("");
   const [recipientName, setRecipientName] = useState("");
   const [bankName, setBankName] = useState("");
   const [bankAccount, setBankAccount] = useState("");
@@ -64,6 +65,7 @@ export function NewRequestForm() {
         projectName: projectName.trim() || undefined,
         purpose: purpose.trim() || undefined,
         neededBy: neededBy || undefined,
+        paymentMethod: paymentMethod || undefined,
         recipientName: recipientName.trim() || undefined,
         bankName: bankName.trim() || undefined,
         bankAccount: bankAccount.trim() || undefined,
@@ -241,6 +243,23 @@ export function NewRequestForm() {
       {/* Payment info */}
       <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-4">
         <h2 className="text-sm font-semibold text-gray-700">收款資訊（選填）</h2>
+
+        <div>
+          <label className="block text-xs font-medium text-gray-600 mb-1">希望付款方式</label>
+          <select
+            value={paymentMethod}
+            onChange={(e) => setPaymentMethod(e.target.value)}
+            className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+          >
+            <option value="">請選擇（選填）</option>
+            <option value="銀行轉帳">銀行轉帳</option>
+            <option value="現金">現金</option>
+            <option value="支票">支票</option>
+            <option value="信用卡">信用卡</option>
+            <option value="其他">其他</option>
+          </select>
+        </div>
+
         <div className="grid grid-cols-3 gap-4">
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">收款人姓名</label>

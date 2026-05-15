@@ -20,6 +20,7 @@ type CreateRequestInput = {
   description?: string;
   purpose?: string;
   neededBy?: string;
+  paymentMethod?: string;
   recipientName?: string;
   bankName?: string;
   bankAccount?: string;
@@ -56,6 +57,7 @@ export async function createRequest(data: CreateRequestInput) {
       description: data.description || null,
       purpose: data.purpose || null,
       neededBy: data.neededBy ? new Date(data.neededBy) : null,
+      paymentMethod: data.paymentMethod || null,
       recipientName: data.recipientName || null,
       bankName: data.bankName || null,
       bankAccount: data.bankAccount || null,

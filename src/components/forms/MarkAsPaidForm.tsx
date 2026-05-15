@@ -14,7 +14,7 @@ const PAYMENT_METHODS = [
   "其他",
 ];
 
-export function MarkAsPaidForm({ requestId }: { requestId: string }) {
+export function MarkAsPaidForm({ requestId, defaultPaymentMethod }: { requestId: string; defaultPaymentMethod?: string }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -62,6 +62,7 @@ export function MarkAsPaidForm({ requestId }: { requestId: string }) {
         <select
           name="paymentMethod"
           required
+          defaultValue={defaultPaymentMethod ?? ""}
           className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
         >
           <option value="">請選擇</option>

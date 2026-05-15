@@ -224,10 +224,13 @@ export default async function RequestDetailPage({
           </div>
 
           {/* Payment info (if available) */}
-          {(request.recipientName || request.bankName || request.bankAccount) && (
+          {(request.recipientName || request.bankName || request.bankAccount || (request.paymentMethod && request.status !== "PAID")) && (
             <div className="bg-white rounded-xl border border-gray-200 p-5">
               <h2 className="text-sm font-semibold text-gray-700 mb-4">收款資訊</h2>
               <dl className="grid grid-cols-3 gap-4 text-sm">
+                {request.paymentMethod && request.status !== "PAID" && (
+                  <InfoRow icon={Banknote} label="希望付款方式" value={request.paymentMethod} />
+                )}
                 {request.recipientName && (
                   <InfoRow icon={User} label="收款人" value={request.recipientName} />
                 )}
@@ -254,7 +257,7 @@ export default async function RequestDetailPage({
           {/* Payment action */}
           {canMarkPaid && (
             <div className="bg-white rounded-xl border border-green-200 p-5 ring-1 ring-green-100">
-              <MarkAsPaidForm requestId={request.id} />
+              <MarkAsPaidForm requestId={request.id} defaultPaymentMethod={request.paymentMethod ?? undefined} />
             </div>
           )}
 
