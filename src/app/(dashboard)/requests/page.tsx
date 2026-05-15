@@ -22,9 +22,10 @@ const ALL_TYPES = Object.keys(REQUEST_TYPE_LABEL) as RequestType[];
 async function getRequests(userId: string, role: UserRole, params: SearchParams) {
   const isAdmin = role === "ADMIN";
   const isApprover = ["PRESIDENT", "FOUNDER_AGENT"].includes(role);
+  const isFinance = role === "FINANCE";
 
   const where = {
-    ...((!isAdmin && !isApprover) && { submitterId: userId }),
+    ...((!isAdmin && !isApprover && !isFinance) && { submitterId: userId }),
     ...(params.status && ALL_STATUSES.includes(params.status as RequestStatus) && { status: params.status as RequestStatus }),
     ...(params.type && ALL_TYPES.includes(params.type as RequestType) && { type: params.type as RequestType }),
     ...(params.q && {
@@ -131,36 +132,50 @@ export default async function RequestsPage({
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {requests.map((req) => (
-                  <tr key={req.id} className="hover:bg-gray-50/80 transition-colors">
-                    <td className="px-4 py-3">
-                      <span className="font-mono text-xs text-gray-400">
+                  <tr key={req.id} className="hover:bg-gray-50/80 transition-colors cursor-pointer">
+                    <td className="p-0">
+                      <Link href={`/requests/${req.id}`} className="block px-4 py-3 font-mono text-xs text-gray-400">
                         {req.requestNumber ?? "—"}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <Link href={`/requests/${req.id}`} className="font-medium text-gray-900 hover:text-blue-600 transition-colors">
-                        {req.title}
                       </Link>
-                      {req.projectName && (
-                        <p className="text-xs text-gray-400 mt-0.5">{req.projectName}</p>
-                      )}
                     </td>
-                    <td className="px-4 py-3"><TypeBadge type={req.type} /></td>
-                    <td className="px-4 py-3">
-                      <span className="text-gray-700">{req.submitter.name}</span>
-                      {req.submitter.department && (
-                        <span className="text-xs text-gray-400 ml-1">· {req.submitter.department}</span>
-                      )}
+                    <td className="p-0">
+                      <Link href={`/requests/${req.id}`} className="block px-4 py-3">
+                        <span className="font-medium text-gray-900">{req.title}</span>
+                        {req.projectName && (
+                          <p className="text-xs text-gray-400 mt-0.5">{req.projectName}</p>
+                        )}
+                      </Link>
                     </td>
-                    <td className="px-4 py-3 text-right">
-                      <span className="font-medium text-gray-900 tabular-nums">
-                        {Number(req.amount).toLocaleString()}
-                      </span>
-                      <span className="text-xs text-gray-400 ml-0.5">元</span>
+                    <td className="p-0">
+                      <Link href={`/requests/${req.id}`} className="block px-4 py-3">
+                        <TypeBadge type={req.type} />
+                      </Link>
                     </td>
-                    <td className="px-4 py-3"><StatusBadge status={req.status} /></td>
-                    <td className="px-4 py-3 text-gray-400 text-xs tabular-nums">
-                      {req.createdAt.toLocaleDateString("zh-TW")}
+                    <td className="p-0">
+                      <Link href={`/requests/${req.id}`} className="block px-4 py-3">
+                        <span className="text-gray-700">{req.submitter.name}</span>
+                        {req.submitter.department && (
+                          <span className="text-xs text-gray-400 ml-1">· {req.submitter.department}</span>
+                        )}
+                      </Link>
+                    </td>
+                    <td className="p-0 text-right">
+                      <Link href={`/requests/${req.id}`} className="block px-4 py-3">
+                        <span className="font-medium text-gray-900 tabular-nums">
+                          {Number(req.amount).toLocaleString()}
+                        </span>
+                        <span className="text-xs text-gray-400 ml-0.5">元</span>
+                      </Link>
+                    </td>
+                    <td className="p-0">
+                      <Link href={`/requests/${req.id}`} className="block px-4 py-3">
+                        <StatusBadge status={req.status} />
+                      </Link>
+                    </td>
+                    <td className="p-0">
+                      <Link href={`/requests/${req.id}`} className="block px-4 py-3 text-gray-400 text-xs tabular-nums">
+                        {req.createdAt.toLocaleDateString("zh-TW")}
+                      </Link>
                     </td>
                   </tr>
                 ))}

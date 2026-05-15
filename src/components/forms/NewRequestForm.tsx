@@ -33,7 +33,10 @@ export function NewRequestForm() {
   const [paymentMethod, setPaymentMethod] = useState("");
   const [recipientName, setRecipientName] = useState("");
   const [bankName, setBankName] = useState("");
-  const [bankAccount, setBankAccount] = useState("");
+  const [bankCode, setBankCode] = useState("");
+  const [branchName, setBranchName] = useState("");
+  const [branchCode, setBranchCode] = useState("");
+  const [paymentInfoNote, setPaymentInfoNote] = useState("");
   const [items, setItems] = useState<Item[]>([newItem()]);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -68,7 +71,10 @@ export function NewRequestForm() {
         paymentMethod: paymentMethod || undefined,
         recipientName: recipientName.trim() || undefined,
         bankName: bankName.trim() || undefined,
-        bankAccount: bankAccount.trim() || undefined,
+        bankCode: bankCode.trim() || undefined,
+        branchName: branchName.trim() || undefined,
+        branchCode: branchCode.trim() || undefined,
+        paymentInfoNote: paymentInfoNote.trim() || undefined,
         items: items.map((i) => ({
           description: i.description.trim(),
           quantity: Number(i.quantity),
@@ -260,16 +266,17 @@ export function NewRequestForm() {
           </select>
         </div>
 
-        <div className="grid grid-cols-3 gap-4">
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">收款人姓名</label>
-            <input
-              value={recipientName}
-              onChange={(e) => setRecipientName(e.target.value)}
-              placeholder="王小明"
-              className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
+        <div>
+          <label className="block text-xs font-medium text-gray-600 mb-1">收款人姓名</label>
+          <input
+            value={recipientName}
+            onChange={(e) => setRecipientName(e.target.value)}
+            placeholder="王小明"
+            className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">銀行名稱</label>
             <input
@@ -280,15 +287,46 @@ export function NewRequestForm() {
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">帳號末五碼</label>
+            <label className="block text-xs font-medium text-gray-600 mb-1">銀行代碼</label>
             <input
-              value={bankAccount}
-              onChange={(e) => setBankAccount(e.target.value)}
-              placeholder="12345"
-              maxLength={5}
+              value={bankCode}
+              onChange={(e) => setBankCode(e.target.value)}
+              placeholder="004"
               className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">分行名稱</label>
+            <input
+              value={branchName}
+              onChange={(e) => setBranchName(e.target.value)}
+              placeholder="信義分行"
+              className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">分行代碼</label>
+            <input
+              value={branchCode}
+              onChange={(e) => setBranchCode(e.target.value)}
+              placeholder="0048"
+              className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-xs font-medium text-gray-600 mb-1">備註</label>
+          <textarea
+            value={paymentInfoNote}
+            onChange={(e) => setPaymentInfoNote(e.target.value)}
+            rows={2}
+            placeholder="可補充說明，或描述附上的付款資訊影本內容"
+            className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+          />
         </div>
       </div>
 

@@ -3,7 +3,7 @@ import type { RequestStatus, RequestType, UserRole } from "@prisma/client";
 export const REQUEST_STATUS_LABEL: Record<RequestStatus, string> = {
   DRAFT:     "草稿",
   PENDING:   "待審核",
-  APPROVED:  "已核准",
+  APPROVED:  "已核准，待付款",
   REJECTED:  "已拒絕",
   RETURNED:  "退回修改",
   PAID:      "已付款",
@@ -39,5 +39,5 @@ export const USER_ROLE_LABEL: Record<UserRole, string> = {
 };
 
 export const APPROVAL_ROLES: UserRole[] = ["PRESIDENT", "FOUNDER_AGENT"];
-export const FINANCE_ROLES: UserRole[] = ["FINANCE", "ADMIN"];
+export const FINANCE_ROLES: UserRole[] = ["FINANCE", "ADMIN", "PRESIDENT", "FOUNDER_AGENT"];
 export const ADMIN_ROLES: UserRole[] = ["ADMIN"];

@@ -82,17 +82,7 @@ export function MarkAsPaidForm({ requestId, defaultPaymentMethod }: { requestId:
         />
       </div>
 
-      <div>
-        <label className="block text-xs text-gray-500 mb-1">付款憑證編號</label>
-        <input
-          type="text"
-          name="paymentReference"
-          placeholder="如：轉帳末五碼、支票號碼"
-          className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
-      </div>
-
-      <div>
+<div>
         <label className="block text-xs text-gray-500 mb-1">備註</label>
         <textarea
           name="paymentNote"

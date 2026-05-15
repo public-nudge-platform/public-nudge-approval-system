@@ -12,12 +12,14 @@ import type { TimelineStep } from "@/components/ui/Timeline";
 import type { UserRole } from "@prisma/client";
 import { APPROVAL_ROLES, FINANCE_ROLES } from "@/lib/constants";
 import Link from "next/link";
-import { ChevronLeft, Calendar, User, Building2, CreditCard, Banknote } from "lucide-react";
+import { ChevronLeft, Calendar, User, Building2, Banknote } from "lucide-react";
 import { UploadZone } from "@/components/ui/UploadZone";
 
 function buildTimeline(request: Awaited<ReturnType<typeof getRequest>>): TimelineStep[] {
+  const status = request!.status;
   const steps: TimelineStep[] = [];
 
+  // 1. 申請人建立
   steps.push({
     id: "created",
     title: "申請人建立",
@@ -26,6 +28,7 @@ function buildTimeline(request: Awaited<ReturnType<typeof getRequest>>): Timelin
     status: "completed",
   });
 
+  // 2. 送出申請
   if (request!.submittedAt) {
     steps.push({
       id: "submitted",
@@ -34,8 +37,11 @@ function buildTimeline(request: Awaited<ReturnType<typeof getRequest>>): Timelin
       date: request!.submittedAt.toLocaleString("zh-TW"),
       status: "completed",
     });
+  } else {
+    steps.push({ id: "submitted", title: "送出申請", status: "pending" });
   }
 
+  // 3. 簽核步驟
   for (const step of request!.approvalSteps) {
     const lastRecord = step.records[step.records.length - 1];
     if (lastRecord) {
@@ -49,16 +55,25 @@ function buildTimeline(request: Awaited<ReturnType<typeof getRequest>>): Timelin
         comment: lastRecord.comment ?? undefined,
         status: actionMap[lastRecord.action],
       });
-    } else if (request!.status === "PENDING") {
+    } else {
       steps.push({
         id: step.id,
         title: step.title,
-        status: "current",
+        status: status === "PENDING" ? "current" : "pending",
       });
     }
   }
 
-  if (request!.status === "PAID") {
+  // 若尚未建立簽核步驟（草稿），補上預設步驟
+  if (request!.approvalSteps.length === 0) {
+    steps.push({ id: "approval", title: "理事長審核", status: "pending" });
+  }
+
+  // 若已拒絕，後續步驟不顯示
+  if (status === "REJECTED") return steps;
+
+  // 4. 財務付款
+  if (status === "PAID" || status === "CLOSED") {
     steps.push({
       id: "paid",
       title: "財務付款完成",
@@ -66,11 +81,20 @@ function buildTimeline(request: Awaited<ReturnType<typeof getRequest>>): Timelin
       date: request!.paidAt?.toLocaleString("zh-TW"),
       status: "completed",
     });
+  } else {
+    steps.push({
+      id: "paid",
+      title: "財務付款",
+      status: status === "APPROVED" ? "current" : "pending",
+    });
   }
 
-  if (request!.status === "CLOSED") {
-    steps.push({ id: "closed", title: "案件結案", status: "completed" });
-  }
+  // 5. 結案
+  steps.push({
+    id: "closed",
+    title: "案件結案",
+    status: status === "CLOSED" ? "completed" : "pending",
+  });
 
   return steps;
 }
@@ -224,10 +248,10 @@ export default async function RequestDetailPage({
           </div>
 
           {/* Payment info (if available) */}
-          {(request.recipientName || request.bankName || request.bankAccount || (request.paymentMethod && request.status !== "PAID")) && (
+          {(request.recipientName || request.bankName || request.bankCode || request.branchName || request.branchCode || request.paymentInfoNote || (request.paymentMethod && request.status !== "PAID")) && (
             <div className="bg-white rounded-xl border border-gray-200 p-5">
               <h2 className="text-sm font-semibold text-gray-700 mb-4">收款資訊</h2>
-              <dl className="grid grid-cols-3 gap-4 text-sm">
+              <dl className="grid grid-cols-3 gap-x-6 gap-y-3 text-sm">
                 {request.paymentMethod && request.status !== "PAID" && (
                   <InfoRow icon={Banknote} label="希望付款方式" value={request.paymentMethod} />
                 )}
@@ -235,12 +259,24 @@ export default async function RequestDetailPage({
                   <InfoRow icon={User} label="收款人" value={request.recipientName} />
                 )}
                 {request.bankName && (
-                  <InfoRow icon={Building2} label="銀行" value={request.bankName} />
+                  <InfoRow icon={Building2} label="銀行名稱" value={request.bankName} />
                 )}
-                {request.bankAccount && (
-                  <InfoRow icon={CreditCard} label="帳號末五碼" value={request.bankAccount} />
+                {request.bankCode && (
+                  <InfoRow icon={Building2} label="銀行代碼" value={request.bankCode} />
+                )}
+                {request.branchName && (
+                  <InfoRow icon={Building2} label="分行名稱" value={request.branchName} />
+                )}
+                {request.branchCode && (
+                  <InfoRow icon={Building2} label="分行代碼" value={request.branchCode} />
                 )}
               </dl>
+              {request.paymentInfoNote && (
+                <div className="mt-3 pt-3 border-t border-gray-100 text-sm">
+                  <dt className="text-xs text-gray-400 mb-0.5">備註</dt>
+                  <dd className="text-gray-700">{request.paymentInfoNote}</dd>
+                </div>
+              )}
             </div>
           )}
         </div>

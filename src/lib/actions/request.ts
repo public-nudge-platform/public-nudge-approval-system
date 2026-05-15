@@ -23,7 +23,10 @@ type CreateRequestInput = {
   paymentMethod?: string;
   recipientName?: string;
   bankName?: string;
-  bankAccount?: string;
+  bankCode?: string;
+  branchName?: string;
+  branchCode?: string;
+  paymentInfoNote?: string;
   items: RequestItemInput[];
   submit: boolean;
 };
@@ -60,7 +63,10 @@ export async function createRequest(data: CreateRequestInput) {
       paymentMethod: data.paymentMethod || null,
       recipientName: data.recipientName || null,
       bankName: data.bankName || null,
-      bankAccount: data.bankAccount || null,
+      bankCode: data.bankCode || null,
+      branchName: data.branchName || null,
+      branchCode: data.branchCode || null,
+      paymentInfoNote: data.paymentInfoNote || null,
       amount: totalAmount,
       status: data.submit ? "PENDING" : "DRAFT",
       requestNumber: requestNumber ?? null,

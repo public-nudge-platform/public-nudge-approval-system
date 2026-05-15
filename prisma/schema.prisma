@@ -42,6 +42,7 @@ model User {
   passwordHash String
   role         UserRole         @default(APPLICANT)
   department   String?
+  isActive     Boolean          @default(true)
   createdAt    DateTime         @default(now())
   updatedAt    DateTime         @updatedAt
   requests     Request[]
@@ -69,9 +70,12 @@ model Request {
   paymentReference   String?
   paymentNote        String?
   paidBy             String?
-  bankAccount        String?
   bankName           String?
+  bankCode           String?
+  branchName         String?
+  branchCode         String?
   recipientName      String?
+  paymentInfoNote    String?
   submitterId    String
   submitter      User           @relation(fields: [submitterId], references: [id])
   items          RequestItem[]

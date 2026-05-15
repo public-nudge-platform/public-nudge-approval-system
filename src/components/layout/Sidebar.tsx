@@ -83,7 +83,8 @@ function NavSection({ title, items, pathname }: { title?: string; items: NavItem
 export function Sidebar({ role }: { role: UserRole }) {
   const pathname = usePathname();
   const isApprover = ["PRESIDENT", "FOUNDER_AGENT", "ADMIN"].includes(role);
-  const isFinance = ["FINANCE", "ADMIN"].includes(role);
+  const isFinance = ["FINANCE", "ADMIN", "PRESIDENT", "FOUNDER_AGENT"].includes(role);
+  const canManageUsers = ["ADMIN", "PRESIDENT", "FOUNDER_AGENT"].includes(role);
   const isAdmin = role === "ADMIN";
 
   return (
@@ -119,7 +120,8 @@ export function Sidebar({ role }: { role: UserRole }) {
         <NavSection items={mainNav} pathname={pathname} />
         {isApprover && <NavSection title="簽核" items={approverNav} pathname={pathname} />}
         {isFinance && <NavSection title="財務" items={financeNav} pathname={pathname} />}
-        {isAdmin && <NavSection title="管理" items={adminNav} pathname={pathname} />}
+        {canManageUsers && <NavSection title="管理" items={[{ href: "/admin/users", label: "使用者管理", icon: Users }]} pathname={pathname} />}
+        {isAdmin && <NavSection items={[{ href: "/admin/settings", label: "系統設定", icon: Settings }]} pathname={pathname} />}
       </nav>
     </aside>
   );

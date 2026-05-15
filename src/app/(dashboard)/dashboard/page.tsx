@@ -6,7 +6,7 @@ import { StatsCard } from "@/components/ui/StatsCard";
 import { StatusBadge, TypeBadge } from "@/components/ui/Badge";
 import {
   FileText, Clock, CheckCircle, XCircle,
-  AlertCircle, Banknote, TrendingUp, Users,
+  AlertCircle, Banknote, TrendingUp, Users, BadgeCheck,
 } from "lucide-react";
 import Link from "next/link";
 import { APPROVAL_ROLES, FINANCE_ROLES } from "@/lib/constants";
@@ -16,12 +16,13 @@ async function getDashboardStats(userId: string, role: UserRole) {
   const isApprover = APPROVAL_ROLES.includes(role) || role === "ADMIN";
   const isFinance = FINANCE_ROLES.includes(role);
 
-  const [myTotal, myPending, myApproved, myDraft, pendingApprovals, recentRequests] =
+  const [myTotal, myPending, myApproved, myDraft, myPaid, pendingApprovals, recentRequests] =
     await Promise.all([
       prisma.request.count({ where: { submitterId: userId } }),
       prisma.request.count({ where: { submitterId: userId, status: "PENDING" } }),
       prisma.request.count({ where: { submitterId: userId, status: "APPROVED" } }),
       prisma.request.count({ where: { submitterId: userId, status: "DRAFT" } }),
+      prisma.request.count({ where: { submitterId: userId, status: "PAID" } }),
       isApprover ? prisma.request.count({ where: { status: "PENDING" } }) : Promise.resolve(0),
       prisma.request.findMany({
         where: role === "ADMIN" || isApprover ? {} : { submitterId: userId },
@@ -37,7 +38,7 @@ async function getDashboardStats(userId: string, role: UserRole) {
     ? await prisma.request.count({ where: { status: "APPROVED" } })
     : 0;
 
-  return { myTotal, myPending, myApproved, myDraft, pendingApprovals, awaitingPayment, recentRequests };
+  return { myTotal, myPending, myApproved, myDraft, myPaid, pendingApprovals, awaitingPayment, recentRequests };
 }
 
 export default async function DashboardPage() {
@@ -60,7 +61,8 @@ export default async function DashboardPage() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatsCard label="我的申請" value={stats.myTotal} icon={FileText} color="slate" href="/requests" />
         <StatsCard label="待審核" value={stats.myPending} icon={Clock} color="amber" href="/requests?status=PENDING" />
-        <StatsCard label="已核准" value={stats.myApproved} icon={CheckCircle} color="green" href="/requests?status=APPROVED" />
+        <StatsCard label="已核准，待付款" value={stats.myApproved} icon={CheckCircle} color="green" href="/requests?status=APPROVED" />
+        <StatsCard label="已付款" value={stats.myPaid} icon={BadgeCheck} color="blue" href="/requests?status=PAID" />
         <StatsCard label="草稿" value={stats.myDraft} icon={AlertCircle} color="slate" href="/requests?status=DRAFT" />
         {isApprover && (
           <StatsCard label="待我簽核" value={stats.pendingApprovals} icon={Users} color="blue" href="/approvals" />
