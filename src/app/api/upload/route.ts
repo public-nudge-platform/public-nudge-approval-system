@@ -6,6 +6,8 @@ import { logAuditAction } from "@/lib/audit";
 
 const MAX_SIZE = 10 * 1024 * 1024;
 const ALLOWED = new Set(["image/jpeg", "image/png", "image/gif", "image/webp", "application/pdf"]);
+const REGULAR_ATTACHMENT_ALLOWED_STATUSES = new Set(["DRAFT", "WITHDRAWN", "RETURNED"]);
+const SETTLEMENT_ATTACHMENT_ALLOWED_STATUSES = new Set(["PENDING_SETTLEMENT", "OFFSET_RETURNED"]);
 
 export async function POST(req: NextRequest) {
   const session = await auth();
@@ -20,11 +22,16 @@ export async function POST(req: NextRequest) {
   if (file.size > MAX_SIZE) return NextResponse.json({ error: "檔案超過 10MB" }, { status: 400 });
   if (!ALLOWED.has(file.type)) return NextResponse.json({ error: "僅支援圖片與 PDF" }, { status: 400 });
 
-  const request = await prisma.request.findUnique({ where: { id: requestId }, select: { submitterId: true } });
+  const request = await prisma.request.findUnique({ where: { id: requestId }, select: { submitterId: true, status: true } });
   if (!request) return NextResponse.json({ error: "找不到申請單" }, { status: 404 });
 
   if (request.submitterId !== session.user.id && session.user.role !== "ADMIN") {
     return NextResponse.json({ error: "無上傳權限" }, { status: 403 });
+  }
+
+  const allowedStatuses = isSettlement ? SETTLEMENT_ATTACHMENT_ALLOWED_STATUSES : REGULAR_ATTACHMENT_ALLOWED_STATUSES;
+  if (!allowedStatuses.has(request.status)) {
+    return NextResponse.json({ error: "此狀態不可上傳附件" }, { status: 400 });
   }
 
   const buffer = Buffer.from(await file.arrayBuffer());

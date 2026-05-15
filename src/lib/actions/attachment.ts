@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { logAuditAction } from "@/lib/audit";
 
-const LOCKED = new Set(["APPROVED", "PAID", "CLOSED"]);
+const LOCKED = new Set(["PENDING", "APPROVED", "REJECTED", "PAID", "PENDING_SETTLEMENT", "OFFSET_SUBMITTED", "OFFSET_RETURNED", "CLOSED"]);
 
 export async function deleteAttachment(attachmentId: string) {
   const session = await auth();

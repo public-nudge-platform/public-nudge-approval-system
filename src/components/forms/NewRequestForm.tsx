@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { PlusCircle, Trash2, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { UploadZone } from "@/components/ui/UploadZone";
-import { createRequest } from "@/lib/actions/request";
+import { createRequest, updateRequest } from "@/lib/actions/request";
 import type { RequestType } from "@prisma/client";
 import { useRouter } from "next/navigation";
 
@@ -18,6 +18,29 @@ type Item = {
   note: string;
 };
 
+type InitialRequest = {
+  id: string;
+  type: RequestType;
+  title: string;
+  projectId: string | null;
+  purpose: string | null;
+  neededBy: Date | null;
+  paymentMethod: string | null;
+  recipientName: string | null;
+  bankName: string | null;
+  bankCode: string | null;
+  branchName: string | null;
+  branchCode: string | null;
+  paymentInfoNote: string | null;
+  items: {
+    id: string;
+    description: string;
+    quantity: number;
+    unitPrice: number | { toString(): string };
+    note: string | null;
+  }[];
+};
+
 function newItem(): Item {
   return { id: crypto.randomUUID(), description: "", quantity: 1, unitPrice: 0, note: "" };
 }
@@ -26,20 +49,29 @@ function formatNumber(n: number) {
   return n.toLocaleString("zh-TW");
 }
 
-export function NewRequestForm({ projects = [] }: { projects?: ActiveProject[] }) {
-  const [type, setType] = useState<RequestType>("REIMBURSEMENT");
-  const [title, setTitle] = useState("");
-  const [projectId, setProjectId] = useState("");
-  const [purpose, setPurpose] = useState("");
-  const [neededBy, setNeededBy] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState("");
-  const [recipientName, setRecipientName] = useState("");
-  const [bankName, setBankName] = useState("");
-  const [bankCode, setBankCode] = useState("");
-  const [branchName, setBranchName] = useState("");
-  const [branchCode, setBranchCode] = useState("");
-  const [paymentInfoNote, setPaymentInfoNote] = useState("");
-  const [items, setItems] = useState<Item[]>([newItem()]);
+export function NewRequestForm({ projects = [], initialRequest }: { projects?: ActiveProject[]; initialRequest?: InitialRequest }) {
+  const isEdit = !!initialRequest;
+  const [type, setType] = useState<RequestType>(initialRequest?.type ?? "REIMBURSEMENT");
+  const [title, setTitle] = useState(initialRequest?.title ?? "");
+  const [projectId, setProjectId] = useState(initialRequest?.projectId ?? "");
+  const [purpose, setPurpose] = useState(initialRequest?.purpose ?? "");
+  const [neededBy, setNeededBy] = useState(initialRequest?.neededBy ? initialRequest.neededBy.toISOString().slice(0, 10) : "");
+  const [paymentMethod, setPaymentMethod] = useState(initialRequest?.paymentMethod ?? "");
+  const [recipientName, setRecipientName] = useState(initialRequest?.recipientName ?? "");
+  const [bankName, setBankName] = useState(initialRequest?.bankName ?? "");
+  const [bankCode, setBankCode] = useState(initialRequest?.bankCode ?? "");
+  const [branchName, setBranchName] = useState(initialRequest?.branchName ?? "");
+  const [branchCode, setBranchCode] = useState(initialRequest?.branchCode ?? "");
+  const [paymentInfoNote, setPaymentInfoNote] = useState(initialRequest?.paymentInfoNote ?? "");
+  const [items, setItems] = useState<Item[]>(
+    initialRequest?.items.map((item) => ({
+      id: item.id,
+      description: item.description,
+      quantity: item.quantity,
+      unitPrice: Number(item.unitPrice),
+      note: item.note ?? "",
+    })) ?? [newItem()]
+  );
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -65,7 +97,7 @@ export function NewRequestForm({ projects = [] }: { projects?: ActiveProject[] }
     if (items.some((i) => i.quantity <= 0 || i.unitPrice <= 0)) { setError("品項數量與單價必須大於 0"); return; }
 
     startTransition(async () => {
-      const result = await createRequest({
+      const payload = {
         type,
         title: title.trim(),
         projectId: projectId || undefined,
@@ -85,7 +117,11 @@ export function NewRequestForm({ projects = [] }: { projects?: ActiveProject[] }
           note: i.note.trim() || undefined,
         })),
         submit,
-      });
+      };
+
+      const result = isEdit
+        ? await updateRequest(initialRequest!.id, payload)
+        : await createRequest(payload);
 
       if (!result || "error" in result) { setError(("error" in result ? result.error : null) ?? "建立失敗"); return; }
 
@@ -362,7 +398,7 @@ export function NewRequestForm({ projects = [] }: { projects?: ActiveProject[] }
           loading={isPending}
           disabled={isPending}
         >
-          儲存草稿
+          {isEdit ? "儲存變更" : "儲存草稿"}
         </Button>
         <Button
           variant="primary"
@@ -370,7 +406,7 @@ export function NewRequestForm({ projects = [] }: { projects?: ActiveProject[] }
           loading={isPending}
           disabled={isPending}
         >
-          送出申請
+          {isEdit ? "重新送出" : "送出申請"}
         </Button>
         <span className="text-xs text-gray-400">送出後將通知理事長審核</span>
       </div>

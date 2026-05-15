@@ -47,7 +47,7 @@ export function UploadZone({ requestId, isSettlement, onFilesChange }: Props) {
       setEntries((prev) => prev.map((e) => e.id === entry.id ? { ...e, status: "done" } : e));
       router.refresh();
     }
-  }, [requestId, router]);
+  }, [isSettlement, requestId, router]);
 
   function addFiles(fileList: FileList) {
     const newEntries: FileEntry[] = [];

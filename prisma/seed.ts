@@ -65,7 +65,7 @@ async function main() {
   async function seed(data: {
     requestNumber: string;
     type: "REIMBURSEMENT" | "PREPAID";
-    status: "DRAFT" | "PENDING" | "APPROVED" | "REJECTED" | "RETURNED" | "PAID" | "CLOSED";
+    status: "DRAFT" | "WITHDRAWN" | "PENDING" | "APPROVED" | "REJECTED" | "RETURNED" | "PAID" | "CLOSED";
     title: string;
     projectId?: string;
     purpose?: string;

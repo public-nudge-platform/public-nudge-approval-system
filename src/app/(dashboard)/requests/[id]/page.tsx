@@ -10,15 +10,17 @@ import { ApprovalActionForm } from "@/components/forms/ApprovalActionForm";
 import { MarkAsPaidForm } from "@/components/forms/MarkAsPaidForm";
 import { SettlementForm } from "@/components/forms/SettlementForm";
 import { SettlementReviewForm } from "@/components/forms/SettlementReviewForm";
+import { FinanceReturnForm, WithdrawRequestForm } from "@/components/forms/RequestWorkflowForms";
 import type { TimelineStep } from "@/components/ui/Timeline";
 import type { UserRole } from "@prisma/client";
 import { APPROVAL_ROLES, FINANCE_ROLES } from "@/lib/constants";
 import Link from "next/link";
-import { ChevronLeft, Calendar, User, Building2, Banknote, FolderOpen, Hash, Receipt, Info } from "lucide-react";
+import { ChevronLeft, Calendar, User, Building2, Banknote, FolderOpen, Hash, Receipt, Info, Pencil } from "lucide-react";
 import { UploadZone } from "@/components/ui/UploadZone";
 
 const OFFSET_STATUSES = ["PENDING_SETTLEMENT", "OFFSET_SUBMITTED", "OFFSET_RETURNED", "CLOSED"] as const;
 const PAID_STATUSES = ["PAID", "PENDING_SETTLEMENT", "OFFSET_SUBMITTED", "OFFSET_RETURNED", "CLOSED"] as const;
+const EDITABLE_STATUSES = ["DRAFT", "WITHDRAWN", "RETURNED"] as const;
 
 function buildTimeline(request: Awaited<ReturnType<typeof getRequest>>): TimelineStep[] {
   const status = request!.status;
@@ -70,6 +72,12 @@ function buildTimeline(request: Awaited<ReturnType<typeof getRequest>>): Timelin
     steps.push({ id: "approval", title: "理事長審核", status: "pending" });
   }
 
+  if (status === "WITHDRAWN") {
+    steps.push({ id: "withdrawn", title: "申請人抽回", status: "returned" });
+    return steps;
+  }
+
+  if (status === "RETURNED") return steps;
   if (status === "REJECTED") return steps;
 
   const isPaid = (PAID_STATUSES as readonly string[]).includes(status);
@@ -177,10 +185,14 @@ export default async function RequestDetailPage({
     ? request.approvalSteps.find((s) => s.records.length === 0)
     : null;
   const canApprove = isApprover && !!pendingStep;
-  const canMarkPaid = isFinance && request.status === "APPROVED";
+  const canMarkPaid = ["FINANCE", "ADMIN"].includes(role) && request.status === "APPROVED";
+  const canFinanceReturn = ["FINANCE", "ADMIN"].includes(role) && request.status === "APPROVED" && !request.paidAt;
 
   const isOwner = request.submitterId === userId;
-  const lockedStatuses = ["APPROVED", "PAID", "PENDING_SETTLEMENT", "OFFSET_SUBMITTED", "OFFSET_RETURNED", "CLOSED"] as const;
+  const hasApprovalRecord = request.approvalSteps.some((step) => step.records.length > 0);
+  const canWithdraw = isOwner && request.status === "PENDING" && !hasApprovalRecord;
+  const canEdit = isOwner && (EDITABLE_STATUSES as readonly string[]).includes(request.status);
+  const lockedStatuses = ["PENDING", "APPROVED", "REJECTED", "PAID", "PENDING_SETTLEMENT", "OFFSET_SUBMITTED", "OFFSET_RETURNED", "CLOSED"] as const;
   const isLocked = (lockedStatuses as readonly string[]).includes(request.status);
   const canUpload = (isOwner || role === "ADMIN") && !isLocked;
   const canDelete = (isOwner || role === "ADMIN") && !isLocked;
@@ -440,6 +452,22 @@ export default async function RequestDetailPage({
         {/* Right column */}
         <div className="space-y-5">
           {/* Approval actions */}
+          {(canEdit || canWithdraw) && (
+            <div className="bg-white rounded-xl border border-slate-200 p-5 ring-1 ring-slate-100 space-y-3">
+              {canEdit && (
+                <Link
+                  href={`/requests/${request.id}/edit`}
+                  className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700"
+                >
+                  <Pencil size={13} />
+                  編輯申請單
+                </Link>
+              )}
+              {canWithdraw && <WithdrawRequestForm requestId={request.id} />}
+            </div>
+          )}
+
+          {/* Approval actions */}
           {canApprove && (
             <div className="bg-white rounded-xl border border-blue-200 p-5 ring-1 ring-blue-100">
               <ApprovalActionForm requestId={request.id} stepId={pendingStep!.id} />
@@ -448,8 +476,13 @@ export default async function RequestDetailPage({
 
           {/* Payment action */}
           {canMarkPaid && (
-            <div className="bg-white rounded-xl border border-green-200 p-5 ring-1 ring-green-100">
+            <div className="bg-white rounded-xl border border-green-200 p-5 ring-1 ring-green-100 space-y-4">
               <MarkAsPaidForm requestId={request.id} defaultPaymentMethod={request.paymentMethod ?? undefined} />
+              {canFinanceReturn && (
+                <div className="border-t border-green-100 pt-4">
+                  <FinanceReturnForm requestId={request.id} />
+                </div>
+              )}
             </div>
           )}
 

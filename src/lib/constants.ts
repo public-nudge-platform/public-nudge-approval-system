@@ -2,6 +2,7 @@ import type { AuditAction, ProjectStatus, RequestStatus, RequestType, UserRole }
 
 export const REQUEST_STATUS_LABEL: Record<RequestStatus, string> = {
   DRAFT:              "草稿",
+  WITHDRAWN:          "已抽單",
   PENDING:            "待審核",
   APPROVED:           "已核准，待付款",
   REJECTED:           "已拒絕",
@@ -15,6 +16,7 @@ export const REQUEST_STATUS_LABEL: Record<RequestStatus, string> = {
 
 export const REQUEST_STATUS_COLOR: Record<RequestStatus, string> = {
   DRAFT:              "bg-gray-100 text-gray-600",
+  WITHDRAWN:          "bg-slate-100 text-slate-700 ring-1 ring-slate-200",
   PENDING:            "bg-amber-50 text-amber-700 ring-1 ring-amber-200",
   APPROVED:           "bg-green-50 text-green-700 ring-1 ring-green-200",
   REJECTED:           "bg-red-50 text-red-700 ring-1 ring-red-200",
@@ -68,7 +70,9 @@ export const PROJECT_VIEW_ROLES: UserRole[] = ["ADMIN", "PRESIDENT", "FOUNDER_AG
 export const AUDIT_ACTION_LABEL: Record<AuditAction, string> = {
   USER_LOGIN:            "使用者登入",
   REQUEST_CREATED:       "新增請款單",
+  REQUEST_UPDATED:       "編輯請款單",
   REQUEST_SUBMITTED:     "送出請款單",
+  REQUEST_WITHDRAWN:     "抽回請款單",
   REQUEST_APPROVED:      "核准請款單",
   REQUEST_RETURNED:      "退回請款單",
   REQUEST_REJECTED:      "拒絕請款單",
@@ -91,7 +95,9 @@ export const AUDIT_ACTION_LABEL: Record<AuditAction, string> = {
 export const AUDIT_ACTION_COLOR: Record<AuditAction, string> = {
   USER_LOGIN:            "bg-gray-100 text-gray-600",
   REQUEST_CREATED:       "bg-blue-50 text-blue-700",
+  REQUEST_UPDATED:       "bg-sky-50 text-sky-700",
   REQUEST_SUBMITTED:     "bg-amber-50 text-amber-700",
+  REQUEST_WITHDRAWN:     "bg-slate-100 text-slate-700",
   REQUEST_APPROVED:      "bg-green-50 text-green-700",
   REQUEST_RETURNED:      "bg-orange-50 text-orange-700",
   REQUEST_REJECTED:      "bg-red-50 text-red-700",

@@ -24,6 +24,7 @@ type Notification = {
 const TYPE_ICON: Record<NotificationType, React.ComponentType<{ size?: number; className?: string }>> = {
   REQUEST_SUBMITTED: Send,
   APPROVAL_ASSIGNED: FileText,
+  REQUEST_WITHDRAWN: RotateCcw,
   REQUEST_APPROVED: CheckCircle2,
   REQUEST_RETURNED: RotateCcw,
   REQUEST_REJECTED: XCircle,
@@ -37,6 +38,7 @@ const TYPE_ICON: Record<NotificationType, React.ComponentType<{ size?: number; c
 const TYPE_COLOR: Record<NotificationType, string> = {
   REQUEST_SUBMITTED: "text-blue-500 bg-blue-50",
   APPROVAL_ASSIGNED: "text-purple-500 bg-purple-50",
+  REQUEST_WITHDRAWN: "text-slate-500 bg-slate-100",
   REQUEST_APPROVED: "text-green-500 bg-green-50",
   REQUEST_RETURNED: "text-amber-500 bg-amber-50",
   REQUEST_REJECTED: "text-red-500 bg-red-50",
