@@ -29,6 +29,9 @@ const TYPE_ICON: Record<NotificationType, React.ComponentType<{ size?: number; c
   REQUEST_REJECTED: XCircle,
   PAYMENT_COMPLETED: Banknote,
   REIMBURSEMENT_REQUIRED: Receipt,
+  SETTLEMENT_SUBMITTED: Receipt,
+  SETTLEMENT_RETURNED: RotateCcw,
+  SETTLEMENT_APPROVED: CheckCircle2,
 };
 
 const TYPE_COLOR: Record<NotificationType, string> = {
@@ -39,6 +42,9 @@ const TYPE_COLOR: Record<NotificationType, string> = {
   REQUEST_REJECTED: "text-red-500 bg-red-50",
   PAYMENT_COMPLETED: "text-emerald-500 bg-emerald-50",
   REIMBURSEMENT_REQUIRED: "text-orange-500 bg-orange-50",
+  SETTLEMENT_SUBMITTED: "text-indigo-500 bg-indigo-50",
+  SETTLEMENT_RETURNED: "text-amber-500 bg-amber-50",
+  SETTLEMENT_APPROVED: "text-purple-500 bg-purple-50",
 };
 
 function timeAgo(date: Date) {

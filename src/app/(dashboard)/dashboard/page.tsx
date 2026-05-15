@@ -6,7 +6,7 @@ import { StatsCard } from "@/components/ui/StatsCard";
 import { StatusBadge, TypeBadge } from "@/components/ui/Badge";
 import {
   FileText, Clock, CheckCircle, XCircle,
-  AlertCircle, Banknote, TrendingUp, Users, BadgeCheck, Bell,
+  AlertCircle, Banknote, TrendingUp, Users, BadgeCheck, Bell, Receipt,
 } from "lucide-react";
 import Link from "next/link";
 import { APPROVAL_ROLES, FINANCE_ROLES } from "@/lib/constants";
@@ -16,13 +16,14 @@ async function getDashboardStats(userId: string, role: UserRole) {
   const isApprover = APPROVAL_ROLES.includes(role) || role === "ADMIN";
   const isFinance = FINANCE_ROLES.includes(role);
 
-  const [myTotal, myPending, myApproved, myDraft, myPaid, pendingApprovals, recentRequests] =
+  const [myTotal, myPending, myApproved, myDraft, myPaid, myPendingSettlement, pendingApprovals, recentRequests] =
     await Promise.all([
       prisma.request.count({ where: { submitterId: userId } }),
       prisma.request.count({ where: { submitterId: userId, status: "PENDING" } }),
       prisma.request.count({ where: { submitterId: userId, status: "APPROVED" } }),
       prisma.request.count({ where: { submitterId: userId, status: "DRAFT" } }),
       prisma.request.count({ where: { submitterId: userId, status: "PAID" } }),
+      prisma.request.count({ where: { submitterId: userId, status: "PENDING_SETTLEMENT" } }),
       isApprover ? prisma.request.count({ where: { status: "PENDING" } }) : Promise.resolve(0),
       prisma.request.findMany({
         where: role === "ADMIN" || isApprover ? {} : { submitterId: userId },
@@ -34,11 +35,14 @@ async function getDashboardStats(userId: string, role: UserRole) {
       }),
     ]);
 
-  const awaitingPayment = isFinance
-    ? await prisma.request.count({ where: { status: "APPROVED" } })
-    : 0;
+  const [awaitingPayment, awaitingSettlement] = isFinance
+    ? await Promise.all([
+        prisma.request.count({ where: { status: "APPROVED" } }),
+        prisma.request.count({ where: { status: "PENDING_SETTLEMENT", reimbursementSubmittedAt: { not: null } } }),
+      ])
+    : [0, 0];
 
-  return { myTotal, myPending, myApproved, myDraft, myPaid, pendingApprovals, awaitingPayment, recentRequests };
+  return { myTotal, myPending, myApproved, myDraft, myPaid, myPendingSettlement, pendingApprovals, awaitingPayment, awaitingSettlement, recentRequests };
 }
 
 export default async function DashboardPage() {
@@ -71,11 +75,17 @@ export default async function DashboardPage() {
         <StatsCard label="已核准，待付款" value={stats.myApproved} icon={CheckCircle} color="green" href="/requests?status=APPROVED" />
         <StatsCard label="已付款" value={stats.myPaid} icon={BadgeCheck} color="blue" href="/requests?status=PAID" />
         <StatsCard label="草稿" value={stats.myDraft} icon={AlertCircle} color="slate" href="/requests?status=DRAFT" />
+        {stats.myPendingSettlement > 0 && (
+          <StatsCard label="待核銷" value={stats.myPendingSettlement} icon={Receipt} color="purple" href="/requests?status=PENDING_SETTLEMENT" />
+        )}
         {isApprover && (
           <StatsCard label="待我簽核" value={stats.pendingApprovals} icon={Users} color="blue" href="/approvals" />
         )}
         {isFinance && (
           <StatsCard label="待付款" value={stats.awaitingPayment} icon={Banknote} color="purple" href="/finance" />
+        )}
+        {isFinance && stats.awaitingSettlement > 0 && (
+          <StatsCard label="待核銷審核" value={stats.awaitingSettlement} icon={Receipt} color="blue" href="/finance" />
         )}
       </div>
 

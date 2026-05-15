@@ -4,7 +4,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { StatusBadge, TypeBadge } from "@/components/ui/Badge";
 import Link from "next/link";
-import { Banknote, Clock, CheckCircle2 } from "lucide-react";
+import { Banknote, Clock, CheckCircle2, Receipt, AlertTriangle } from "lucide-react";
 import type { UserRole } from "@prisma/client";
 import { redirect } from "next/navigation";
 import { FINANCE_ROLES } from "@/lib/constants";
@@ -17,19 +17,27 @@ export default async function FinancePage() {
     redirect("/dashboard");
   }
 
-  const [pendingPayment, paidRequests] = await Promise.all([
+  const [pendingPayment, pendingSettlement, paidRequests] = await Promise.all([
     prisma.request.findMany({
       where: { status: "APPROVED" },
       orderBy: { updatedAt: "asc" },
       include: { submitter: { select: { name: true } } },
     }),
     prisma.request.findMany({
-      where: { status: "PAID" },
+      where: { status: "PENDING_SETTLEMENT" },
+      orderBy: { updatedAt: "asc" },
+      include: { submitter: { select: { name: true } } },
+    }),
+    prisma.request.findMany({
+      where: { status: { in: ["PAID", "CLOSED"] } },
       orderBy: { paidAt: "desc" },
       take: 50,
       include: { submitter: { select: { name: true } } },
     }),
   ]);
+
+  const awaitingSettlementReview = pendingSettlement.filter((r) => r.reimbursementSubmittedAt !== null);
+  const awaitingApplicantSettlement = pendingSettlement.filter((r) => r.reimbursementSubmittedAt === null);
 
   return (
     <div className="space-y-6">
@@ -71,9 +79,7 @@ export default async function FinancePage() {
                     )}
                   </div>
                   <p className="font-semibold text-gray-900 mt-1">{req.title}</p>
-                  <p className="text-sm text-gray-500 mt-0.5">
-                    {req.submitter.name}
-                  </p>
+                  <p className="text-sm text-gray-500 mt-0.5">{req.submitter.name}</p>
                   {req.neededBy && (
                     <p className="text-xs text-amber-600 mt-0.5">
                       需款期限：{req.neededBy.toLocaleDateString("zh-TW")}
@@ -93,11 +99,107 @@ export default async function FinancePage() {
         )}
       </section>
 
+      {/* Pending settlement */}
+      <section className="space-y-3">
+        <div className="flex items-center gap-2">
+          <Receipt size={15} className="text-indigo-500" />
+          <h2 className="text-sm font-semibold text-gray-700">待核銷</h2>
+          {pendingSettlement.length > 0 && (
+            <span className="bg-indigo-100 text-indigo-700 text-xs font-semibold px-2 py-0.5 rounded-full">
+              {pendingSettlement.length}
+            </span>
+          )}
+        </div>
+
+        {pendingSettlement.length === 0 ? (
+          <div className="bg-white rounded-xl border border-gray-200 py-10 text-center">
+            <CheckCircle2 size={28} className="mx-auto text-green-300 mb-2" />
+            <p className="text-gray-500 font-medium text-sm">目前沒有待核銷項目</p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {awaitingSettlementReview.length > 0 && (
+              <>
+                <p className="text-xs text-indigo-700 font-medium flex items-center gap-1">
+                  <AlertTriangle size={11} />
+                  以下核銷單已由申請人送出，待財務審核
+                </p>
+                {awaitingSettlementReview.map((req) => (
+                  <Link
+                    key={req.id}
+                    href={`/requests/${req.id}`}
+                    className="flex items-center gap-4 bg-white rounded-xl border border-indigo-200 px-5 py-4 hover:border-indigo-400 hover:shadow-sm transition-all"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <TypeBadge type={req.type} />
+                        {req.requestNumber && (
+                          <span className="font-mono text-xs text-gray-400">{req.requestNumber}</span>
+                        )}
+                        <span className="text-xs text-indigo-600 font-medium bg-indigo-50 px-1.5 py-0.5 rounded">待審核</span>
+                      </div>
+                      <p className="font-semibold text-gray-900 mt-1">{req.title}</p>
+                      <p className="text-sm text-gray-500 mt-0.5">{req.submitter.name}</p>
+                      {req.reimbursementSubmittedAt && (
+                        <p className="text-xs text-indigo-600 mt-0.5">
+                          核銷送出：{req.reimbursementSubmittedAt.toLocaleDateString("zh-TW")}
+                        </p>
+                      )}
+                    </div>
+                    <div className="text-right flex-shrink-0">
+                      <p className="text-lg font-bold text-gray-900 tabular-nums">
+                        {Number(req.amount).toLocaleString()} 元
+                      </p>
+                      {req.actualAmount && (
+                        <p className="text-xs text-gray-500 mt-0.5">
+                          實際：{Number(req.actualAmount).toLocaleString()} 元
+                        </p>
+                      )}
+                      <StatusBadge status={req.status} />
+                    </div>
+                  </Link>
+                ))}
+              </>
+            )}
+
+            {awaitingApplicantSettlement.length > 0 && (
+              <>
+                <p className="text-xs text-gray-500 font-medium mt-2">申請人尚未送出核銷</p>
+                {awaitingApplicantSettlement.map((req) => (
+                  <Link
+                    key={req.id}
+                    href={`/requests/${req.id}`}
+                    className="flex items-center gap-4 bg-white rounded-xl border border-gray-200 px-5 py-4 hover:border-gray-400 hover:shadow-sm transition-all opacity-75"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <TypeBadge type={req.type} />
+                        {req.requestNumber && (
+                          <span className="font-mono text-xs text-gray-400">{req.requestNumber}</span>
+                        )}
+                      </div>
+                      <p className="font-semibold text-gray-900 mt-1">{req.title}</p>
+                      <p className="text-sm text-gray-500 mt-0.5">{req.submitter.name}</p>
+                    </div>
+                    <div className="text-right flex-shrink-0">
+                      <p className="text-lg font-bold text-gray-900 tabular-nums">
+                        {Number(req.amount).toLocaleString()} 元
+                      </p>
+                      <StatusBadge status={req.status} />
+                    </div>
+                  </Link>
+                ))}
+              </>
+            )}
+          </div>
+        )}
+      </section>
+
       {/* Paid records */}
       <section className="space-y-3">
         <div className="flex items-center gap-2">
           <CheckCircle2 size={15} className="text-green-500" />
-          <h2 className="text-sm font-semibold text-gray-700">已付款紀錄</h2>
+          <h2 className="text-sm font-semibold text-gray-700">已付款／已結案紀錄</h2>
           {paidRequests.length > 0 && (
             <span className="bg-gray-100 text-gray-600 text-xs font-semibold px-2 py-0.5 rounded-full">
               {paidRequests.length}
@@ -133,6 +235,7 @@ export default async function FinancePage() {
                           <p className="font-mono text-xs text-gray-400">{req.requestNumber}</p>
                         )}
                       </Link>
+                      <StatusBadge status={req.status} />
                     </td>
                     <td className="px-4 py-3 text-gray-600">{req.submitter.name}</td>
                     <td className="px-4 py-3 text-gray-600">{req.paymentMethod || "—"}</td>

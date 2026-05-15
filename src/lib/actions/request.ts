@@ -244,10 +244,12 @@ export async function markAsPaid(requestId: string, input: MarkAsPaidInput) {
   if (!request) return { error: "找不到申請單" };
   if (request.status !== "APPROVED") return { error: "只能標記已核准的申請單" };
 
+  const newStatus = request.type === "PREPAID" ? "PENDING_SETTLEMENT" : "PAID";
+
   await prisma.request.update({
     where: { id: requestId },
     data: {
-      status: "PAID",
+      status: newStatus,
       paymentMethod: input.paymentMethod,
       paymentReference: input.paymentReference || null,
       paymentNote: input.paymentNote || null,
@@ -266,8 +268,94 @@ export async function markAsPaid(requestId: string, input: MarkAsPaidInput) {
   if (request.type === "PREPAID") {
     await createNotificationsForUsers([request.submitterId], {
       title: "預付款待核銷",
-      message: `您的預付請款「${request.title}」已付款，請提交核銷單據。`,
+      message: `您的預付請款「${request.title}」已付款，請上傳核銷單據並填寫實際支出金額。`,
       type: "REIMBURSEMENT_REQUIRED",
+      relatedRequestId: requestId,
+    });
+  }
+
+  revalidatePath(`/requests/${requestId}`);
+  revalidatePath("/requests");
+  revalidatePath("/finance");
+  revalidatePath("/dashboard");
+}
+
+export async function submitSettlement(requestId: string, data: { actualAmount: number; reimbursementNote?: string }) {
+  const session = await auth();
+  if (!session) return { error: "未登入" };
+
+  const request = await prisma.request.findUnique({
+    where: { id: requestId, submitterId: session.user.id },
+    select: { status: true, title: true, type: true },
+  });
+  if (!request) return { error: "找不到申請單" };
+  if (request.type !== "PREPAID") return { error: "只有預付請款需要核銷" };
+  if (request.status !== "PENDING_SETTLEMENT") return { error: "此申請單不在待核銷狀態" };
+  if (!data.actualAmount || data.actualAmount <= 0) return { error: "實際支出金額必須大於 0" };
+
+  await prisma.request.update({
+    where: { id: requestId },
+    data: {
+      actualAmount: data.actualAmount,
+      reimbursementNote: data.reimbursementNote || null,
+      reimbursementSubmittedAt: new Date(),
+    },
+  });
+
+  await createNotificationsForRoles(["FINANCE", "PRESIDENT", "FOUNDER_AGENT"], {
+    title: "核銷單據待審核",
+    message: `${session.user.name} 已送出「${request.title}」的核銷單據，請前往審核。`,
+    type: "SETTLEMENT_SUBMITTED",
+    relatedRequestId: requestId,
+  });
+
+  revalidatePath(`/requests/${requestId}`);
+  revalidatePath("/requests");
+  revalidatePath("/finance");
+  revalidatePath("/dashboard");
+}
+
+export async function reviewSettlement(requestId: string, action: "APPROVED" | "RETURNED", comment?: string) {
+  const session = await auth();
+  if (!session) return { error: "未登入" };
+
+  const role = session.user.role;
+  if (!["FINANCE", "PRESIDENT", "FOUNDER_AGENT", "ADMIN"].includes(role)) {
+    return { error: "無核銷審核權限" };
+  }
+
+  const request = await prisma.request.findUnique({
+    where: { id: requestId },
+    select: { status: true, title: true, submitterId: true, type: true, reimbursementSubmittedAt: true },
+  });
+  if (!request) return { error: "找不到申請單" };
+  if (request.type !== "PREPAID") return { error: "只有預付請款需要核銷審核" };
+  if (request.status !== "PENDING_SETTLEMENT") return { error: "此申請單不在待核銷狀態" };
+  if (!request.reimbursementSubmittedAt) return { error: "申請人尚未送出核銷" };
+
+  if (action === "APPROVED") {
+    await prisma.request.update({
+      where: { id: requestId },
+      data: { status: "CLOSED" },
+    });
+
+    await createNotificationsForUsers([request.submitterId], {
+      title: "核銷已確認完成",
+      message: `您的預付請款「${request.title}」核銷已確認完成，案件結案。`,
+      type: "SETTLEMENT_APPROVED",
+      relatedRequestId: requestId,
+    });
+  } else {
+    await prisma.request.update({
+      where: { id: requestId },
+      data: { reimbursementSubmittedAt: null },
+    });
+
+    const commentSuffix = comment ? `。備註：${comment}` : "";
+    await createNotificationsForUsers([request.submitterId], {
+      title: "核銷退回補件",
+      message: `您的預付請款「${request.title}」核銷被退回，請補充單據後重新送出${commentSuffix}。`,
+      type: "SETTLEMENT_RETURNED",
       relatedRequestId: requestId,
     });
   }

@@ -8,18 +8,19 @@ import { Timeline } from "@/components/ui/Timeline";
 import { AttachmentGrid } from "@/components/ui/AttachmentViewer";
 import { ApprovalActionForm } from "@/components/forms/ApprovalActionForm";
 import { MarkAsPaidForm } from "@/components/forms/MarkAsPaidForm";
+import { SettlementForm } from "@/components/forms/SettlementForm";
+import { SettlementReviewForm } from "@/components/forms/SettlementReviewForm";
 import type { TimelineStep } from "@/components/ui/Timeline";
 import type { UserRole } from "@prisma/client";
 import { APPROVAL_ROLES, FINANCE_ROLES } from "@/lib/constants";
 import Link from "next/link";
-import { ChevronLeft, Calendar, User, Building2, Banknote, FolderOpen, Hash } from "lucide-react";
+import { ChevronLeft, Calendar, User, Building2, Banknote, FolderOpen, Hash, Receipt, Info } from "lucide-react";
 import { UploadZone } from "@/components/ui/UploadZone";
 
 function buildTimeline(request: Awaited<ReturnType<typeof getRequest>>): TimelineStep[] {
   const status = request!.status;
   const steps: TimelineStep[] = [];
 
-  // 1. 申請人建立
   steps.push({
     id: "created",
     title: "申請人建立",
@@ -28,7 +29,6 @@ function buildTimeline(request: Awaited<ReturnType<typeof getRequest>>): Timelin
     status: "completed",
   });
 
-  // 2. 送出申請
   if (request!.submittedAt) {
     steps.push({
       id: "submitted",
@@ -41,7 +41,6 @@ function buildTimeline(request: Awaited<ReturnType<typeof getRequest>>): Timelin
     steps.push({ id: "submitted", title: "送出申請", status: "pending" });
   }
 
-  // 3. 簽核步驟
   for (const step of request!.approvalSteps) {
     const lastRecord = step.records[step.records.length - 1];
     if (lastRecord) {
@@ -64,16 +63,14 @@ function buildTimeline(request: Awaited<ReturnType<typeof getRequest>>): Timelin
     }
   }
 
-  // 若尚未建立簽核步驟（草稿），補上預設步驟
   if (request!.approvalSteps.length === 0) {
     steps.push({ id: "approval", title: "理事長審核", status: "pending" });
   }
 
-  // 若已拒絕，後續步驟不顯示
   if (status === "REJECTED") return steps;
 
-  // 4. 財務付款
-  if (status === "PAID" || status === "CLOSED") {
+  const isPaid = ["PAID", "PENDING_SETTLEMENT", "CLOSED"].includes(status);
+  if (isPaid) {
     steps.push({
       id: "paid",
       title: "財務付款完成",
@@ -89,12 +86,45 @@ function buildTimeline(request: Awaited<ReturnType<typeof getRequest>>): Timelin
     });
   }
 
-  // 5. 結案
-  steps.push({
-    id: "closed",
-    title: "案件結案",
-    status: status === "CLOSED" ? "completed" : "pending",
-  });
+  if (request!.type === "PREPAID") {
+    if (status === "CLOSED") {
+      steps.push({
+        id: "settlement",
+        title: "核銷完成",
+        date: undefined,
+        status: "completed",
+      });
+    } else if (status === "PENDING_SETTLEMENT") {
+      if (request!.reimbursementSubmittedAt) {
+        steps.push({
+          id: "settlement",
+          title: "核銷待財務審核",
+          date: request!.reimbursementSubmittedAt.toLocaleString("zh-TW"),
+          status: "current",
+        });
+      } else {
+        steps.push({
+          id: "settlement",
+          title: "待申請人送出核銷",
+          status: "current",
+        });
+      }
+    } else {
+      steps.push({ id: "settlement", title: "核銷", status: "pending" });
+    }
+
+    steps.push({
+      id: "closed",
+      title: "案件結案",
+      status: status === "CLOSED" ? "completed" : "pending",
+    });
+  } else {
+    steps.push({
+      id: "closed",
+      title: "案件結案",
+      status: status === "CLOSED" ? "completed" : "pending",
+    });
+  }
 
   return steps;
 }
@@ -103,7 +133,7 @@ async function getRequest(id: string) {
   return prisma.request.findUnique({
     where: { id },
     include: {
-      submitter: { select: { name: true, email: true } },
+      submitter: { select: { id: true, name: true, email: true } },
       project: { select: { id: true, name: true, status: true } },
       items: true,
       attachments: true,
@@ -141,10 +171,23 @@ export default async function RequestDetailPage({
   const canMarkPaid = isFinance && request.status === "APPROVED";
 
   const isOwner = request.submitterId === userId;
-  const lockedStatuses = ["APPROVED", "PAID", "CLOSED"] as const;
+  const lockedStatuses = ["APPROVED", "PAID", "PENDING_SETTLEMENT", "CLOSED"] as const;
   const isLocked = (lockedStatuses as readonly string[]).includes(request.status);
   const canUpload = (isOwner || role === "ADMIN") && !isLocked;
   const canDelete = (isOwner || role === "ADMIN") && !isLocked;
+
+  const isPrepaid = request.type === "PREPAID";
+  const isPendingSettlement = request.status === "PENDING_SETTLEMENT";
+
+  const settlementAttachments = request.attachments.filter((a) => a.isSettlement);
+  const regularAttachments = request.attachments.filter((a) => !a.isSettlement);
+
+  const canSubmitSettlement = isPrepaid && isPendingSettlement && isOwner && !request.reimbursementSubmittedAt;
+  const canReviewSettlement = isPrepaid && isPendingSettlement && isFinance && !!request.reimbursementSubmittedAt;
+
+  const prepaidAmount = Number(request.amount);
+  const actualAmount = request.actualAmount ? Number(request.actualAmount) : null;
+  const amountDiff = actualAmount !== null ? actualAmount - prepaidAmount : null;
 
   const timeline = buildTimeline(request);
 
@@ -242,10 +285,10 @@ export default async function RequestDetailPage({
             </table>
           </div>
 
-          {/* Attachments */}
+          {/* Regular Attachments */}
           <div className="bg-white rounded-xl border border-gray-200 p-5">
-            <h2 className="text-sm font-semibold text-gray-700 mb-4">附件</h2>
-            <AttachmentGrid attachments={request.attachments} canDelete={canDelete} />
+            <h2 className="text-sm font-semibold text-gray-700 mb-4">申請附件</h2>
+            <AttachmentGrid attachments={regularAttachments} canDelete={canDelete} />
             {canUpload && (
               <div className="mt-4 pt-4 border-t border-gray-100">
                 <p className="text-xs font-medium text-gray-500 mb-2">新增附件</p>
@@ -254,12 +297,127 @@ export default async function RequestDetailPage({
             )}
           </div>
 
+          {/* Settlement section — PREPAID only */}
+          {isPrepaid && isPendingSettlement && (
+            <div className="bg-white rounded-xl border border-indigo-200 p-5 ring-1 ring-indigo-100">
+              <div className="flex items-center gap-2 mb-4">
+                <Receipt size={15} className="text-indigo-600" />
+                <h2 className="text-sm font-semibold text-gray-700">核銷資訊</h2>
+              </div>
+
+              {/* Show settlement data if submitted */}
+              {request.reimbursementSubmittedAt && (
+                <div className="space-y-3 mb-4">
+                  <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
+                    <div>
+                      <dt className="text-xs text-gray-400 mb-0.5">預付金額</dt>
+                      <dd className="font-semibold text-gray-900 tabular-nums">{prepaidAmount.toLocaleString()} 元</dd>
+                    </div>
+                    {actualAmount !== null && (
+                      <div>
+                        <dt className="text-xs text-gray-400 mb-0.5">實際支出</dt>
+                        <dd className="font-semibold text-gray-900 tabular-nums">{actualAmount.toLocaleString()} 元</dd>
+                      </div>
+                    )}
+                  </div>
+
+                  {amountDiff !== null && (
+                    <div className={`px-3 py-2 rounded-lg text-xs font-medium border flex items-center gap-1.5 ${
+                      amountDiff === 0 ? "bg-green-50 text-green-700 border-green-200" :
+                      amountDiff < 0 ? "bg-amber-50 text-amber-700 border-amber-200" :
+                      "bg-red-50 text-red-700 border-red-200"
+                    }`}>
+                      <Info size={12} />
+                      {amountDiff === 0 && "金額相符"}
+                      {amountDiff < 0 && `需繳回差額 ${Math.abs(amountDiff).toLocaleString()} 元`}
+                      {amountDiff > 0 && `超支 ${amountDiff.toLocaleString()} 元，需另行請款`}
+                    </div>
+                  )}
+
+                  {request.reimbursementNote && (
+                    <div>
+                      <dt className="text-xs text-gray-400 mb-0.5">核銷說明</dt>
+                      <dd className="text-sm text-gray-700">{request.reimbursementNote}</dd>
+                    </div>
+                  )}
+
+                  <div>
+                    <dt className="text-xs text-gray-400 mb-0.5">核銷送出時間</dt>
+                    <dd className="text-sm text-gray-700">{request.reimbursementSubmittedAt.toLocaleString("zh-TW")}</dd>
+                  </div>
+
+                  {/* Settlement attachments preview */}
+                  {settlementAttachments.length > 0 && (
+                    <div>
+                      <p className="text-xs text-gray-400 mb-2">核銷附件</p>
+                      <AttachmentGrid attachments={settlementAttachments} canDelete={false} />
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Upload settlement attachments (when not yet submitted) */}
+              {isOwner && !request.reimbursementSubmittedAt && (
+                <div className="mb-4">
+                  <p className="text-xs text-gray-500 mb-2">已上傳核銷附件</p>
+                  <AttachmentGrid attachments={settlementAttachments} canDelete={true} />
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Show settlement summary if CLOSED */}
+          {isPrepaid && request.status === "CLOSED" && (actualAmount !== null || settlementAttachments.length > 0) && (
+            <div className="bg-white rounded-xl border border-gray-200 p-5">
+              <div className="flex items-center gap-2 mb-4">
+                <Receipt size={15} className="text-purple-600" />
+                <h2 className="text-sm font-semibold text-gray-700">核銷記錄</h2>
+              </div>
+              <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm mb-3">
+                <div>
+                  <dt className="text-xs text-gray-400 mb-0.5">預付金額</dt>
+                  <dd className="font-semibold text-gray-900 tabular-nums">{prepaidAmount.toLocaleString()} 元</dd>
+                </div>
+                {actualAmount !== null && (
+                  <div>
+                    <dt className="text-xs text-gray-400 mb-0.5">實際支出</dt>
+                    <dd className="font-semibold text-gray-900 tabular-nums">{actualAmount.toLocaleString()} 元</dd>
+                  </div>
+                )}
+              </div>
+              {amountDiff !== null && (
+                <div className={`px-3 py-2 rounded-lg text-xs font-medium border flex items-center gap-1.5 mb-3 ${
+                  amountDiff === 0 ? "bg-green-50 text-green-700 border-green-200" :
+                  amountDiff < 0 ? "bg-amber-50 text-amber-700 border-amber-200" :
+                  "bg-red-50 text-red-700 border-red-200"
+                }`}>
+                  <Info size={12} />
+                  {amountDiff === 0 && "金額相符"}
+                  {amountDiff < 0 && `需繳回差額 ${Math.abs(amountDiff).toLocaleString()} 元`}
+                  {amountDiff > 0 && `超支 ${amountDiff.toLocaleString()} 元，需另行請款`}
+                </div>
+              )}
+              {request.reimbursementNote && (
+                <div className="mb-3">
+                  <dt className="text-xs text-gray-400 mb-0.5">核銷說明</dt>
+                  <dd className="text-sm text-gray-700">{request.reimbursementNote}</dd>
+                </div>
+              )}
+              {settlementAttachments.length > 0 && (
+                <div>
+                  <p className="text-xs text-gray-400 mb-2">核銷附件</p>
+                  <AttachmentGrid attachments={settlementAttachments} canDelete={false} />
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Payment info (if available) */}
-          {(request.recipientName || request.bankName || request.bankCode || request.branchName || request.branchCode || request.paymentInfoNote || (request.paymentMethod && request.status !== "PAID")) && (
+          {(request.recipientName || request.bankName || request.bankCode || request.branchName || request.branchCode || request.paymentInfoNote || (request.paymentMethod && !["PAID", "PENDING_SETTLEMENT", "CLOSED"].includes(request.status))) && (
             <div className="bg-white rounded-xl border border-gray-200 p-5">
               <h2 className="text-sm font-semibold text-gray-700 mb-4">收款資訊</h2>
               <dl className="grid grid-cols-3 gap-x-6 gap-y-3 text-sm">
-                {request.paymentMethod && request.status !== "PAID" && (
+                {request.paymentMethod && !["PAID", "PENDING_SETTLEMENT", "CLOSED"].includes(request.status) && (
                   <InfoRow icon={Banknote} label="希望付款方式" value={request.paymentMethod} />
                 )}
                 {request.recipientName && (
@@ -304,8 +462,26 @@ export default async function RequestDetailPage({
             </div>
           )}
 
-          {/* Payment record (if paid) */}
-          {request.status === "PAID" && request.paidAt && (
+          {/* Settlement form (applicant submits) */}
+          {canSubmitSettlement && (
+            <div className="bg-white rounded-xl border border-indigo-200 p-5 ring-1 ring-indigo-100">
+              <SettlementForm
+                requestId={request.id}
+                prepaidAmount={prepaidAmount}
+                settlementAttachmentsCount={settlementAttachments.length}
+              />
+            </div>
+          )}
+
+          {/* Settlement review form (finance reviews) */}
+          {canReviewSettlement && (
+            <div className="bg-white rounded-xl border border-teal-200 p-5 ring-1 ring-teal-100">
+              <SettlementReviewForm requestId={request.id} />
+            </div>
+          )}
+
+          {/* Payment record (if paid / pending settlement / closed) */}
+          {["PAID", "PENDING_SETTLEMENT", "CLOSED"].includes(request.status) && request.paidAt && (
             <div className="bg-white rounded-xl border border-gray-200 p-5">
               <div className="flex items-center gap-2 mb-3">
                 <Banknote size={14} className="text-blue-600" />

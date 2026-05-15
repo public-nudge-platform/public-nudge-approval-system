@@ -13,6 +13,7 @@ export async function POST(req: NextRequest) {
   const formData = await req.formData();
   const file = formData.get("file") as File | null;
   const requestId = formData.get("requestId") as string | null;
+  const isSettlement = formData.get("isSettlement") === "true";
 
   if (!file || !requestId) return NextResponse.json({ error: "缺少參數" }, { status: 400 });
   if (file.size > MAX_SIZE) return NextResponse.json({ error: "檔案超過 10MB" }, { status: 400 });
@@ -35,6 +36,7 @@ export async function POST(req: NextRequest) {
       mimeType: file.type,
       size: file.size,
       data: buffer,
+      isSettlement,
     },
   });
 
