@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import type { RequestType } from "@prisma/client";
+import { createNotificationsForRoles, createNotificationsForUsers } from "@/lib/notifications";
 
 type RequestItemInput = {
   description: string;
@@ -102,6 +103,15 @@ export async function createRequest(data: CreateRequestInput) {
     },
   });
 
+  if (data.submit) {
+    await createNotificationsForRoles(["PRESIDENT", "FOUNDER_AGENT"], {
+      title: "新請款單待審核",
+      message: `${session.user.name} 已送出「${data.title}」，請前往審核。`,
+      type: "REQUEST_SUBMITTED",
+      relatedRequestId: request.id,
+    });
+  }
+
   revalidatePath("/requests");
   revalidatePath("/dashboard");
   return { id: request.id };
@@ -131,6 +141,13 @@ export async function submitRequest(requestId: string) {
     },
   });
 
+  await createNotificationsForRoles(["PRESIDENT", "FOUNDER_AGENT"], {
+    title: "新請款單待審核",
+    message: `${session.user.name} 已送出「${request.title}」，請前往審核。`,
+    type: "REQUEST_SUBMITTED",
+    relatedRequestId: requestId,
+  });
+
   revalidatePath(`/requests/${requestId}`);
   revalidatePath("/requests");
   revalidatePath("/dashboard");
@@ -145,6 +162,12 @@ export async function approveRequest(requestId: string, stepId: string, action: 
   if (!["PRESIDENT", "FOUNDER_AGENT", "ADMIN"].includes(role)) {
     return { error: "無簽核權限" };
   }
+
+  const request = await prisma.request.findUnique({
+    where: { id: requestId },
+    select: { title: true, submitterId: true },
+  });
+  if (!request) return { error: "找不到申請單" };
 
   await prisma.$transaction(async (tx) => {
     await tx.approvalRecord.create({
@@ -162,6 +185,37 @@ export async function approveRequest(requestId: string, stepId: string, action: 
       data: { status: newStatus },
     });
   });
+
+  const commentSuffix = comment ? `。備註：${comment}` : "";
+
+  if (action === "APPROVED") {
+    await createNotificationsForUsers([request.submitterId], {
+      title: "請款單已核准",
+      message: `您的申請「${request.title}」已核准，財務人員將盡快處理付款。`,
+      type: "REQUEST_APPROVED",
+      relatedRequestId: requestId,
+    });
+    await createNotificationsForRoles(["FINANCE", "ADMIN"], {
+      title: "請款單待付款",
+      message: `「${request.title}」已核准，請前往財務管理完成付款。`,
+      type: "REQUEST_APPROVED",
+      relatedRequestId: requestId,
+    });
+  } else if (action === "RETURNED") {
+    await createNotificationsForUsers([request.submitterId], {
+      title: "請款單已退回",
+      message: `您的申請「${request.title}」已被退回，請修改後重新提交${commentSuffix}。`,
+      type: "REQUEST_RETURNED",
+      relatedRequestId: requestId,
+    });
+  } else if (action === "REJECTED") {
+    await createNotificationsForUsers([request.submitterId], {
+      title: "請款單已拒絕",
+      message: `您的申請「${request.title}」已被拒絕${commentSuffix}。`,
+      type: "REQUEST_REJECTED",
+      relatedRequestId: requestId,
+    });
+  }
 
   revalidatePath(`/requests/${requestId}`);
   revalidatePath("/requests");
@@ -185,7 +239,7 @@ export async function markAsPaid(requestId: string, input: MarkAsPaidInput) {
 
   const request = await prisma.request.findUnique({
     where: { id: requestId },
-    select: { status: true },
+    select: { status: true, title: true, submitterId: true, type: true },
   });
   if (!request) return { error: "找不到申請單" };
   if (request.status !== "APPROVED") return { error: "只能標記已核准的申請單" };
@@ -201,6 +255,22 @@ export async function markAsPaid(requestId: string, input: MarkAsPaidInput) {
       paidAt: input.paidAt ? new Date(input.paidAt) : new Date(),
     },
   });
+
+  await createNotificationsForUsers([request.submitterId], {
+    title: "請款已付款",
+    message: `您的申請「${request.title}」已完成付款。`,
+    type: "PAYMENT_COMPLETED",
+    relatedRequestId: requestId,
+  });
+
+  if (request.type === "PREPAID") {
+    await createNotificationsForUsers([request.submitterId], {
+      title: "預付款待核銷",
+      message: `您的預付請款「${request.title}」已付款，請提交核銷單據。`,
+      type: "REIMBURSEMENT_REQUIRED",
+      relatedRequestId: requestId,
+    });
+  }
 
   revalidatePath(`/requests/${requestId}`);
   revalidatePath("/requests");

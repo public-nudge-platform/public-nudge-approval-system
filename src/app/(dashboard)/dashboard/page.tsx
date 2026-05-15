@@ -6,7 +6,7 @@ import { StatsCard } from "@/components/ui/StatsCard";
 import { StatusBadge, TypeBadge } from "@/components/ui/Badge";
 import {
   FileText, Clock, CheckCircle, XCircle,
-  AlertCircle, Banknote, TrendingUp, Users, BadgeCheck,
+  AlertCircle, Banknote, TrendingUp, Users, BadgeCheck, Bell,
 } from "lucide-react";
 import Link from "next/link";
 import { APPROVAL_ROLES, FINANCE_ROLES } from "@/lib/constants";
@@ -44,7 +44,14 @@ async function getDashboardStats(userId: string, role: UserRole) {
 export default async function DashboardPage() {
   const session = await auth();
   const role = session!.user.role as UserRole;
-  const stats = await getDashboardStats(session!.user.id, role);
+  const [stats, recentNotifications] = await Promise.all([
+    getDashboardStats(session!.user.id, role),
+    prisma.notification.findMany({
+      where: { userId: session!.user.id },
+      orderBy: { createdAt: "desc" },
+      take: 5,
+    }),
+  ]);
   const isApprover = APPROVAL_ROLES.includes(role) || role === "ADMIN";
   const isFinance = FINANCE_ROLES.includes(role);
 
@@ -122,6 +129,41 @@ export default async function DashboardPage() {
           </ul>
         )}
       </div>
+
+      {/* Recent notifications */}
+      {recentNotifications.length > 0 && (
+        <div className="bg-white rounded-xl border border-gray-200">
+          <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+            <div className="flex items-center gap-2">
+              <Bell size={16} className="text-gray-400" />
+              <h2 className="text-sm font-semibold text-gray-800">最近通知</h2>
+            </div>
+            <Link href="/notifications" className="text-xs text-blue-600 hover:underline">
+              查看全部
+            </Link>
+          </div>
+          <ul className="divide-y divide-gray-50">
+            {recentNotifications.map((n) => (
+              <li key={n.id}>
+                <Link
+                  href={n.relatedRequestId ? `/requests/${n.relatedRequestId}` : "/notifications"}
+                  className="flex items-start gap-3 px-5 py-3.5 hover:bg-gray-50 transition-colors"
+                >
+                  {!n.isRead && <span className="mt-1.5 w-2 h-2 bg-blue-500 rounded-full flex-shrink-0" />}
+                  {n.isRead && <span className="mt-1.5 w-2 h-2 flex-shrink-0" />}
+                  <div className="flex-1 min-w-0">
+                    <p className={`text-sm text-gray-900 truncate ${!n.isRead ? "font-semibold" : ""}`}>{n.title}</p>
+                    <p className="text-xs text-gray-500 mt-0.5 truncate">{n.message}</p>
+                  </div>
+                  <span className="text-xs text-gray-400 flex-shrink-0 mt-0.5">
+                    {new Date(n.createdAt).toLocaleDateString("zh-TW")}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {/* Pending approvals widget (for approvers) */}
       {isApprover && stats.pendingApprovals > 0 && (

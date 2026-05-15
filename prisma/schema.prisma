@@ -44,6 +44,16 @@ enum ApprovalAction {
   RETURNED
 }
 
+enum NotificationType {
+  REQUEST_SUBMITTED
+  APPROVAL_ASSIGNED
+  REQUEST_APPROVED
+  REQUEST_RETURNED
+  REQUEST_REJECTED
+  PAYMENT_COMPLETED
+  REIMBURSEMENT_REQUIRED
+}
+
 model User {
   id           String           @id @default(cuid())
   name         String
@@ -53,8 +63,9 @@ model User {
   isActive     Boolean          @default(true)
   createdAt    DateTime         @default(now())
   updatedAt    DateTime         @updatedAt
-  requests     Request[]
-  approvals    ApprovalRecord[]
+  requests      Request[]
+  approvals     ApprovalRecord[]
+  notifications Notification[]
 
   @@map("users")
 }
@@ -145,6 +156,20 @@ model ApprovalStep {
 
   @@unique([requestId, stepOrder])
   @@map("approval_steps")
+}
+
+model Notification {
+  id               String           @id @default(cuid())
+  userId           String
+  user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title            String
+  message          String
+  type             NotificationType
+  relatedRequestId String?
+  isRead           Boolean          @default(false)
+  createdAt        DateTime         @default(now())
+
+  @@map("notifications")
 }
 
 model ApprovalRecord {

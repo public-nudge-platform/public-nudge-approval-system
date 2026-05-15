@@ -13,6 +13,7 @@ import {
   PlusCircle,
   ChevronRight,
   FolderOpen,
+  Bell,
 } from "lucide-react";
 import type { UserRole } from "@prisma/client";
 
@@ -25,6 +26,7 @@ type NavItem = {
 const mainNav: NavItem[] = [
   { href: "/dashboard", label: "首頁", icon: LayoutDashboard },
   { href: "/requests", label: "請款單管理", icon: FileText },
+  { href: "/notifications", label: "通知中心", icon: Bell },
 ];
 
 const approverNav: NavItem[] = [
