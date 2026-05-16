@@ -9,6 +9,7 @@ import type { RequestType } from "@prisma/client";
 import { useRouter } from "next/navigation";
 
 type ActiveProject = { id: string; name: string };
+type ActiveRecipient = { id: string; name: string };
 
 type Item = {
   id: string;
@@ -49,7 +50,7 @@ function formatNumber(n: number) {
   return n.toLocaleString("zh-TW");
 }
 
-export function NewRequestForm({ projects = [], initialRequest }: { projects?: ActiveProject[]; initialRequest?: InitialRequest }) {
+export function NewRequestForm({ projects = [], recipients = [], initialRequest }: { projects?: ActiveProject[]; recipients?: ActiveRecipient[]; initialRequest?: InitialRequest }) {
   const isEdit = !!initialRequest;
   const [type, setType] = useState<RequestType>(initialRequest?.type ?? "REIMBURSEMENT");
   const [title, setTitle] = useState(initialRequest?.title ?? "");
@@ -313,10 +314,28 @@ export function NewRequestForm({ projects = [], initialRequest }: { projects?: A
 
         <div>
           <label className="block text-xs font-medium text-gray-600 mb-1">收款人姓名</label>
+          {recipients.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mb-2">
+              {recipients.map((r) => (
+                <button
+                  key={r.id}
+                  type="button"
+                  onClick={() => setRecipientName(r.name)}
+                  className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
+                    recipientName === r.name
+                      ? "bg-blue-600 text-white border-blue-600"
+                      : "bg-white text-gray-600 border-gray-200 hover:border-blue-400 hover:text-blue-600"
+                  }`}
+                >
+                  {r.name}
+                </button>
+              ))}
+            </div>
+          )}
           <input
             value={recipientName}
             onChange={(e) => setRecipientName(e.target.value)}
-            placeholder="王小明"
+            placeholder="王小明（可手動輸入）"
             className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>

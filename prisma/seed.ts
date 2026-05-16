@@ -25,6 +25,8 @@ const DEFAULT_PROJECTS = [
   "博愛路改造計畫",
 ];
 
+const DEFAULT_RECIPIENTS = ["方瀚賢", "王儷潔", "鍾慧諭", "集思北科大", "集思交通部"];
+
 async function main() {
   console.log("🌱 Seeding users...");
 
@@ -213,6 +215,16 @@ async function main() {
     submitterId: bob, amount: 450,
     items: [{ description: "各式文具", quantity: 1, unitPrice: 450 }],
   });
+
+  console.log("\n🌱 Seeding payment recipients...");
+  for (const name of DEFAULT_RECIPIENTS) {
+    await prisma.paymentRecipient.upsert({
+      where: { id: `seed-${name}` },
+      update: { name },
+      create: { id: `seed-${name}`, name },
+    });
+    console.log(`  ✓ ${name}`);
+  }
 
   // Also update any existing requests with old request numbers to assign the admin project
   await prisma.request.updateMany({

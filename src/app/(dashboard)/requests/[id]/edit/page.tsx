@@ -28,16 +28,23 @@ export default async function EditRequestPage({
   if (request.submitterId !== session!.user.id) redirect(`/requests/${id}`);
   if (!(EDITABLE_STATUSES as readonly string[]).includes(request.status)) redirect(`/requests/${id}`);
 
-  const projects = await prisma.project.findMany({
-    where: {
-      OR: [
-        { status: "IN_PROGRESS" },
-        ...(request.projectId ? [{ id: request.projectId }] : []),
-      ],
-    },
-    orderBy: { name: "asc" },
-    select: { id: true, name: true },
-  });
+  const [projects, recipients] = await Promise.all([
+    prisma.project.findMany({
+      where: {
+        OR: [
+          { status: "IN_PROGRESS" },
+          ...(request.projectId ? [{ id: request.projectId }] : []),
+        ],
+      },
+      orderBy: { name: "asc" },
+      select: { id: true, name: true },
+    }),
+    prisma.paymentRecipient.findMany({
+      where: { isActive: true },
+      orderBy: { createdAt: "asc" },
+      select: { id: true, name: true },
+    }),
+  ]);
 
   return (
     <div>
@@ -51,6 +58,7 @@ export default async function EditRequestPage({
       </div>
       <NewRequestForm
         projects={projects}
+        recipients={recipients}
         initialRequest={{
           id: request.id,
           type: request.type,

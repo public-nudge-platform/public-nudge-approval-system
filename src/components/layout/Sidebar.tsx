@@ -15,6 +15,7 @@ import {
   FolderOpen,
   Bell,
   ClipboardList,
+  BookUser,
 } from "lucide-react";
 import type { UserRole } from "@prisma/client";
 
@@ -89,6 +90,7 @@ export function Sidebar({ role }: { role: UserRole }) {
   const isApprover = ["PRESIDENT", "FOUNDER_AGENT", "ADMIN"].includes(role);
   const isFinance = ["FINANCE", "ADMIN", "PRESIDENT", "FOUNDER_AGENT"].includes(role);
   const canManageUsers = ["ADMIN", "PRESIDENT", "FOUNDER_AGENT"].includes(role);
+  const canManageRecipients = ["ADMIN", "PRESIDENT", "FOUNDER_AGENT", "FINANCE"].includes(role);
   const isAdmin = role === "ADMIN";
 
   return (
@@ -125,12 +127,17 @@ export function Sidebar({ role }: { role: UserRole }) {
         {isApprover && <NavSection title="簽核" items={approverNav} pathname={pathname} />}
         {isFinance && <NavSection title="財務" items={financeNav} pathname={pathname} />}
         {isFinance && <NavSection title="專案" items={[{ href: "/projects", label: "專案管理", icon: FolderOpen }]} pathname={pathname} />}
-        {canManageUsers && (
+        {(canManageUsers || canManageRecipients) && (
           <NavSection
             title="管理"
             items={[
-              { href: "/admin/users", label: "使用者管理", icon: Users },
-              { href: "/admin/audit-logs", label: "操作紀錄", icon: ClipboardList },
+              ...(canManageUsers ? [
+                { href: "/admin/users", label: "使用者管理", icon: Users },
+                { href: "/admin/audit-logs", label: "操作紀錄", icon: ClipboardList },
+              ] : []),
+              ...(canManageRecipients ? [
+                { href: "/admin/recipients", label: "常用付款對象", icon: BookUser },
+              ] : []),
             ]}
             pathname={pathname}
           />
