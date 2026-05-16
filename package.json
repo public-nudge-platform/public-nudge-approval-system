@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "db:seed": "dotenv -e .env -- tsx prisma/seed.ts",
+    "db:reset-demo": "ENABLE_DEMO_RESET=true dotenv -e .env -- tsx prisma/seed-demo.ts",
     "postinstall": "prisma generate"
   },
   "prisma": {
