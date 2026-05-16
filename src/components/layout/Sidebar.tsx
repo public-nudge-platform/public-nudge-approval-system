@@ -136,7 +136,7 @@ export function Sidebar({ role }: { role: UserRole }) {
                 { href: "/admin/audit-logs", label: "操作紀錄", icon: ClipboardList },
               ] : []),
               ...(canManageRecipients ? [
-                { href: "/admin/recipients", label: "常用付款對象", icon: BookUser },
+                { href: "/admin/recipients", label: "付款對象", icon: BookUser },
               ] : []),
             ]}
             pathname={pathname}

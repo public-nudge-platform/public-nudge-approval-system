@@ -167,6 +167,14 @@ async function getRequest(id: string) {
   });
 }
 
+async function getActiveRecipients() {
+  return prisma.paymentRecipient.findMany({
+    where: { isActive: true },
+    orderBy: { createdAt: "asc" },
+    select: { id: true, name: true },
+  });
+}
+
 export default async function RequestDetailPage({
   params,
 }: {
@@ -176,6 +184,9 @@ export default async function RequestDetailPage({
   const [request, session] = await Promise.all([getRequest(id), auth()]);
 
   if (!request) notFound();
+
+  const canMarkPaidEarly = ["FINANCE", "ADMIN"].includes(session!.user.role) && request.status === "APPROVED";
+  const activeRecipients = canMarkPaidEarly ? await getActiveRecipients() : [];
 
   const role = session!.user.role as UserRole;
   const userId = session!.user.id;
@@ -478,7 +489,7 @@ export default async function RequestDetailPage({
           {/* Payment action */}
           {canMarkPaid && (
             <div className="bg-white rounded-xl border border-green-200 p-5 ring-1 ring-green-100 space-y-4">
-              <MarkAsPaidForm requestId={request.id} defaultPaymentMethod={request.paymentMethod ?? undefined} />
+              <MarkAsPaidForm requestId={request.id} defaultPaymentMethod={request.paymentMethod ?? undefined} recipients={activeRecipients} />
               {canFinanceReturn && (
                 <div className="border-t border-green-100 pt-4">
                   <FinanceReturnForm requestId={request.id} />
@@ -527,6 +538,12 @@ export default async function RequestDetailPage({
                   <dt className="text-gray-400">付款日期</dt>
                   <dd className="text-gray-800">{request.paidAt.toLocaleDateString("zh-TW")}</dd>
                 </div>
+                {request.paymentRecipientName && (
+                  <div className="flex justify-between">
+                    <dt className="text-gray-400">付款對象</dt>
+                    <dd className="text-gray-800 font-medium">{request.paymentRecipientName}</dd>
+                  </div>
+                )}
                 {request.bankLastFive && (
                   <div className="flex justify-between">
                     <dt className="text-gray-400">匯款帳號後五碼</dt>

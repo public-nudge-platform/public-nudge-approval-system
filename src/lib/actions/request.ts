@@ -524,10 +524,10 @@ export async function returnApprovedRequest(requestId: string, comment?: string)
 
 type MarkAsPaidInput = {
   paymentMethod: string;
-  paymentReference?: string;
   paymentNote?: string;
   paidAt?: string;
   bankLastFive?: string;
+  paymentRecipientName?: string;
 };
 
 export async function markAsPaid(requestId: string, input: MarkAsPaidInput) {
@@ -552,11 +552,11 @@ export async function markAsPaid(requestId: string, input: MarkAsPaidInput) {
     data: {
       status: newStatus,
       paymentMethod: input.paymentMethod,
-      paymentReference: input.paymentReference || null,
       paymentNote: input.paymentNote || null,
       paidBy,
       paidAt: input.paidAt ? new Date(input.paidAt) : new Date(),
       bankLastFive: input.bankLastFive || null,
+      paymentRecipientName: input.paymentRecipientName || null,
     },
   });
 
@@ -585,8 +585,8 @@ export async function markAsPaid(requestId: string, input: MarkAsPaidInput) {
     description: `標記付款「${request.title}」，方式：${input.paymentMethod}，付款人：${paidBy}`,
     afterData: {
       paymentMethod: input.paymentMethod,
-      paymentReference: input.paymentReference,
       bankLastFive: input.bankLastFive,
+      paymentRecipientName: input.paymentRecipientName,
       paidBy,
       newStatus,
     },

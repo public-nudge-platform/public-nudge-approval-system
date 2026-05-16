@@ -134,8 +134,9 @@ model Request {
   paymentMethod      String?
   paymentReference   String?
   paymentNote        String?
-  paidBy             String?
-  bankLastFive       String?
+  paidBy                 String?
+  bankLastFive           String?
+  paymentRecipientName   String?
   bankName           String?
   bankCode           String?
   branchName         String?

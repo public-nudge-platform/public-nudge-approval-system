@@ -23,7 +23,7 @@ export default async function RecipientsPage() {
     <div className="space-y-4">
       <div className="flex items-center gap-2">
         <BookUser size={20} className="text-blue-600" />
-        <h1 className="text-xl font-semibold text-gray-900">常用付款對象</h1>
+        <h1 className="text-xl font-semibold text-gray-900">付款對象</h1>
       </div>
       <RecipientsClient recipients={recipients} />
     </div>

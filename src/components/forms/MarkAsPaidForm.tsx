@@ -8,12 +8,24 @@ import { UploadZone } from "@/components/ui/UploadZone";
 import { Banknote } from "lucide-react";
 import { PAYMENT_METHOD_OPTIONS } from "@/lib/constants";
 
-export function MarkAsPaidForm({ requestId, defaultPaymentMethod }: { requestId: string; defaultPaymentMethod?: string }) {
+type Recipient = { id: string; name: string };
+
+export function MarkAsPaidForm({
+  requestId,
+  defaultPaymentMethod,
+  recipients = [],
+}: {
+  requestId: string;
+  defaultPaymentMethod?: string;
+  recipients?: Recipient[];
+}) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [selectedMethod, setSelectedMethod] = useState(defaultPaymentMethod ?? "");
+  const [recipientValue, setRecipientValue] = useState("");
+  const [customRecipient, setCustomRecipient] = useState("");
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -21,12 +33,16 @@ export function MarkAsPaidForm({ requestId, defaultPaymentMethod }: { requestId:
     const form = e.currentTarget;
     const data = new FormData(form);
 
+    const paymentRecipientName =
+      recipientValue === "OTHER" ? customRecipient.trim() : recipientValue || undefined;
+
     startTransition(async () => {
       const result = await markAsPaid(requestId, {
         paymentMethod: data.get("paymentMethod") as string,
         paymentNote: (data.get("paymentNote") as string) || undefined,
         paidAt: (data.get("paidAt") as string) || undefined,
         bankLastFive: (data.get("bankLastFive") as string) || undefined,
+        paymentRecipientName,
       });
       if (result?.error) {
         setError(result.error);
@@ -78,6 +94,30 @@ export function MarkAsPaidForm({ requestId, defaultPaymentMethod }: { requestId:
             className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
+      </div>
+
+      <div>
+        <label className="block text-xs text-gray-500 mb-1">付款對象</label>
+        <select
+          value={recipientValue}
+          onChange={(e) => setRecipientValue(e.target.value)}
+          className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+        >
+          <option value="">請選擇（選填）</option>
+          {recipients.map((r) => (
+            <option key={r.id} value={r.name}>{r.name}</option>
+          ))}
+          <option value="OTHER">其他</option>
+        </select>
+        {recipientValue === "OTHER" && (
+          <input
+            type="text"
+            value={customRecipient}
+            onChange={(e) => setCustomRecipient(e.target.value)}
+            placeholder="請輸入付款對象名稱"
+            className="mt-2 w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        )}
       </div>
 
       {selectedMethod === "BANK_TRANSFER" && (
