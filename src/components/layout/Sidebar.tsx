@@ -25,6 +25,8 @@ type NavItem = {
   icon: React.ComponentType<{ size?: number; className?: string }>;
 };
 
+type NavContext = { onClose?: () => void };
+
 const mainNav: NavItem[] = [
   { href: "/dashboard", label: "首頁", icon: LayoutDashboard },
   { href: "/requests", label: "請款單管理", icon: FileText },
@@ -44,11 +46,12 @@ const adminNav: NavItem[] = [
   { href: "/admin/settings", label: "系統設定", icon: Settings },
 ];
 
-function NavLink({ item, isActive }: { item: NavItem; isActive: boolean }) {
+function NavLink({ item, isActive, onClose }: { item: NavItem; isActive: boolean } & NavContext) {
   const Icon = item.icon;
   return (
     <Link
       href={item.href}
+      onClick={onClose}
       className={clsx(
         "flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors group",
         isActive
@@ -63,7 +66,7 @@ function NavLink({ item, isActive }: { item: NavItem; isActive: boolean }) {
   );
 }
 
-function NavSection({ title, items, pathname }: { title?: string; items: NavItem[]; pathname: string }) {
+function NavSection({ title, items, pathname, onClose }: { title?: string; items: NavItem[]; pathname: string } & NavContext) {
   return (
     <div>
       {title && (
@@ -77,6 +80,7 @@ function NavSection({ title, items, pathname }: { title?: string; items: NavItem
             <NavLink
               item={item}
               isActive={pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href))}
+              onClose={onClose}
             />
           </li>
         ))}
@@ -85,7 +89,7 @@ function NavSection({ title, items, pathname }: { title?: string; items: NavItem
   );
 }
 
-export function Sidebar({ role }: { role: UserRole }) {
+export function Sidebar({ role, onClose }: { role: UserRole; onClose?: () => void }) {
   const pathname = usePathname();
   const isApprover = ["PRESIDENT", "FOUNDER_AGENT", "ADMIN"].includes(role);
   const isFinance = ["FINANCE", "ADMIN", "PRESIDENT", "FOUNDER_AGENT"].includes(role);
@@ -109,24 +113,23 @@ export function Sidebar({ role }: { role: UserRole }) {
       </div>
 
       {/* Quick action */}
-      {(
-        <div className="px-3 pt-4">
-          <Link
-            href="/requests/new"
-            className="flex items-center gap-2 w-full px-3 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            <PlusCircle size={15} />
-            新增申請單
-          </Link>
-        </div>
-      )}
+      <div className="px-3 pt-4">
+        <Link
+          href="/requests/new"
+          onClick={onClose}
+          className="flex items-center gap-2 w-full px-3 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+        >
+          <PlusCircle size={15} />
+          新增申請單
+        </Link>
+      </div>
 
       {/* Navigation */}
       <nav className="flex-1 px-3 py-3 space-y-0 overflow-y-auto">
-        <NavSection items={mainNav} pathname={pathname} />
-        {isApprover && <NavSection title="簽核" items={approverNav} pathname={pathname} />}
-        {isFinance && <NavSection title="財務" items={financeNav} pathname={pathname} />}
-        {isFinance && <NavSection title="專案" items={[{ href: "/projects", label: "專案管理", icon: FolderOpen }]} pathname={pathname} />}
+        <NavSection items={mainNav} pathname={pathname} onClose={onClose} />
+        {isApprover && <NavSection title="簽核" items={approverNav} pathname={pathname} onClose={onClose} />}
+        {isFinance && <NavSection title="財務" items={financeNav} pathname={pathname} onClose={onClose} />}
+        {isFinance && <NavSection title="專案" items={[{ href: "/projects", label: "專案管理", icon: FolderOpen }]} pathname={pathname} onClose={onClose} />}
         {(canManageUsers || canManageRecipients) && (
           <NavSection
             title="管理"
@@ -140,9 +143,10 @@ export function Sidebar({ role }: { role: UserRole }) {
               ] : []),
             ]}
             pathname={pathname}
+            onClose={onClose}
           />
         )}
-        {isAdmin && <NavSection items={[{ href: "/admin/settings", label: "系統設定", icon: Settings }]} pathname={pathname} />}
+        {isAdmin && <NavSection items={[{ href: "/admin/settings", label: "系統設定", icon: Settings }]} pathname={pathname} onClose={onClose} />}
       </nav>
     </aside>
   );

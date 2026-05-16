@@ -1,7 +1,7 @@
 "use client";
 
 import { signOut } from "next-auth/react";
-import { LogOut, User, Bell } from "lucide-react";
+import { LogOut, User, Bell, Menu } from "lucide-react";
 import type { Session } from "next-auth";
 import { USER_ROLE_LABEL } from "@/lib/constants";
 import type { UserRole } from "@prisma/client";
@@ -11,15 +11,23 @@ import Link from "next/link";
 type Props = {
   user: Session["user"];
   unreadCount: number;
+  onMenuClick: () => void;
 };
 
-export function Header({ user, unreadCount }: Props) {
+export function Header({ user, unreadCount, onMenuClick }: Props) {
   const [open, setOpen] = useState(false);
   const roleLabel = USER_ROLE_LABEL[user.role as UserRole] ?? "";
 
   return (
-    <header className="h-14 flex items-center justify-between px-6 bg-white border-b border-gray-200 flex-shrink-0">
-      <div />
+    <header className="h-14 flex items-center justify-between px-4 md:px-6 bg-white border-b border-gray-200 flex-shrink-0">
+      <button
+        onClick={onMenuClick}
+        className="md:hidden p-2 -ml-1 rounded-lg text-gray-500 hover:bg-gray-100 transition-colors"
+        aria-label="開啟選單"
+      >
+        <Menu size={20} />
+      </button>
+      <div className="hidden md:block" />
       <div className="flex items-center gap-3">
         {/* Notification bell */}
         <Link
