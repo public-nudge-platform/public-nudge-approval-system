@@ -10,6 +10,8 @@ import { REQUEST_STATUS_LABEL, REQUEST_TYPE_LABEL } from "@/lib/constants";
 import { FilterSelect } from "@/components/ui/FilterSelect";
 import { FilterInput } from "@/components/ui/FilterInput";
 import { AdvancedFiltersPanel } from "@/components/ui/AdvancedFiltersPanel";
+import { ExportButton } from "@/components/ui/ExportButton";
+import { FINANCE_ROLES } from "@/lib/constants";
 import { Suspense } from "react";
 
 type SearchParams = {
@@ -138,13 +140,18 @@ export default async function RequestsPage({
       {/* Page header */}
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold text-gray-900">請款單管理</h1>
-        <Link
-          href="/requests/new"
-          className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
-        >
-          <PlusCircle size={15} />
-          新增申請單
-        </Link>
+        <div className="flex items-center gap-2">
+          {FINANCE_ROLES.includes(role) && (
+            <ExportButton projects={projects} />
+          )}
+          <Link
+            href="/requests/new"
+            className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            <PlusCircle size={15} />
+            新增申請單
+          </Link>
+        </div>
       </div>
 
       {/* Filters */}

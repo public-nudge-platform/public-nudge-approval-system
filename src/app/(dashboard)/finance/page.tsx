@@ -18,6 +18,7 @@ import { redirect } from "next/navigation";
 import { FINANCE_ROLES, PAYMENT_METHOD_LABEL } from "@/lib/constants";
 import { FilterSelect } from "@/components/ui/FilterSelect";
 import { FilterInput } from "@/components/ui/FilterInput";
+import { ExportButton } from "@/components/ui/ExportButton";
 import { Suspense } from "react";
 
 const VIEW_OPTIONS = [
@@ -115,9 +116,12 @@ export default async function FinancePage({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-2">
-        <Banknote size={20} className="text-blue-600" />
-        <h1 className="text-xl font-semibold text-gray-900">財務管理</h1>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Banknote size={20} className="text-blue-600" />
+          <h1 className="text-xl font-semibold text-gray-900">財務管理</h1>
+        </div>
+        <ExportButton projects={projects} />
       </div>
 
       {/* Filters */}

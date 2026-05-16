@@ -109,6 +109,7 @@ export const AUDIT_ACTION_LABEL: Record<AuditAction, string> = {
   USER_UPDATED:          "編輯使用者",
   USER_DEACTIVATED:      "停用使用者",
   PASSWORD_RESET:        "重設密碼",
+  DATA_EXPORTED:         "匯出資料",
 };
 
 export const AUDIT_ACTION_COLOR: Record<AuditAction, string> = {
@@ -134,4 +135,5 @@ export const AUDIT_ACTION_COLOR: Record<AuditAction, string> = {
   USER_UPDATED:          "bg-blue-50 text-blue-700",
   USER_DEACTIVATED:      "bg-red-50 text-red-700",
   PASSWORD_RESET:        "bg-amber-50 text-amber-700",
+  DATA_EXPORTED:         "bg-emerald-50 text-emerald-700",
 };

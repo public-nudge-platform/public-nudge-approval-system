@@ -71,6 +71,7 @@ enum AuditAction {
   USER_UPDATED
   USER_DEACTIVATED
   PASSWORD_RESET
+  DATA_EXPORTED
 }
 
 enum NotificationType {
