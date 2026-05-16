@@ -61,6 +61,25 @@ export const PROJECT_STATUS_COLOR: Record<ProjectStatus, string> = {
   CLOSED:      "bg-gray-100 text-gray-500",
 };
 
+export const PAYMENT_METHOD_OPTIONS = [
+  { value: "BANK_TRANSFER", label: "銀行轉帳" },
+  { value: "CASH",          label: "現金" },
+  { value: "CHECK",         label: "支票" },
+  { value: "OTHER",         label: "其他" },
+] as const;
+
+export const PAYMENT_METHOD_LABEL: Record<string, string> = {
+  BANK_TRANSFER: "銀行轉帳",
+  CASH:          "現金",
+  CHECK:         "支票",
+  OTHER:         "其他",
+  銀行轉帳:       "銀行轉帳",
+  現金:           "現金",
+  支票:           "支票",
+  信用卡:         "信用卡",
+  其他:           "其他",
+};
+
 export const APPROVAL_ROLES: UserRole[] = ["PRESIDENT", "FOUNDER_AGENT"];
 export const FINANCE_ROLES: UserRole[] = ["FINANCE", "ADMIN", "PRESIDENT", "FOUNDER_AGENT"];
 export const ADMIN_ROLES: UserRole[] = ["ADMIN"];

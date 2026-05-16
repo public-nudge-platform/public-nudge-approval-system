@@ -13,7 +13,7 @@ import { SettlementReviewForm } from "@/components/forms/SettlementReviewForm";
 import { FinanceReturnForm, WithdrawRequestForm } from "@/components/forms/RequestWorkflowForms";
 import type { TimelineStep } from "@/components/ui/Timeline";
 import type { UserRole } from "@prisma/client";
-import { APPROVAL_ROLES, FINANCE_ROLES } from "@/lib/constants";
+import { APPROVAL_ROLES, FINANCE_ROLES, PAYMENT_METHOD_LABEL } from "@/lib/constants";
 import Link from "next/link";
 import { ChevronLeft, Calendar, User, Building2, Banknote, FolderOpen, Hash, Receipt, Info, Pencil } from "lucide-react";
 import { UploadZone } from "@/components/ui/UploadZone";
@@ -201,7 +201,8 @@ export default async function RequestDetailPage({
   const isInOffsetFlow = isPrepaid && (OFFSET_STATUSES as readonly string[]).includes(request.status);
 
   const settlementAttachments = request.attachments.filter((a) => a.isSettlement);
-  const regularAttachments = request.attachments.filter((a) => !a.isSettlement);
+  const paymentAttachments = request.attachments.filter((a) => a.isPayment);
+  const regularAttachments = request.attachments.filter((a) => !a.isSettlement && !a.isPayment);
 
   const canSubmitOffset =
     isPrepaid &&
@@ -517,32 +518,46 @@ export default async function RequestDetailPage({
                 {request.paymentMethod && (
                   <div className="flex justify-between">
                     <dt className="text-gray-400">付款方式</dt>
-                    <dd className="text-gray-800 font-medium">{request.paymentMethod}</dd>
-                  </div>
-                )}
-                {request.paymentReference && (
-                  <div className="flex justify-between">
-                    <dt className="text-gray-400">憑證編號</dt>
-                    <dd className="text-gray-800 font-mono text-xs">{request.paymentReference}</dd>
-                  </div>
-                )}
-                {request.paidBy && (
-                  <div className="flex justify-between">
-                    <dt className="text-gray-400">付款人</dt>
-                    <dd className="text-gray-800">{request.paidBy}</dd>
+                    <dd className="text-gray-800 font-medium">
+                      {PAYMENT_METHOD_LABEL[request.paymentMethod] ?? request.paymentMethod}
+                    </dd>
                   </div>
                 )}
                 <div className="flex justify-between">
                   <dt className="text-gray-400">付款日期</dt>
                   <dd className="text-gray-800">{request.paidAt.toLocaleDateString("zh-TW")}</dd>
                 </div>
+                {request.bankLastFive && (
+                  <div className="flex justify-between">
+                    <dt className="text-gray-400">匯款帳號後五碼</dt>
+                    <dd className="text-gray-800 font-mono">*{request.bankLastFive}</dd>
+                  </div>
+                )}
+                {request.paymentReference && (
+                  <div className="flex justify-between">
+                    <dt className="text-gray-400">付款參考編號</dt>
+                    <dd className="text-gray-800 font-mono text-xs">{request.paymentReference}</dd>
+                  </div>
+                )}
+                {request.paidBy && (
+                  <div className="flex justify-between">
+                    <dt className="text-gray-400">付款處理人</dt>
+                    <dd className="text-gray-800">{request.paidBy}</dd>
+                  </div>
+                )}
                 {request.paymentNote && (
                   <div className="pt-1 border-t border-gray-100">
-                    <dt className="text-gray-400 mb-0.5">備註</dt>
+                    <dt className="text-gray-400 mb-0.5">付款備註</dt>
                     <dd className="text-gray-700">{request.paymentNote}</dd>
                   </div>
                 )}
               </dl>
+              {paymentAttachments.length > 0 && (
+                <div className="mt-3 pt-3 border-t border-gray-100">
+                  <p className="text-xs text-gray-400 mb-2">付款證明附件</p>
+                  <AttachmentGrid attachments={paymentAttachments} canDelete={false} />
+                </div>
+              )}
             </div>
           )}
 

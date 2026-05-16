@@ -527,6 +527,7 @@ type MarkAsPaidInput = {
   paymentReference?: string;
   paymentNote?: string;
   paidAt?: string;
+  bankLastFive?: string;
 };
 
 export async function markAsPaid(requestId: string, input: MarkAsPaidInput) {
@@ -544,6 +545,7 @@ export async function markAsPaid(requestId: string, input: MarkAsPaidInput) {
   if (request.status !== "APPROVED") return { error: "只能標記已核准的申請單" };
 
   const newStatus = request.type === "PREPAID" ? "PENDING_SETTLEMENT" : "PAID";
+  const paidBy = session.user.name || session.user.email;
 
   await prisma.request.update({
     where: { id: requestId },
@@ -552,8 +554,9 @@ export async function markAsPaid(requestId: string, input: MarkAsPaidInput) {
       paymentMethod: input.paymentMethod,
       paymentReference: input.paymentReference || null,
       paymentNote: input.paymentNote || null,
-      paidBy: session.user.name || session.user.email,
+      paidBy,
       paidAt: input.paidAt ? new Date(input.paidAt) : new Date(),
+      bankLastFive: input.bankLastFive || null,
     },
   });
 
@@ -579,8 +582,14 @@ export async function markAsPaid(requestId: string, input: MarkAsPaidInput) {
     action: "PAYMENT_MARKED",
     entityType: "Request",
     entityId: requestId,
-    description: `標記付款「${request.title}」`,
-    afterData: { paymentMethod: input.paymentMethod, newStatus },
+    description: `標記付款「${request.title}」，方式：${input.paymentMethod}，付款人：${paidBy}`,
+    afterData: {
+      paymentMethod: input.paymentMethod,
+      paymentReference: input.paymentReference,
+      bankLastFive: input.bankLastFive,
+      paidBy,
+      newStatus,
+    },
   });
 
   revalidatePath(`/requests/${requestId}`);

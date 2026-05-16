@@ -21,10 +21,11 @@ function formatBytes(bytes: number) {
 type Props = {
   requestId?: string;
   isSettlement?: boolean;
+  isPayment?: boolean;
   onFilesChange?: (files: File[]) => void;
 };
 
-export function UploadZone({ requestId, isSettlement, onFilesChange }: Props) {
+export function UploadZone({ requestId, isSettlement, isPayment, onFilesChange }: Props) {
   const [entries, setEntries] = useState<FileEntry[]>([]);
   const [dragOver, setDragOver] = useState(false);
   const router = useRouter();
@@ -37,6 +38,7 @@ export function UploadZone({ requestId, isSettlement, onFilesChange }: Props) {
     fd.append("file", entry.file);
     fd.append("requestId", requestId);
     if (isSettlement) fd.append("isSettlement", "true");
+    if (isPayment) fd.append("isPayment", "true");
 
     const res = await fetch("/api/upload", { method: "POST", body: fd });
     const json = await res.json();
@@ -47,7 +49,7 @@ export function UploadZone({ requestId, isSettlement, onFilesChange }: Props) {
       setEntries((prev) => prev.map((e) => e.id === entry.id ? { ...e, status: "done" } : e));
       router.refresh();
     }
-  }, [isSettlement, requestId, router]);
+  }, [isSettlement, isPayment, requestId, router]);
 
   function addFiles(fileList: FileList) {
     const newEntries: FileEntry[] = [];

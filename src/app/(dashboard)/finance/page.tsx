@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import type { UserRole } from "@prisma/client";
 import { redirect } from "next/navigation";
-import { FINANCE_ROLES } from "@/lib/constants";
+import { FINANCE_ROLES, PAYMENT_METHOD_LABEL } from "@/lib/constants";
 import { FilterSelect } from "@/components/ui/FilterSelect";
 import { FilterInput } from "@/components/ui/FilterInput";
 import { Suspense } from "react";
@@ -405,7 +405,8 @@ export default async function FinancePage({
                   <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500">申請單</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500">申請人</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500">付款方式</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500">憑證編號</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500">帳號後五碼</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500">參考編號</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500">付款人</th>
                   <th className="text-right px-5 py-3 text-xs font-semibold text-gray-500">金額</th>
                   <th className="text-right px-5 py-3 text-xs font-semibold text-gray-500">付款日期</th>
@@ -427,7 +428,12 @@ export default async function FinancePage({
                       <StatusBadge status={req.status} />
                     </td>
                     <td className="px-4 py-3 text-gray-600">{req.submitter.name}</td>
-                    <td className="px-4 py-3 text-gray-600">{req.paymentMethod || "—"}</td>
+                    <td className="px-4 py-3 text-gray-600">
+                      {req.paymentMethod ? (PAYMENT_METHOD_LABEL[req.paymentMethod] ?? req.paymentMethod) : "—"}
+                    </td>
+                    <td className="px-4 py-3 text-gray-500 font-mono text-xs">
+                      {req.bankLastFive ? `*${req.bankLastFive}` : "—"}
+                    </td>
                     <td className="px-4 py-3 text-gray-500 font-mono text-xs">
                       {req.paymentReference || "—"}
                     </td>

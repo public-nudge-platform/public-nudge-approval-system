@@ -135,6 +135,7 @@ model Request {
   paymentReference   String?
   paymentNote        String?
   paidBy             String?
+  bankLastFive       String?
   bankName           String?
   bankCode           String?
   branchName         String?
@@ -181,6 +182,7 @@ model Attachment {
   size       Int
   data         Bytes?
   isSettlement Boolean  @default(false)
+  isPayment    Boolean  @default(false)
   uploadedAt   DateTime @default(now())
 
   @@map("attachments")
