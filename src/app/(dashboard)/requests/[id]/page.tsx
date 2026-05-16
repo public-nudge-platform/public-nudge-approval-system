@@ -13,7 +13,7 @@ import { SettlementReviewForm } from "@/components/forms/SettlementReviewForm";
 import { FinanceReturnForm, WithdrawRequestForm } from "@/components/forms/RequestWorkflowForms";
 import type { TimelineStep } from "@/components/ui/Timeline";
 import type { UserRole } from "@prisma/client";
-import { APPROVAL_ROLES, FINANCE_ROLES, PAYMENT_METHOD_LABEL } from "@/lib/constants";
+import { APPROVAL_ROLES, FINANCE_ROLES, OFFSET_REVIEW_ROLES, PAYMENT_METHOD_LABEL } from "@/lib/constants";
 import Link from "next/link";
 import { ChevronLeft, Calendar, User, Building2, Banknote, FolderOpen, Hash, Receipt, Info, Pencil } from "lucide-react";
 import { UploadZone } from "@/components/ui/UploadZone";
@@ -109,7 +109,7 @@ function buildTimeline(request: Awaited<ReturnType<typeof getRequest>>): Timelin
     } else if (status === "OFFSET_SUBMITTED") {
       steps.push({
         id: "settlement",
-        title: "沖銷待財務確認",
+        title: "沖銷待確認",
         date: request!.reimbursementSubmittedAt?.toLocaleString("zh-TW"),
         status: "current",
       });
@@ -222,7 +222,7 @@ export default async function RequestDetailPage({
 
   const canReviewOffset =
     isPrepaid &&
-    isFinance &&
+    (OFFSET_REVIEW_ROLES.includes(role) || role === "ADMIN") &&
     request.status === "OFFSET_SUBMITTED";
 
   const prepaidAmount = Number(request.amount);
@@ -403,16 +403,16 @@ export default async function RequestDetailPage({
 
               {/* CLOSED: show review info */}
               {request.status === "CLOSED" && request.offsetReviewedAt && (
-                <div className="border-t border-gray-100 pt-3 space-y-1 text-sm">
+                <div className="border-t border-gray-100 pt-3 space-y-1.5 text-sm">
                   {request.offsetReviewedBy && (
-                    <div className="flex justify-between text-xs">
-                      <dt className="text-gray-500">確認人</dt>
-                      <dd className="text-gray-700">{request.offsetReviewedBy}</dd>
-                    </div>
+                    <p className="text-xs text-green-700 font-medium">
+                      已由{request.offsetReviewedBy}於{" "}
+                      {request.offsetReviewedAt.toLocaleDateString("zh-TW")} 完成沖銷確認
+                    </p>
                   )}
-                  <div className="flex justify-between text-xs">
-                    <dt className="text-gray-500">確認時間</dt>
-                    <dd className="text-gray-700">{request.offsetReviewedAt.toLocaleString("zh-TW")}</dd>
+                  <div className="flex justify-between text-xs text-gray-500">
+                    <span>確認時間</span>
+                    <span>{request.offsetReviewedAt.toLocaleString("zh-TW")}</span>
                   </div>
                 </div>
               )}

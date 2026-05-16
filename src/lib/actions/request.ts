@@ -7,6 +7,7 @@ import { revalidatePath } from "next/cache";
 import type { RequestStatus, RequestType } from "@prisma/client";
 import { createNotificationsForRoles, createNotificationsForUsers } from "@/lib/notifications";
 import { logAuditAction } from "@/lib/audit";
+import { USER_ROLE_LABEL } from "@/lib/constants";
 
 type RequestItemInput = {
   description: string;
@@ -664,19 +665,29 @@ export async function reviewSettlement(requestId: string, action: "APPROVED" | "
   if (request.type !== "PREPAID") return { error: "只有預付請款需要沖銷審核" };
   if (request.status !== "OFFSET_SUBMITTED") return { error: "此申請單不在沖銷待確認狀態" };
 
+  const roleLabel = USER_ROLE_LABEL[role as keyof typeof USER_ROLE_LABEL] ?? role;
+  const reviewerDisplay = `${roleLabel} ${session.user.name || session.user.email}`;
+  const otherOffsetRoles = (["FINANCE", "PRESIDENT", "FOUNDER_AGENT"] as const).filter(r => r !== role);
+
   if (action === "APPROVED") {
     await prisma.request.update({
       where: { id: requestId },
       data: {
         status: "CLOSED",
         offsetReviewedAt: new Date(),
-        offsetReviewedBy: session.user.name || session.user.email,
+        offsetReviewedBy: reviewerDisplay,
       },
     });
 
+    await createNotificationsForRoles(otherOffsetRoles as import("@prisma/client").UserRole[], {
+      title: "沖銷案件已確認",
+      message: `「${request.title}」的沖銷已由${reviewerDisplay}完成確認，案件結案。`,
+      type: "SETTLEMENT_APPROVED",
+      relatedRequestId: requestId,
+    });
     await createNotificationsForUsers([request.submitterId], {
       title: "沖銷已確認完成",
-      message: `您的預付請款「${request.title}」沖銷已確認完成，案件結案。`,
+      message: `您的預付請款「${request.title}」沖銷已由${reviewerDisplay}完成確認，案件結案。`,
       type: "SETTLEMENT_APPROVED",
       relatedRequestId: requestId,
     });
@@ -686,8 +697,8 @@ export async function reviewSettlement(requestId: string, action: "APPROVED" | "
       action: "SETTLEMENT_APPROVED",
       entityType: "Request",
       entityId: requestId,
-      description: `沖銷完成「${request.title}」`,
-      afterData: { status: "CLOSED" },
+      description: `沖銷完成「${request.title}」，確認人：${reviewerDisplay}`,
+      afterData: { status: "CLOSED", reviewedBy: reviewerDisplay, role },
     });
   } else {
     const reviewNote = comment || "請補充沖銷單據後重新送出";
@@ -700,6 +711,12 @@ export async function reviewSettlement(requestId: string, action: "APPROVED" | "
       },
     });
 
+    await createNotificationsForRoles(otherOffsetRoles as import("@prisma/client").UserRole[], {
+      title: "沖銷已退回補件",
+      message: `「${request.title}」的沖銷已由${reviewerDisplay}退回補件。`,
+      type: "SETTLEMENT_RETURNED",
+      relatedRequestId: requestId,
+    });
     await createNotificationsForUsers([request.submitterId], {
       title: "沖銷退回補件",
       message: `您的預付請款「${request.title}」沖銷被退回，請補充單據後重新送出。備註：${reviewNote}`,
@@ -712,8 +729,8 @@ export async function reviewSettlement(requestId: string, action: "APPROVED" | "
       action: "SETTLEMENT_RETURNED",
       entityType: "Request",
       entityId: requestId,
-      description: `沖銷退回「${request.title}」`,
-      afterData: { note: reviewNote },
+      description: `沖銷退回「${request.title}」，操作人：${reviewerDisplay}`,
+      afterData: { note: reviewNote, reviewedBy: reviewerDisplay, role },
     });
   }
 

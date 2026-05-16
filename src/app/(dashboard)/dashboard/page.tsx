@@ -9,12 +9,13 @@ import {
   AlertCircle, Banknote, TrendingUp, Users, BadgeCheck, Bell, Receipt,
 } from "lucide-react";
 import Link from "next/link";
-import { APPROVAL_ROLES, FINANCE_ROLES } from "@/lib/constants";
+import { APPROVAL_ROLES, FINANCE_ROLES, OFFSET_REVIEW_ROLES } from "@/lib/constants";
 import type { UserRole } from "@prisma/client";
 
 async function getDashboardStats(userId: string, role: UserRole) {
   const isApprover = APPROVAL_ROLES.includes(role) || role === "ADMIN";
   const isFinance = FINANCE_ROLES.includes(role);
+  const isOffsetReviewer = OFFSET_REVIEW_ROLES.includes(role) || role === "ADMIN";
 
   const [myTotal, myPending, myApproved, myDraft, myPaid, myPendingOffset, pendingApprovals, recentRequests] =
     await Promise.all([
@@ -48,9 +49,11 @@ async function getDashboardStats(userId: string, role: UserRole) {
           where: { status: { in: ["PENDING_SETTLEMENT", "OFFSET_SUBMITTED", "OFFSET_RETURNED"] } },
         }),
       ])
+    : isOffsetReviewer
+    ? [0, await prisma.request.count({ where: { status: "OFFSET_SUBMITTED" } }), 0]
     : [0, 0, 0];
 
-  return { myTotal, myPending, myApproved, myDraft, myPaid, myPendingOffset, pendingApprovals, awaitingPayment, awaitingOffsetReview, allPendingOffset, recentRequests };
+  return { myTotal, myPending, myApproved, myDraft, myPaid, myPendingOffset, pendingApprovals, awaitingPayment, awaitingOffsetReview, allPendingOffset, recentRequests, isOffsetReviewer };
 }
 
 export default async function DashboardPage() {
@@ -66,6 +69,7 @@ export default async function DashboardPage() {
   ]);
   const isApprover = APPROVAL_ROLES.includes(role) || role === "ADMIN";
   const isFinance = FINANCE_ROLES.includes(role);
+  const isOffsetReviewer = stats.isOffsetReviewer;
 
   return (
     <div className="space-y-6">
@@ -95,7 +99,7 @@ export default async function DashboardPage() {
         {isFinance && (
           <StatsCard label="待付款" value={stats.awaitingPayment} icon={Banknote} color="purple" href="/finance" />
         )}
-        {isFinance && stats.awaitingOffsetReview > 0 && (
+        {isOffsetReviewer && stats.awaitingOffsetReview > 0 && (
           <StatsCard label="沖銷待確認" value={stats.awaitingOffsetReview} icon={Receipt} color="blue" href="/finance" />
         )}
       </div>

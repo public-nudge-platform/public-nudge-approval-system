@@ -82,6 +82,7 @@ export const PAYMENT_METHOD_LABEL: Record<string, string> = {
 
 export const APPROVAL_ROLES: UserRole[] = ["PRESIDENT", "FOUNDER_AGENT"];
 export const FINANCE_ROLES: UserRole[] = ["FINANCE", "ADMIN", "PRESIDENT", "FOUNDER_AGENT"];
+export const OFFSET_REVIEW_ROLES: UserRole[] = ["FINANCE", "PRESIDENT", "FOUNDER_AGENT"];
 export const ADMIN_ROLES: UserRole[] = ["ADMIN"];
 export const PROJECT_MANAGE_ROLES: UserRole[] = ["ADMIN", "PRESIDENT", "FOUNDER_AGENT"];
 export const PROJECT_VIEW_ROLES: UserRole[] = ["ADMIN", "PRESIDENT", "FOUNDER_AGENT", "FINANCE"];
