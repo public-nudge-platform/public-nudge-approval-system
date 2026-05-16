@@ -24,7 +24,6 @@ export function MarkAsPaidForm({ requestId, defaultPaymentMethod }: { requestId:
     startTransition(async () => {
       const result = await markAsPaid(requestId, {
         paymentMethod: data.get("paymentMethod") as string,
-        paymentReference: (data.get("paymentReference") as string) || undefined,
         paymentNote: (data.get("paymentNote") as string) || undefined,
         paidAt: (data.get("paidAt") as string) || undefined,
         bankLastFive: (data.get("bankLastFive") as string) || undefined,
@@ -81,31 +80,19 @@ export function MarkAsPaidForm({ requestId, defaultPaymentMethod }: { requestId:
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      {selectedMethod === "BANK_TRANSFER" && (
         <div>
-          <label className="block text-xs text-gray-500 mb-1">付款參考編號</label>
+          <label className="block text-xs text-gray-500 mb-1">匯款帳號後五碼</label>
           <input
             type="text"
-            name="paymentReference"
-            placeholder="憑證／交易編號（選填）"
-            className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            name="bankLastFive"
+            maxLength={5}
+            pattern="\d{1,5}"
+            placeholder="例：12345"
+            className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
           />
         </div>
-
-        {selectedMethod === "BANK_TRANSFER" && (
-          <div>
-            <label className="block text-xs text-gray-500 mb-1">匯款帳號後五碼</label>
-            <input
-              type="text"
-              name="bankLastFive"
-              maxLength={5}
-              pattern="\d{1,5}"
-              placeholder="例：12345"
-              className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
-            />
-          </div>
-        )}
-      </div>
+      )}
 
       <div>
         <label className="block text-xs text-gray-500 mb-1">付款備註</label>

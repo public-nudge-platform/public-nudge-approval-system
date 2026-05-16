@@ -406,7 +406,6 @@ export default async function FinancePage({
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500">申請人</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500">付款方式</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500">帳號後五碼</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500">參考編號</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500">付款人</th>
                   <th className="text-right px-5 py-3 text-xs font-semibold text-gray-500">金額</th>
                   <th className="text-right px-5 py-3 text-xs font-semibold text-gray-500">付款日期</th>
@@ -433,9 +432,6 @@ export default async function FinancePage({
                     </td>
                     <td className="px-4 py-3 text-gray-500 font-mono text-xs">
                       {req.bankLastFive ? `*${req.bankLastFive}` : "—"}
-                    </td>
-                    <td className="px-4 py-3 text-gray-500 font-mono text-xs">
-                      {req.paymentReference || "—"}
                     </td>
                     <td className="px-4 py-3 text-gray-600">{req.paidBy || "—"}</td>
                     <td className="px-5 py-3 text-right font-semibold text-gray-900 tabular-nums">

@@ -533,12 +533,6 @@ export default async function RequestDetailPage({
                     <dd className="text-gray-800 font-mono">*{request.bankLastFive}</dd>
                   </div>
                 )}
-                {request.paymentReference && (
-                  <div className="flex justify-between">
-                    <dt className="text-gray-400">付款參考編號</dt>
-                    <dd className="text-gray-800 font-mono text-xs">{request.paymentReference}</dd>
-                  </div>
-                )}
                 {request.paidBy && (
                   <div className="flex justify-between">
                     <dt className="text-gray-400">付款處理人</dt>
