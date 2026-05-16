@@ -1,11 +1,11 @@
 "use client";
 
-import { useTransition } from "react";
+import { useTransition, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { markNotificationRead, markAllNotificationsRead } from "@/lib/actions/notification";
 import {
   Bell, FileText, CheckCircle2, XCircle, RotateCcw,
-  Banknote, Receipt, Send,
+  Banknote, Receipt, Send, Archive, SmartphoneNfc,
 } from "lucide-react";
 import { clsx } from "clsx";
 import type { NotificationType } from "@prisma/client";
@@ -33,6 +33,7 @@ const TYPE_ICON: Record<NotificationType, React.ComponentType<{ size?: number; c
   SETTLEMENT_SUBMITTED: Receipt,
   SETTLEMENT_RETURNED: RotateCcw,
   SETTLEMENT_APPROVED: CheckCircle2,
+  REQUEST_CLOSED: Archive,
 };
 
 const TYPE_COLOR: Record<NotificationType, string> = {
@@ -47,7 +48,121 @@ const TYPE_COLOR: Record<NotificationType, string> = {
   SETTLEMENT_SUBMITTED: "text-indigo-500 bg-indigo-50",
   SETTLEMENT_RETURNED: "text-amber-500 bg-amber-50",
   SETTLEMENT_APPROVED: "text-purple-500 bg-purple-50",
+  REQUEST_CLOSED: "text-gray-500 bg-gray-100",
 };
+
+type PushState = "unsupported" | "default" | "granted" | "denied" | "loading";
+
+function usePushNotifications() {
+  const [state, setState] = useState<PushState>("loading");
+
+  useEffect(() => {
+    if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
+      setState("unsupported");
+      return;
+    }
+    setState(Notification.permission as PushState);
+  }, []);
+
+  async function enable() {
+    setState("loading");
+    try {
+      const res = await fetch("/api/push/subscribe");
+      const { vapidPublicKey } = await res.json();
+      if (!vapidPublicKey) {
+        setState("unsupported");
+        return;
+      }
+      const reg = await navigator.serviceWorker.ready;
+      const sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: vapidPublicKey,
+      });
+      await fetch("/api/push/subscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(sub.toJSON()),
+      });
+      setState("granted");
+    } catch {
+      setState(Notification.permission as PushState);
+    }
+  }
+
+  async function disable() {
+    setState("loading");
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      const sub = await reg.pushManager.getSubscription();
+      if (sub) {
+        await fetch("/api/push/subscribe", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ endpoint: sub.endpoint }),
+        });
+        await sub.unsubscribe();
+      }
+      setState("default");
+    } catch {
+      setState("default");
+    }
+  }
+
+  return { state, enable, disable };
+}
+
+function PushToggleButton() {
+  const { state, enable, disable } = usePushNotifications();
+
+  if (state === "loading") {
+    return (
+      <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-50 border border-gray-200 text-sm text-gray-400">
+        <SmartphoneNfc size={15} />
+        <span>偵測中…</span>
+      </div>
+    );
+  }
+
+  if (state === "unsupported") {
+    return (
+      <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-50 border border-gray-200 text-sm text-gray-400">
+        <SmartphoneNfc size={15} />
+        <span>此瀏覽器不支援手機推播</span>
+      </div>
+    );
+  }
+
+  if (state === "denied") {
+    return (
+      <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-50 border border-amber-200 text-sm text-amber-700">
+        <SmartphoneNfc size={15} />
+        <span>推播已被封鎖，請至瀏覽器設定解除封鎖</span>
+      </div>
+    );
+  }
+
+  if (state === "granted") {
+    return (
+      <button
+        onClick={disable}
+        className="flex items-center gap-2 px-3 py-2 rounded-lg bg-green-50 border border-green-200 text-sm text-green-700 hover:bg-green-100 transition-colors"
+      >
+        <SmartphoneNfc size={15} />
+        <span>手機推播已啟用（點此關閉）</span>
+      </button>
+    );
+  }
+
+  return (
+    <button
+      onClick={enable}
+      className="flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-50 border border-blue-200 text-sm text-blue-700 hover:bg-blue-100 transition-colors"
+    >
+      <SmartphoneNfc size={15} />
+      <span>啟用手機推播通知</span>
+    </button>
+  );
+}
 
 function timeAgo(date: Date) {
   const diff = Date.now() - new Date(date).getTime();
@@ -147,6 +262,12 @@ export function NotificationsClient({ notifications, unreadCount }: {
             全部標記已讀
           </button>
         )}
+      </div>
+
+      {/* Push notification toggle */}
+      <div className="flex items-center justify-between bg-white rounded-xl border border-gray-200 px-4 py-3">
+        <div className="text-sm text-gray-600">在手機或桌面上接收即時推播通知</div>
+        <PushToggleButton />
       </div>
 
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">

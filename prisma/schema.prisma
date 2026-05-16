@@ -86,6 +86,7 @@ enum NotificationType {
   SETTLEMENT_SUBMITTED
   SETTLEMENT_RETURNED
   SETTLEMENT_APPROVED
+  REQUEST_CLOSED
 }
 
 model User {
@@ -97,9 +98,10 @@ model User {
   isActive     Boolean          @default(true)
   createdAt    DateTime         @default(now())
   updatedAt    DateTime         @updatedAt
-  requests      Request[]
-  approvals     ApprovalRecord[]
-  notifications Notification[]
+  requests          Request[]
+  approvals         ApprovalRecord[]
+  notifications     Notification[]
+  pushSubscriptions PushSubscription[]
 
   @@map("users")
 }
@@ -211,9 +213,24 @@ model Notification {
   type             NotificationType
   relatedRequestId String?
   isRead           Boolean          @default(false)
+  readAt           DateTime?
+  deliveryStatus   String           @default("IN_APP")
   createdAt        DateTime         @default(now())
 
   @@map("notifications")
+}
+
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("push_subscriptions")
 }
 
 model AuditLog {

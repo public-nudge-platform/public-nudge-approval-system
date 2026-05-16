@@ -10,7 +10,7 @@ export async function markNotificationRead(notificationId: string) {
 
   await prisma.notification.updateMany({
     where: { id: notificationId, userId: session.user.id },
-    data: { isRead: true },
+    data: { isRead: true, readAt: new Date() },
   });
 
   revalidatePath("/notifications");
