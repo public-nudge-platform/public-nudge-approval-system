@@ -157,7 +157,7 @@ export default async function RequestsPage({
                 name="q"
                 value={params.q}
                 placeholder="搜尋標題、流水編號、申請人…"
-                className="w-full pl-8 pr-3 py-1.5 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full pl-8 pr-3 py-1.5 text-sm text-gray-800 border border-slate-300 rounded-lg bg-white placeholder:text-slate-400 hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
             <FilterSelect
@@ -196,9 +196,9 @@ export default async function RequestsPage({
             <AdvancedFiltersPanel defaultOpen={hasAdvancedFilters}>
               <div className="p-3 bg-gray-50 rounded-lg border border-gray-200 flex flex-wrap gap-4">
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-gray-500 whitespace-nowrap">申請日期</span>
+                  <span className="text-xs text-gray-600 whitespace-nowrap">申請日期</span>
                   <FilterInput name="dateFrom" type="date" value={params.dateFrom} />
-                  <span className="text-xs text-gray-400">—</span>
+                  <span className="text-xs text-gray-500">—</span>
                   <FilterInput name="dateTo" type="date" value={params.dateTo} />
                 </div>
                 <div className="flex items-center gap-2">
@@ -208,15 +208,15 @@ export default async function RequestsPage({
                     type="number"
                     value={params.amountMin}
                     placeholder="最低"
-                    className="w-24 text-sm border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-24 text-sm text-gray-800 border border-slate-300 rounded-lg px-2.5 py-1.5 bg-white placeholder:text-slate-400 hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   />
-                  <span className="text-xs text-gray-400">—</span>
+                  <span className="text-xs text-gray-500">—</span>
                   <FilterInput
                     name="amountMax"
                     type="number"
                     value={params.amountMax}
                     placeholder="最高"
-                    className="w-24 text-sm border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-24 text-sm text-gray-800 border border-slate-300 rounded-lg px-2.5 py-1.5 bg-white placeholder:text-slate-400 hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   />
                 </div>
                 <div className="flex items-center gap-2">
@@ -258,7 +258,7 @@ export default async function RequestsPage({
         {requests.length === 0 ? (
           <div className="py-16 text-center">
             <Search size={32} className="mx-auto text-gray-200 mb-3" />
-            <p className="text-sm text-gray-400">
+            <p className="text-sm text-gray-500">
               {hasBasicFilters || hasAdvancedFilters ? "找不到符合條件的申請單" : "尚無申請單"}
             </p>
             {!hasBasicFilters && !hasAdvancedFilters && (
@@ -272,13 +272,13 @@ export default async function RequestsPage({
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-200">
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">專案</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">標題</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">類型</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">申請人</th>
-                  <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wide">金額</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">狀態</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">日期</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">專案</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">標題</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">類型</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">申請人</th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wide">金額</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">狀態</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">日期</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -297,7 +297,7 @@ export default async function RequestsPage({
                       <Link href={`/requests/${req.id}`} className="block px-4 py-3">
                         <span className="font-medium text-gray-900">{req.title}</span>
                         {req.requestNumber && (
-                          <p className="text-xs text-gray-400 mt-0.5 font-mono">{req.requestNumber}</p>
+                          <p className="text-xs text-gray-500 mt-0.5 font-mono">{req.requestNumber}</p>
                         )}
                       </Link>
                     </td>
@@ -316,7 +316,7 @@ export default async function RequestsPage({
                         <span className="font-medium text-gray-900 tabular-nums">
                           {Number(req.amount).toLocaleString()}
                         </span>
-                        <span className="text-xs text-gray-400 ml-0.5">元</span>
+                        <span className="text-xs text-gray-500 ml-0.5">元</span>
                       </Link>
                     </td>
                     <td className="p-0">
@@ -325,7 +325,7 @@ export default async function RequestsPage({
                       </Link>
                     </td>
                     <td className="p-0">
-                      <Link href={`/requests/${req.id}`} className="block px-4 py-3 text-gray-400 text-xs tabular-nums">
+                      <Link href={`/requests/${req.id}`} className="block px-4 py-3 text-gray-500 text-xs tabular-nums">
                         {req.createdAt.toLocaleDateString("zh-TW")}
                       </Link>
                     </td>
@@ -337,7 +337,7 @@ export default async function RequestsPage({
         )}
       </div>
 
-      <p className="text-xs text-gray-400">共 {requests.length} 筆</p>
+      <p className="text-xs text-gray-500">共 {requests.length} 筆</p>
     </div>
   );
 }

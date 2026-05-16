@@ -17,7 +17,7 @@ export function AdvancedFiltersPanel({
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-600 transition-colors"
+        className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-700 transition-colors"
       >
         <SlidersHorizontal size={11} />
         進階篩選

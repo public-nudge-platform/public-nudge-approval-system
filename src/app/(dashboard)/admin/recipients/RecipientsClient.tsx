@@ -33,12 +33,12 @@ function EditModal({ recipient, onClose }: { recipient: Recipient; onClose: () =
         <h2 className="text-sm font-semibold text-gray-800">編輯付款對象</h2>
         <form onSubmit={handleSubmit} className="space-y-3">
           <div>
-            <label className="block text-xs text-gray-500 mb-1">名稱</label>
+            <label className="block text-xs text-gray-600 mb-1">名稱</label>
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
-              className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 text-sm text-gray-800 border border-slate-300 rounded-lg placeholder:text-slate-400 hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
           </div>
           {error && <p className="text-xs text-red-500">{error}</p>}
@@ -73,14 +73,14 @@ function CreateModal({ onClose }: { onClose: () => void }) {
         <h2 className="text-sm font-semibold text-gray-800">新增付款對象</h2>
         <form onSubmit={handleSubmit} className="space-y-3">
           <div>
-            <label className="block text-xs text-gray-500 mb-1">名稱</label>
+            <label className="block text-xs text-gray-600 mb-1">名稱</label>
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
               placeholder="例：王小明"
               autoFocus
-              className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 text-sm text-gray-800 border border-slate-300 rounded-lg placeholder:text-slate-400 hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
           </div>
           {error && <p className="text-xs text-red-500">{error}</p>}
@@ -116,7 +116,7 @@ export function RecipientsClient({ recipients: initial }: { recipients: Recipien
       {editTarget && <EditModal recipient={editTarget} onClose={() => setEditTarget(null)} />}
 
       <div className="flex items-center justify-between">
-        <p className="text-xs text-gray-400">共 {active.length} 筆啟用</p>
+        <p className="text-xs text-gray-500">共 {active.length} 筆啟用</p>
         <Button onClick={() => setShowCreate(true)} size="sm">
           <UserPlus size={14} />
           新增付款對象
@@ -127,10 +127,10 @@ export function RecipientsClient({ recipients: initial }: { recipients: Recipien
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-gray-100 bg-gray-50">
-              <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500">名稱</th>
-              <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500">狀態</th>
-              <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500">建立日期</th>
-              <th className="text-right px-5 py-3 text-xs font-semibold text-gray-500">操作</th>
+              <th className="text-left px-5 py-3 text-xs font-semibold text-gray-600">名稱</th>
+              <th className="text-left px-4 py-3 text-xs font-semibold text-gray-600">狀態</th>
+              <th className="text-left px-4 py-3 text-xs font-semibold text-gray-600">建立日期</th>
+              <th className="text-right px-5 py-3 text-xs font-semibold text-gray-600">操作</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
@@ -142,7 +142,7 @@ export function RecipientsClient({ recipients: initial }: { recipients: Recipien
                     ? <span className="inline-flex items-center gap-1 text-xs text-green-700 bg-green-50 px-2 py-0.5 rounded-full ring-1 ring-green-200"><CheckCircle2 size={11} />啟用</span>
                     : <span className="inline-flex items-center gap-1 text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full"><XCircle size={11} />停用</span>}
                 </td>
-                <td className="px-4 py-3 text-xs text-gray-400">{r.createdAt.toLocaleDateString("zh-TW")}</td>
+                <td className="px-4 py-3 text-xs text-gray-500">{r.createdAt.toLocaleDateString("zh-TW")}</td>
                 <td className="px-5 py-3 text-right">
                   <div className="flex gap-2 justify-end">
                     <button
@@ -165,7 +165,7 @@ export function RecipientsClient({ recipients: initial }: { recipients: Recipien
             ))}
             {recipients.length === 0 && (
               <tr>
-                <td colSpan={4} className="px-5 py-10 text-center text-sm text-gray-400">尚無付款對象</td>
+                <td colSpan={4} className="px-5 py-10 text-center text-sm text-gray-500">尚無付款對象</td>
               </tr>
             )}
           </tbody>

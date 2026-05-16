@@ -51,7 +51,7 @@ export default async function ApprovalsPage() {
           <div className="bg-white rounded-xl border border-gray-200 py-16 text-center">
             <CheckCircle2 size={40} className="mx-auto text-green-300 mb-3" />
             <p className="text-gray-500 font-medium">目前沒有待審核的申請單</p>
-            <p className="text-sm text-gray-400 mt-1">所有申請都已處理完畢</p>
+            <p className="text-sm text-gray-500 mt-1">所有申請都已處理完畢</p>
           </div>
         ) : (
           <div className="space-y-2">
@@ -65,11 +65,11 @@ export default async function ApprovalsPage() {
                   <div className="flex items-center gap-2">
                     <TypeBadge type={req.type} />
                     {req.requestNumber && (
-                      <span className="font-mono text-xs text-gray-400">{req.requestNumber}</span>
+                      <span className="font-mono text-xs text-gray-500">{req.requestNumber}</span>
                     )}
                   </div>
                   <p className="font-semibold text-gray-900 mt-1">{req.title}</p>
-                  <p className="text-sm text-gray-500 mt-0.5">
+                  <p className="text-sm text-gray-600 mt-0.5">
                     {req.submitter.name}
                   </p>
                   {req.neededBy && (

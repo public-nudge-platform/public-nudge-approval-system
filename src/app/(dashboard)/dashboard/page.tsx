@@ -73,7 +73,7 @@ export default async function DashboardPage() {
         <h1 className="text-xl font-semibold text-gray-900">
           歡迎回來，{session!.user.name}
         </h1>
-        <p className="text-sm text-gray-500 mt-0.5">以下是目前的案件概況</p>
+        <p className="text-sm text-gray-600 mt-0.5">以下是目前的案件概況</p>
       </div>
 
       {/* Stats grid */}
@@ -115,7 +115,7 @@ export default async function DashboardPage() {
         {stats.recentRequests.length === 0 ? (
           <div className="py-10 text-center text-gray-400">
             <FileText size={32} className="mx-auto mb-2 opacity-30" />
-            <p className="text-sm">尚無申請記錄</p>
+            <p className="text-sm text-gray-500">尚無申請記錄</p>
           </div>
         ) : (
           <ul className="divide-y divide-gray-50">
@@ -131,10 +131,10 @@ export default async function DashboardPage() {
                     </div>
                     <div className="flex items-center gap-2 mt-0.5">
                       {req.requestNumber && (
-                        <span className="text-xs text-gray-400 font-mono">{req.requestNumber}</span>
+                        <span className="text-xs text-gray-500 font-mono">{req.requestNumber}</span>
                       )}
-                      <span className="text-xs text-gray-400">·</span>
-                      <span className="text-xs text-gray-500">{req.submitter.name}</span>
+                      <span className="text-xs text-gray-500">·</span>
+                      <span className="text-xs text-gray-600">{req.submitter.name}</span>
                     </div>
                   </div>
                   <div className="flex items-center gap-3 flex-shrink-0">
@@ -174,9 +174,9 @@ export default async function DashboardPage() {
                   {n.isRead && <span className="mt-1.5 w-2 h-2 flex-shrink-0" />}
                   <div className="flex-1 min-w-0">
                     <p className={`text-sm text-gray-900 truncate ${!n.isRead ? "font-semibold" : ""}`}>{n.title}</p>
-                    <p className="text-xs text-gray-500 mt-0.5 truncate">{n.message}</p>
+                    <p className="text-xs text-gray-600 mt-0.5 truncate">{n.message}</p>
                   </div>
-                  <span className="text-xs text-gray-400 flex-shrink-0 mt-0.5">
+                  <span className="text-xs text-gray-500 flex-shrink-0 mt-0.5">
                     {new Date(n.createdAt).toLocaleDateString("zh-TW")}
                   </span>
                 </Link>

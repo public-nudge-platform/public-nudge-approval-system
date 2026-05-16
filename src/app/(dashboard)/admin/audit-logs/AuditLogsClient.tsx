@@ -48,7 +48,7 @@ function DetailModal({ log, onClose }: { log: AuditLog; onClose: () => void }) {
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200">
           <div>
             <p className="font-semibold text-gray-900 text-sm">{log.description}</p>
-            <p className="text-xs text-gray-400 mt-0.5">
+            <p className="text-xs text-gray-500 mt-0.5">
               {log.createdAt.toLocaleString("zh-TW")}
             </p>
           </div>
@@ -63,28 +63,28 @@ function DetailModal({ log, onClose }: { log: AuditLog; onClose: () => void }) {
         <div className="p-5 overflow-y-auto space-y-4">
           <div className="grid grid-cols-2 gap-3 text-sm">
             <div>
-              <p className="text-xs text-gray-400">操作者</p>
+              <p className="text-xs text-gray-500">操作者</p>
               <p className="font-medium text-gray-800">{log.userName}</p>
             </div>
             <div>
-              <p className="text-xs text-gray-400">操作類型</p>
+              <p className="text-xs text-gray-500">操作類型</p>
               <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${AUDIT_ACTION_COLOR[log.action]}`}>
                 {AUDIT_ACTION_LABEL[log.action]}
               </span>
             </div>
             <div>
-              <p className="text-xs text-gray-400">操作對象類型</p>
+              <p className="text-xs text-gray-500">操作對象類型</p>
               <p className="text-gray-700">{log.entityType}</p>
             </div>
             {log.entityId && (
               <div>
-                <p className="text-xs text-gray-400">對象 ID</p>
-                <p className="text-gray-500 text-xs font-mono break-all">{log.entityId}</p>
+                <p className="text-xs text-gray-500">對象 ID</p>
+                <p className="text-gray-600 text-xs font-mono break-all">{log.entityId}</p>
               </div>
             )}
             {log.ipAddress && (
               <div>
-                <p className="text-xs text-gray-400">IP 位址</p>
+                <p className="text-xs text-gray-500">IP 位址</p>
                 <p className="text-gray-700 font-mono text-xs">{log.ipAddress}</p>
               </div>
             )}
@@ -168,11 +168,11 @@ export function AuditLogsClient({ logs, users }: Props) {
         {showFilters && (
           <div className="px-4 pb-4 pt-1 border-t border-gray-100 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
             <div>
-              <label className="block text-xs text-gray-500 mb-1">操作類型</label>
+              <label className="block text-xs text-gray-600 mb-1">操作類型</label>
               <select
                 value={filterAction}
                 onChange={(e) => setFilterAction(e.target.value)}
-                className="w-full text-sm border border-gray-200 rounded-lg px-2.5 py-1.5 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full text-sm text-gray-800 border border-slate-300 rounded-lg px-2.5 py-1.5 hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
                 <option value="">全部</option>
                 {(Object.keys(AUDIT_ACTION_LABEL) as AuditAction[]).map((a) => (
@@ -182,11 +182,11 @@ export function AuditLogsClient({ logs, users }: Props) {
             </div>
 
             <div>
-              <label className="block text-xs text-gray-500 mb-1">操作者</label>
+              <label className="block text-xs text-gray-600 mb-1">操作者</label>
               <select
                 value={filterUserId}
                 onChange={(e) => setFilterUserId(e.target.value)}
-                className="w-full text-sm border border-gray-200 rounded-lg px-2.5 py-1.5 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full text-sm text-gray-800 border border-slate-300 rounded-lg px-2.5 py-1.5 hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
                 <option value="">全部</option>
                 {users.map((u) => (
@@ -196,11 +196,11 @@ export function AuditLogsClient({ logs, users }: Props) {
             </div>
 
             <div>
-              <label className="block text-xs text-gray-500 mb-1">操作對象</label>
+              <label className="block text-xs text-gray-600 mb-1">操作對象</label>
               <select
                 value={filterEntityType}
                 onChange={(e) => setFilterEntityType(e.target.value)}
-                className="w-full text-sm border border-gray-200 rounded-lg px-2.5 py-1.5 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full text-sm text-gray-800 border border-slate-300 rounded-lg px-2.5 py-1.5 hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
                 <option value="">全部</option>
                 {ENTITY_TYPE_OPTIONS.map((t) => (
@@ -210,22 +210,22 @@ export function AuditLogsClient({ logs, users }: Props) {
             </div>
 
             <div>
-              <label className="block text-xs text-gray-500 mb-1">開始日期</label>
+              <label className="block text-xs text-gray-600 mb-1">開始日期</label>
               <input
                 type="date"
                 value={filterFrom}
                 onChange={(e) => setFilterFrom(e.target.value)}
-                className="w-full text-sm border border-gray-200 rounded-lg px-2.5 py-1.5 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full text-sm text-gray-800 border border-slate-300 rounded-lg px-2.5 py-1.5 hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
 
             <div>
-              <label className="block text-xs text-gray-500 mb-1">結束日期</label>
+              <label className="block text-xs text-gray-600 mb-1">結束日期</label>
               <input
                 type="date"
                 value={filterTo}
                 onChange={(e) => setFilterTo(e.target.value)}
-                className="w-full text-sm border border-gray-200 rounded-lg px-2.5 py-1.5 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full text-sm text-gray-800 border border-slate-300 rounded-lg px-2.5 py-1.5 hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
           </div>
@@ -233,24 +233,24 @@ export function AuditLogsClient({ logs, users }: Props) {
       </div>
 
       {/* Result count */}
-      <p className="text-xs text-gray-400 mb-2">共 {filtered.length} 筆紀錄</p>
+      <p className="text-xs text-gray-500 mb-2">共 {filtered.length} 筆紀錄</p>
 
       {/* Table */}
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-gray-50 border-b border-gray-200">
-              <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500">操作者</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500">操作類型</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500">操作對象</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 hidden md:table-cell">描述</th>
-              <th className="px-5 py-3 text-right text-xs font-semibold text-gray-500">時間</th>
+              <th className="px-5 py-3 text-left text-xs font-semibold text-gray-600">操作者</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">操作類型</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">操作對象</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 hidden md:table-cell">描述</th>
+              <th className="px-5 py-3 text-right text-xs font-semibold text-gray-600">時間</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-5 py-10 text-center text-sm text-gray-400">
+                <td colSpan={5} className="px-5 py-10 text-center text-sm text-gray-500">
                   無紀錄
                 </td>
               </tr>
@@ -267,16 +267,16 @@ export function AuditLogsClient({ logs, users }: Props) {
                     {AUDIT_ACTION_LABEL[log.action]}
                   </span>
                 </td>
-                <td className="px-4 py-3 text-gray-500 text-xs">
+                <td className="px-4 py-3 text-gray-600 text-xs">
                   <span>{log.entityType}</span>
                   {log.entityId && (
-                    <span className="ml-1 font-mono text-gray-400">{log.entityId.slice(0, 8)}…</span>
+                    <span className="ml-1 font-mono text-gray-500">{log.entityId.slice(0, 8)}…</span>
                   )}
                 </td>
                 <td className="px-4 py-3 text-gray-600 hidden md:table-cell max-w-xs truncate">
                   {log.description}
                 </td>
-                <td className="px-5 py-3 text-right text-xs text-gray-400 whitespace-nowrap">
+                <td className="px-5 py-3 text-right text-xs text-gray-500 whitespace-nowrap">
                   {log.createdAt.toLocaleString("zh-TW", {
                     month: "2-digit",
                     day: "2-digit",

@@ -49,7 +49,7 @@ function Modal({ title, onClose, children }: { title: string; onClose: () => voi
   );
 }
 
-const inputCls = "w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500";
+const inputCls = "w-full px-3 py-2 text-sm text-gray-800 border border-slate-300 rounded-lg placeholder:text-slate-400 hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500";
 
 // ── Request mini-table ─────────────────────────────────────────────────────
 function RequestsTable({ requests, projectId, totalCount }: {
@@ -67,21 +67,21 @@ function RequestsTable({ requests, projectId, totalCount }: {
         <table className="w-full text-xs">
           <thead>
             <tr className="bg-gray-50/80 border-b border-gray-100">
-              <th className="px-4 py-2 text-left font-semibold text-gray-400">流水編號</th>
-              <th className="px-3 py-2 text-left font-semibold text-gray-400">類型</th>
-              <th className="px-3 py-2 text-left font-semibold text-gray-400">標題</th>
-              <th className="px-3 py-2 text-left font-semibold text-gray-400">申請人</th>
-              <th className="px-3 py-2 text-right font-semibold text-gray-400">金額</th>
-              <th className="px-3 py-2 text-left font-semibold text-gray-400">狀態</th>
-              <th className="px-3 py-2 text-left font-semibold text-gray-400">申請日期</th>
-              <th className="px-3 py-2 text-left font-semibold text-gray-400">付款狀態</th>
-              <th className="px-4 py-2 text-right font-semibold text-gray-400" />
+              <th className="px-4 py-2 text-left font-semibold text-gray-500">流水編號</th>
+              <th className="px-3 py-2 text-left font-semibold text-gray-500">類型</th>
+              <th className="px-3 py-2 text-left font-semibold text-gray-500">標題</th>
+              <th className="px-3 py-2 text-left font-semibold text-gray-500">申請人</th>
+              <th className="px-3 py-2 text-right font-semibold text-gray-500">金額</th>
+              <th className="px-3 py-2 text-left font-semibold text-gray-500">狀態</th>
+              <th className="px-3 py-2 text-left font-semibold text-gray-500">申請日期</th>
+              <th className="px-3 py-2 text-left font-semibold text-gray-500">付款狀態</th>
+              <th className="px-4 py-2 text-right font-semibold text-gray-500" />
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
             {requests.map((req) => (
               <tr key={req.id} className="hover:bg-gray-50/60 transition-colors">
-                <td className="px-4 py-2 font-mono text-gray-400">{req.requestNumber ?? "—"}</td>
+                <td className="px-4 py-2 font-mono text-gray-500">{req.requestNumber ?? "—"}</td>
                 <td className="px-3 py-2"><TypeBadge type={req.type} /></td>
                 <td className="px-3 py-2 text-gray-700 max-w-[160px] truncate" title={req.title}>{req.title}</td>
                 <td className="px-3 py-2 text-gray-600">{req.submitter.name}</td>
@@ -119,7 +119,7 @@ function RequestsTable({ requests, projectId, totalCount }: {
 
       {totalCount > 10 && (
         <div className="px-4 py-3 border-t border-gray-100 flex items-center justify-between">
-          <p className="text-xs text-gray-400">顯示最新 {requests.length} 筆，共 {totalCount} 筆</p>
+          <p className="text-xs text-gray-500">顯示最新 {requests.length} 筆，共 {totalCount} 筆</p>
           <Link
             href={`/projects/${projectId}/requests`}
             className="text-xs text-blue-600 hover:text-blue-700 font-medium transition-colors"
@@ -130,7 +130,7 @@ function RequestsTable({ requests, projectId, totalCount }: {
       )}
       {totalCount <= 10 && totalCount > 0 && (
         <div className="px-4 py-3 border-t border-gray-100">
-          <p className="text-xs text-gray-400">共 {totalCount} 筆</p>
+          <p className="text-xs text-gray-500">共 {totalCount} 筆</p>
         </div>
       )}
     </div>
@@ -185,7 +185,7 @@ function ProjectRow({
               value={project.status}
               onChange={(e) => onSetStatus(project.id, e.target.value as ProjectStatus)}
               disabled={pending}
-              className="text-xs border border-gray-200 rounded-md px-1.5 py-1 bg-white text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:opacity-50"
+              className="text-xs border border-slate-300 rounded-md px-1.5 py-1 bg-white text-gray-700 hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:opacity-50"
             >
               <option value="NOT_STARTED">尚未啟動</option>
               <option value="IN_PROGRESS">進行中</option>

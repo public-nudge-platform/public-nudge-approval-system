@@ -10,7 +10,7 @@ import { X } from "lucide-react";
 
 const ALL_ROLES = Object.keys(USER_ROLE_LABEL) as UserRole[];
 
-const inputCls = "w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500";
+const inputCls = "w-full px-3 py-2 text-sm text-gray-800 border border-slate-300 rounded-lg placeholder:text-slate-400 hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500";
 const labelCls = "block text-xs font-medium text-gray-600 mb-1";
 
 function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {

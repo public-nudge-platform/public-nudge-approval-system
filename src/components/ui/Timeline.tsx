@@ -37,9 +37,9 @@ const stepConfig = {
   },
   pending: {
     icon: Clock,
-    iconClass: "bg-gray-200 text-gray-400",
+    iconClass: "bg-gray-200 text-gray-500",
     lineClass: "bg-gray-100",
-    titleClass: "text-gray-400",
+    titleClass: "text-gray-500",
   },
 };
 
@@ -62,13 +62,13 @@ export function Timeline({ steps }: { steps: TimelineStep[] }) {
             <div className={clsx("pb-5 min-w-0 flex-1", isLast && "pb-0")}>
               <p className={clsx("text-sm", config.titleClass)}>{step.title}</p>
               {step.person && (
-                <p className="text-xs text-gray-500 mt-0.5">{step.person}</p>
+                <p className="text-xs text-gray-600 mt-0.5">{step.person}</p>
               )}
               {step.date && (
-                <p className="text-xs text-gray-400 mt-0.5">{step.date}</p>
+                <p className="text-xs text-gray-500 mt-0.5">{step.date}</p>
               )}
               {step.comment && (
-                <p className="text-xs text-gray-600 bg-gray-50 rounded px-2 py-1 mt-1.5 border border-gray-100">
+                <p className="text-xs text-gray-700 bg-gray-50 rounded px-2 py-1 mt-1.5 border border-gray-200">
                   「{step.comment}」
                 </p>
               )}

@@ -44,7 +44,7 @@ export function UserTable({ users, actorRole, actorId }: { users: User[]; actorR
   return (
     <>
       <div className="flex items-center justify-between mb-4">
-        <p className="text-xs text-gray-400">共 {users.length} 位使用者</p>
+        <p className="text-xs text-gray-500">共 {users.length} 位使用者</p>
         <Button onClick={() => setShowCreate(true)} size="sm">
           <UserPlus size={14} />
           新增使用者
@@ -55,12 +55,12 @@ export function UserTable({ users, actorRole, actorId }: { users: User[]; actorR
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-gray-50 border-b border-gray-200">
-              <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500">姓名</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500">Email</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500">角色</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500">狀態</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500">建立日期</th>
-              <th className="px-5 py-3 text-right text-xs font-semibold text-gray-500">操作</th>
+              <th className="px-5 py-3 text-left text-xs font-semibold text-gray-600">姓名</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Email</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">角色</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">狀態</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">建立日期</th>
+              <th className="px-5 py-3 text-right text-xs font-semibold text-gray-600">操作</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
@@ -78,7 +78,7 @@ export function UserTable({ users, actorRole, actorId }: { users: User[]; actorR
                       )}
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-gray-500">{user.email}</td>
+                  <td className="px-4 py-3 text-gray-600">{user.email}</td>
                   <td className="px-4 py-3">
                     <span
                       className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium"
@@ -92,7 +92,7 @@ export function UserTable({ users, actorRole, actorId }: { users: User[]; actorR
                       {user.isActive ? "啟用" : "停用"}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-gray-400 text-xs">
+                  <td className="px-4 py-3 text-gray-500 text-xs">
                     {user.createdAt.toLocaleDateString("zh-TW")}
                   </td>
                   <td className="px-5 py-3">

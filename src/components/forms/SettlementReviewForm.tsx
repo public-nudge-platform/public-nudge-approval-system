@@ -43,13 +43,13 @@ export function SettlementReviewForm({ requestId }: Props) {
       <h3 className="text-sm font-semibold text-gray-800">確認沖銷</h3>
 
       <div>
-        <label className="block text-xs text-gray-500 mb-1">審核意見（退回時建議填寫）</label>
+        <label className="block text-xs text-gray-600 mb-1">審核意見（退回時建議填寫）</label>
         <textarea
           rows={2}
           value={comment}
           onChange={(e) => setComment(e.target.value)}
           placeholder="審核意見（選填）"
-          className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+          className="w-full text-sm text-gray-800 border border-slate-300 rounded-lg px-3 py-2 placeholder:text-slate-400 hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
         />
       </div>
 

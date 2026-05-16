@@ -43,7 +43,7 @@ export function FilterInput({
       }}
       className={
         className ??
-        "text-sm border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        "text-sm border border-slate-300 rounded-lg px-2.5 py-1.5 bg-white text-gray-800 placeholder:text-slate-400 hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
       }
     />
   );

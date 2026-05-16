@@ -82,8 +82,8 @@ function NotificationItem({ notification, onRead }: { notification: Notification
             <span className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0" />
           )}
         </div>
-        <p className="text-sm text-gray-500 mt-0.5 leading-snug">{notification.message}</p>
-        <p className="text-xs text-gray-400 mt-1">{timeAgo(notification.createdAt)}</p>
+        <p className="text-sm text-gray-600 mt-0.5 leading-snug">{notification.message}</p>
+        <p className="text-xs text-gray-500 mt-1">{timeAgo(notification.createdAt)}</p>
       </div>
     </div>
   );
@@ -153,7 +153,7 @@ export function NotificationsClient({ notifications, unreadCount }: {
         {notifications.length === 0 ? (
           <div className="py-16 text-center">
             <Bell size={36} className="mx-auto text-gray-200 mb-3" />
-            <p className="text-sm text-gray-400">目前沒有任何通知</p>
+            <p className="text-sm text-gray-500">目前沒有任何通知</p>
           </div>
         ) : (
           <ul>
@@ -165,7 +165,7 @@ export function NotificationsClient({ notifications, unreadCount }: {
       </div>
 
       {notifications.length > 0 && (
-        <p className="text-xs text-gray-400">共 {notifications.length} 則通知</p>
+        <p className="text-xs text-gray-500">共 {notifications.length} 則通知</p>
       )}
     </div>
   );

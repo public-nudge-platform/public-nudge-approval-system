@@ -151,11 +151,11 @@ export function NewRequestForm({ projects = [], recipients = [], initialRequest 
               className={`flex-1 py-3 px-4 rounded-xl border-2 text-sm font-medium transition-all ${
                 type === t
                   ? "border-blue-500 bg-blue-50 text-blue-700"
-                  : "border-gray-200 bg-white text-gray-500 hover:border-gray-300"
+                  : "border-slate-300 bg-white text-gray-600 hover:border-slate-400"
               }`}
             >
               {t === "REIMBURSEMENT" ? "一般請款" : "預付請款"}
-              <p className={`text-xs mt-0.5 font-normal ${type === t ? "text-blue-500" : "text-gray-400"}`}>
+              <p className={`text-xs mt-0.5 font-normal ${type === t ? "text-blue-500" : "text-gray-500"}`}>
                 {t === "REIMBURSEMENT" ? "事後報銷已支付費用" : "事前申請預付款項"}
               </p>
             </button>
@@ -175,7 +175,7 @@ export function NewRequestForm({ projects = [], recipients = [], initialRequest 
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="例：2026 年度會員大會餐費"
-            className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 text-sm text-gray-800 border border-slate-300 rounded-lg placeholder:text-slate-400 hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           />
         </div>
 
@@ -187,7 +187,7 @@ export function NewRequestForm({ projects = [], recipients = [], initialRequest 
             <select
               value={projectId}
               onChange={(e) => setProjectId(e.target.value)}
-              className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+              className="w-full px-3 py-2 text-sm text-gray-800 border border-slate-300 rounded-lg bg-white hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="">請選擇專案</option>
               {projects.map((p) => (
@@ -203,7 +203,7 @@ export function NewRequestForm({ projects = [], recipients = [], initialRequest 
               type="date"
               value={neededBy}
               onChange={(e) => setNeededBy(e.target.value)}
-              className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 text-sm text-gray-800 border border-slate-300 rounded-lg placeholder:text-slate-400 hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
           </div>
         </div>
@@ -215,7 +215,7 @@ export function NewRequestForm({ projects = [], recipients = [], initialRequest 
             onChange={(e) => setPurpose(e.target.value)}
             rows={2}
             placeholder="簡述費用用途…"
-            className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+            className="w-full px-3 py-2 text-sm text-gray-800 border border-slate-300 rounded-lg placeholder:text-slate-400 hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
           />
         </div>
       </div>
@@ -226,10 +226,10 @@ export function NewRequestForm({ projects = [], recipients = [], initialRequest 
 
         <div className="space-y-2">
           <div className="grid grid-cols-12 gap-2 px-1 mb-1">
-            <span className="col-span-5 text-xs font-medium text-gray-400">品項說明</span>
-            <span className="col-span-2 text-xs font-medium text-gray-400 text-center">數量</span>
-            <span className="col-span-2 text-xs font-medium text-gray-400 text-right">單價</span>
-            <span className="col-span-2 text-xs font-medium text-gray-400 text-right">小計</span>
+            <span className="col-span-5 text-xs font-medium text-gray-500">品項說明</span>
+            <span className="col-span-2 text-xs font-medium text-gray-500 text-center">數量</span>
+            <span className="col-span-2 text-xs font-medium text-gray-500 text-right">單價</span>
+            <span className="col-span-2 text-xs font-medium text-gray-500 text-right">小計</span>
             <span className="col-span-1" />
           </div>
 
@@ -239,14 +239,14 @@ export function NewRequestForm({ projects = [], recipients = [], initialRequest 
                 value={item.description}
                 onChange={(e) => updateItem(item.id, "description", e.target.value)}
                 placeholder="品項說明"
-                className="col-span-5 px-2.5 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="col-span-5 px-2.5 py-1.5 text-sm text-gray-800 border border-slate-300 rounded-lg placeholder:text-slate-400 hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
               <input
                 type="number"
                 min="1"
                 value={item.quantity}
                 onChange={(e) => updateItem(item.id, "quantity", Number(e.target.value))}
-                className="col-span-2 px-2.5 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-center"
+                className="col-span-2 px-2.5 py-1.5 text-sm text-gray-800 border border-slate-300 rounded-lg hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-center"
               />
               <input
                 type="number"
@@ -254,7 +254,7 @@ export function NewRequestForm({ projects = [], recipients = [], initialRequest 
                 step="1"
                 value={item.unitPrice}
                 onChange={(e) => updateItem(item.id, "unitPrice", Number(e.target.value))}
-                className="col-span-2 px-2.5 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-right"
+                className="col-span-2 px-2.5 py-1.5 text-sm text-gray-800 border border-slate-300 rounded-lg hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-right"
               />
               <div className="col-span-2 text-right">
                 <span className="text-sm font-medium text-gray-700 tabular-nums">
@@ -284,9 +284,9 @@ export function NewRequestForm({ projects = [], recipients = [], initialRequest 
 
         <div className="mt-4 pt-3 border-t border-gray-100 flex justify-end">
           <div className="text-right">
-            <p className="text-xs text-gray-400">申請總金額</p>
+            <p className="text-xs text-gray-500">申請總金額</p>
             <p className="text-2xl font-bold text-gray-900 tabular-nums">
-              {formatNumber(total)} <span className="text-sm font-normal text-gray-400">元</span>
+              {formatNumber(total)} <span className="text-sm font-normal text-gray-500">元</span>
             </p>
           </div>
         </div>
@@ -301,7 +301,7 @@ export function NewRequestForm({ projects = [], recipients = [], initialRequest 
           <select
             value={paymentMethod}
             onChange={(e) => setPaymentMethod(e.target.value)}
-            className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+            className="w-full px-3 py-2 text-sm text-gray-800 border border-slate-300 rounded-lg bg-white hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           >
             <option value="">請選擇（選填）</option>
             <option value="銀行轉帳">銀行轉帳</option>
@@ -324,7 +324,7 @@ export function NewRequestForm({ projects = [], recipients = [], initialRequest 
                   className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
                     recipientName === r.name
                       ? "bg-blue-600 text-white border-blue-600"
-                      : "bg-white text-gray-600 border-gray-200 hover:border-blue-400 hover:text-blue-600"
+                      : "bg-white text-gray-700 border-slate-300 hover:border-blue-400 hover:text-blue-600"
                   }`}
                 >
                   {r.name}
@@ -336,7 +336,7 @@ export function NewRequestForm({ projects = [], recipients = [], initialRequest 
             value={recipientName}
             onChange={(e) => setRecipientName(e.target.value)}
             placeholder="王小明（可手動輸入）"
-            className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 text-sm text-gray-800 border border-slate-300 rounded-lg placeholder:text-slate-400 hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           />
         </div>
 
@@ -347,7 +347,7 @@ export function NewRequestForm({ projects = [], recipients = [], initialRequest 
               value={bankName}
               onChange={(e) => setBankName(e.target.value)}
               placeholder="台灣銀行"
-              className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 text-sm text-gray-800 border border-slate-300 rounded-lg placeholder:text-slate-400 hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
           </div>
           <div>
@@ -356,7 +356,7 @@ export function NewRequestForm({ projects = [], recipients = [], initialRequest 
               value={bankCode}
               onChange={(e) => setBankCode(e.target.value)}
               placeholder="004"
-              className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 text-sm text-gray-800 border border-slate-300 rounded-lg placeholder:text-slate-400 hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
           </div>
         </div>
@@ -368,7 +368,7 @@ export function NewRequestForm({ projects = [], recipients = [], initialRequest 
               value={branchName}
               onChange={(e) => setBranchName(e.target.value)}
               placeholder="信義分行"
-              className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 text-sm text-gray-800 border border-slate-300 rounded-lg placeholder:text-slate-400 hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
           </div>
           <div>
@@ -377,7 +377,7 @@ export function NewRequestForm({ projects = [], recipients = [], initialRequest 
               value={branchCode}
               onChange={(e) => setBranchCode(e.target.value)}
               placeholder="0048"
-              className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 text-sm text-gray-800 border border-slate-300 rounded-lg placeholder:text-slate-400 hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
           </div>
         </div>
@@ -389,7 +389,7 @@ export function NewRequestForm({ projects = [], recipients = [], initialRequest 
             onChange={(e) => setPaymentInfoNote(e.target.value)}
             rows={2}
             placeholder="可補充說明，或描述附上的付款資訊影本內容"
-            className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+            className="w-full px-3 py-2 text-sm text-gray-800 border border-slate-300 rounded-lg placeholder:text-slate-400 hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
           />
         </div>
       </div>
@@ -398,7 +398,7 @@ export function NewRequestForm({ projects = [], recipients = [], initialRequest 
       <div className="bg-white rounded-xl border border-gray-200 p-5">
         <h2 className="text-sm font-semibold text-gray-700 mb-3">附件上傳</h2>
         <UploadZone onFilesChange={setPendingFiles} />
-        <p className="text-xs text-gray-400 mt-2">* 請附上發票、收據或相關憑證</p>
+        <p className="text-xs text-gray-500 mt-2">* 請附上發票、收據或相關憑證</p>
       </div>
 
       {/* Error */}
@@ -427,7 +427,7 @@ export function NewRequestForm({ projects = [], recipients = [], initialRequest 
         >
           {isEdit ? "重新送出" : "送出申請"}
         </Button>
-        <span className="text-xs text-gray-400">送出後將通知理事長審核</span>
+        <span className="text-xs text-gray-500">送出後將通知理事長審核</span>
       </div>
     </div>
   );

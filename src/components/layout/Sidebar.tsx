@@ -67,7 +67,7 @@ function NavSection({ title, items, pathname }: { title?: string; items: NavItem
   return (
     <div>
       {title && (
-        <p className="px-3 pt-5 pb-1.5 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+        <p className="px-3 pt-5 pb-1.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">
           {title}
         </p>
       )}
@@ -103,7 +103,7 @@ export function Sidebar({ role }: { role: UserRole }) {
           </div>
           <div>
             <p className="text-sm font-bold text-gray-900 leading-tight">Public Nudge</p>
-            <p className="text-[10px] text-gray-400 leading-tight">請款簽核系統</p>
+            <p className="text-[10px] text-gray-500 leading-tight">請款簽核系統</p>
           </div>
         </div>
       </div>

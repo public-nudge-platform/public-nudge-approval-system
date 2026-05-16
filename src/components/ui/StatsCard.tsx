@@ -26,7 +26,7 @@ export function StatsCard({ label, value, icon: Icon, color = "blue", href }: St
         <Icon size={20} />
       </div>
       <div className="min-w-0">
-        <p className="text-sm text-gray-500 truncate">{label}</p>
+        <p className="text-sm text-gray-600 truncate">{label}</p>
         <p className={clsx("text-2xl font-bold mt-0.5 tabular-nums", colors.value)}>{value}</p>
       </div>
     </div>

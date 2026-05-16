@@ -78,12 +78,12 @@ export function SettlementForm({ requestId, prepaidAmount, settlementAttachments
       )}
 
       <div className="bg-gray-50 rounded-lg px-3 py-2 text-sm flex justify-between items-center">
-        <span className="text-gray-500">預付金額</span>
+        <span className="text-gray-600">預付金額</span>
         <span className="font-semibold text-gray-900 tabular-nums">{prepaidAmount.toLocaleString()} 元</span>
       </div>
 
       <div>
-        <label className="block text-xs text-gray-500 mb-1">實際支出金額 <span className="text-red-500">*</span></label>
+        <label className="block text-xs text-gray-600 mb-1">實際支出金額 <span className="text-red-500">*</span></label>
         <input
           type="number"
           name="actualAmount"
@@ -93,7 +93,7 @@ export function SettlementForm({ requestId, prepaidAmount, settlementAttachments
           placeholder="請輸入實際支出金額"
           value={actualAmount}
           onChange={(e) => setActualAmount(e.target.value)}
-          className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          className="w-full text-sm text-gray-800 border border-slate-300 rounded-lg px-3 py-2 placeholder:text-slate-400 hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
         />
         {amountStatus && (
           <div className={`mt-1.5 px-3 py-1.5 rounded-md text-xs font-medium border ${amountStatus.color} flex items-center gap-1.5`}>
@@ -104,17 +104,17 @@ export function SettlementForm({ requestId, prepaidAmount, settlementAttachments
       </div>
 
       <div>
-        <label className="block text-xs text-gray-500 mb-1">沖銷說明</label>
+        <label className="block text-xs text-gray-600 mb-1">沖銷說明</label>
         <textarea
           name="reimbursementNote"
           rows={3}
           placeholder="請說明實際支出情況（選填）"
-          className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+          className="w-full text-sm text-gray-800 border border-slate-300 rounded-lg px-3 py-2 placeholder:text-slate-400 hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 resize-none"
         />
       </div>
 
       <div>
-        <p className="text-xs text-gray-500 mb-2">沖銷附件（發票、收據、付款證明）</p>
+        <p className="text-xs text-gray-600 mb-2">沖銷附件（發票、收據、付款證明）</p>
         <UploadZone requestId={requestId} isSettlement={true} />
         {settlementAttachmentsCount === 0 && (
           <p className="mt-1.5 text-xs text-amber-600 flex items-center gap-1">

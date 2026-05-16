@@ -129,7 +129,7 @@ export default async function FinancePage({
               name="submitter"
               value={params.submitter}
               placeholder="搜尋申請人…"
-              className="pl-8 pr-3 py-1.5 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="pl-8 pr-3 py-1.5 text-sm text-gray-800 border border-slate-300 rounded-lg bg-white placeholder:text-slate-400 hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
           </div>
           <FilterSelect
@@ -145,13 +145,13 @@ export default async function FinancePage({
             options={VIEW_OPTIONS}
           />
           <div className="flex items-center gap-1.5">
-            <span className="text-xs text-gray-500 whitespace-nowrap">申請日期</span>
+            <span className="text-xs text-gray-600 whitespace-nowrap">申請日期</span>
             <FilterInput name="dateFrom" type="date" value={params.dateFrom} />
-            <span className="text-xs text-gray-400">—</span>
+            <span className="text-xs text-gray-500">—</span>
             <FilterInput name="dateTo" type="date" value={params.dateTo} />
           </div>
           {hasFilters && (
-            <Link href="/finance" className="text-xs text-gray-400 hover:text-gray-600 underline">
+            <Link href="/finance" className="text-xs text-gray-500 hover:text-gray-700 underline">
               清除篩選
             </Link>
           )}
@@ -189,11 +189,11 @@ export default async function FinancePage({
                   <div className="flex items-center gap-2">
                     <TypeBadge type={req.type} />
                     {req.requestNumber && (
-                      <span className="font-mono text-xs text-gray-400">{req.requestNumber}</span>
+                      <span className="font-mono text-xs text-gray-500">{req.requestNumber}</span>
                     )}
                   </div>
                   <p className="font-semibold text-gray-900 mt-1">{req.title}</p>
-                  <p className="text-sm text-gray-500 mt-0.5">{req.submitter.name}</p>
+                  <p className="text-sm text-gray-600 mt-0.5">{req.submitter.name}</p>
                   {req.neededBy && (
                     <p className="text-xs text-amber-600 mt-0.5">
                       需款期限：{req.neededBy.toLocaleDateString("zh-TW")}
@@ -205,7 +205,7 @@ export default async function FinancePage({
                     {Number(req.amount).toLocaleString()} 元
                   </p>
                   <StatusBadge status={req.status} />
-                  <p className="text-xs text-gray-400 mt-1">點擊進入詳情頁付款</p>
+                  <p className="text-xs text-gray-500 mt-1">點擊進入詳情頁付款</p>
                 </div>
               </Link>
             ))}
@@ -266,10 +266,10 @@ export default async function FinancePage({
                                   {req.title}
                                 </p>
                                 {req.requestNumber && (
-                                  <p className="font-mono text-xs text-gray-400">{req.requestNumber}</p>
+                                  <p className="font-mono text-xs text-gray-500">{req.requestNumber}</p>
                                 )}
                                 {req.project && (
-                                  <p className="text-xs text-gray-400 truncate max-w-[160px]">
+                                  <p className="text-xs text-gray-500 truncate max-w-[160px]">
                                     {req.project.name}
                                   </p>
                                 )}
@@ -283,12 +283,12 @@ export default async function FinancePage({
                               {actual !== null ? (
                                 <span className="font-medium text-gray-900">{actual.toLocaleString()}</span>
                               ) : (
-                                <span className="text-gray-400">—</span>
+                                <span className="text-gray-500">—</span>
                               )}
                             </td>
                             <td className="px-4 py-3 text-right tabular-nums text-xs">
                               {diff === null ? (
-                                <span className="text-gray-400">—</span>
+                                <span className="text-gray-500">—</span>
                               ) : diff === 0 ? (
                                 <span className="text-green-600 font-medium">相符</span>
                               ) : diff < 0 ? (
@@ -299,7 +299,7 @@ export default async function FinancePage({
                                 <span className="text-red-600 font-medium">+{diff.toLocaleString()}</span>
                               )}
                             </td>
-                            <td className="px-4 py-3 text-gray-500 text-xs">
+                            <td className="px-4 py-3 text-gray-600 text-xs">
                               {req.reimbursementSubmittedAt?.toLocaleDateString("zh-TW") ?? "—"}
                             </td>
                           </tr>
@@ -314,7 +314,7 @@ export default async function FinancePage({
             {/* PENDING_SETTLEMENT: waiting for applicant */}
             {pendingSettlement.length > 0 && (
               <div className="space-y-2">
-                <p className="text-xs text-gray-500 font-medium">申請人尚未送出沖銷</p>
+                <p className="text-xs text-gray-600 font-medium">申請人尚未送出沖銷</p>
                 {pendingSettlement.map((req) => (
                   <Link
                     key={req.id}
@@ -325,11 +325,11 @@ export default async function FinancePage({
                       <div className="flex items-center gap-2">
                         <TypeBadge type={req.type} />
                         {req.requestNumber && (
-                          <span className="font-mono text-xs text-gray-400">{req.requestNumber}</span>
+                          <span className="font-mono text-xs text-gray-500">{req.requestNumber}</span>
                         )}
                       </div>
                       <p className="font-semibold text-gray-900 mt-1">{req.title}</p>
-                      <p className="text-sm text-gray-500 mt-0.5">{req.submitter.name}</p>
+                      <p className="text-sm text-gray-600 mt-0.5">{req.submitter.name}</p>
                     </div>
                     <div className="text-right flex-shrink-0">
                       <p className="text-lg font-bold text-gray-900 tabular-nums">
@@ -359,11 +359,11 @@ export default async function FinancePage({
                       <div className="flex items-center gap-2">
                         <TypeBadge type={req.type} />
                         {req.requestNumber && (
-                          <span className="font-mono text-xs text-gray-400">{req.requestNumber}</span>
+                          <span className="font-mono text-xs text-gray-500">{req.requestNumber}</span>
                         )}
                       </div>
                       <p className="font-semibold text-gray-900 mt-1">{req.title}</p>
-                      <p className="text-sm text-gray-500 mt-0.5">{req.submitter.name}</p>
+                      <p className="text-sm text-gray-600 mt-0.5">{req.submitter.name}</p>
                     </div>
                     <div className="text-right flex-shrink-0">
                       <p className="text-lg font-bold text-gray-900 tabular-nums">
@@ -393,7 +393,7 @@ export default async function FinancePage({
 
         {paidRequests.length === 0 ? (
           <div className="bg-white rounded-xl border border-gray-200 py-10 text-center">
-            <p className="text-sm text-gray-400">
+            <p className="text-sm text-gray-500">
               {hasFilters ? "找不到符合條件的付款紀錄" : "尚無付款紀錄"}
             </p>
           </div>
@@ -402,14 +402,14 @@ export default async function FinancePage({
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-gray-100 bg-gray-50">
-                  <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500">申請單</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500">申請人</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500">付款方式</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500">付款對象</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500">帳號後五碼</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500">付款人</th>
-                  <th className="text-right px-5 py-3 text-xs font-semibold text-gray-500">金額</th>
-                  <th className="text-right px-5 py-3 text-xs font-semibold text-gray-500">付款日期</th>
+                  <th className="text-left px-5 py-3 text-xs font-semibold text-gray-600">申請單</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-600">申請人</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-600">付款方式</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-600">付款對象</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-600">帳號後五碼</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-600">付款人</th>
+                  <th className="text-right px-5 py-3 text-xs font-semibold text-gray-600">金額</th>
+                  <th className="text-right px-5 py-3 text-xs font-semibold text-gray-600">付款日期</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
@@ -419,10 +419,10 @@ export default async function FinancePage({
                       <Link href={`/requests/${req.id}`} className="hover:text-blue-600 transition-colors">
                         <p className="font-medium text-gray-900">{req.title}</p>
                         {req.requestNumber && (
-                          <p className="font-mono text-xs text-gray-400">{req.requestNumber}</p>
+                          <p className="font-mono text-xs text-gray-500">{req.requestNumber}</p>
                         )}
                         {req.project && (
-                          <p className="text-xs text-gray-400">{req.project.name}</p>
+                          <p className="text-xs text-gray-500">{req.project.name}</p>
                         )}
                       </Link>
                       <StatusBadge status={req.status} />
@@ -432,14 +432,14 @@ export default async function FinancePage({
                       {req.paymentMethod ? (PAYMENT_METHOD_LABEL[req.paymentMethod] ?? req.paymentMethod) : "—"}
                     </td>
                     <td className="px-4 py-3 text-gray-600">{req.paymentRecipientName || "—"}</td>
-                    <td className="px-4 py-3 text-gray-500 font-mono text-xs">
+                    <td className="px-4 py-3 text-gray-600 font-mono text-xs">
                       {req.bankLastFive ? `*${req.bankLastFive}` : "—"}
                     </td>
                     <td className="px-4 py-3 text-gray-600">{req.paidBy || "—"}</td>
                     <td className="px-5 py-3 text-right font-semibold text-gray-900 tabular-nums">
                       {Number(req.amount).toLocaleString()} 元
                     </td>
-                    <td className="px-5 py-3 text-right text-gray-500 text-xs">
+                    <td className="px-5 py-3 text-right text-gray-600 text-xs">
                       {req.paidAt?.toLocaleDateString("zh-TW") || "—"}
                     </td>
                   </tr>

@@ -242,7 +242,7 @@ export default async function RequestDetailPage({
           <div>
             <div className="flex items-center gap-2.5 flex-wrap">
               {request.requestNumber && (
-                <span className="font-mono text-sm text-gray-400">{request.requestNumber}</span>
+                <span className="font-mono text-sm text-gray-500">{request.requestNumber}</span>
               )}
               <TypeBadge type={request.type} />
               <StatusBadge status={request.status} />
@@ -253,10 +253,10 @@ export default async function RequestDetailPage({
             )}
           </div>
           <div className="text-right">
-            <p className="text-xs text-gray-400">申請金額</p>
+            <p className="text-xs text-gray-500">申請金額</p>
             <p className="text-3xl font-bold text-gray-900 tabular-nums">
               {Number(request.amount).toLocaleString()}
-              <span className="text-base font-normal text-gray-400 ml-1">元</span>
+              <span className="text-base font-normal text-gray-500 ml-1">元</span>
             </p>
           </div>
         </div>
@@ -282,7 +282,7 @@ export default async function RequestDetailPage({
               )}
               {request.purpose && (
                 <div className="col-span-2">
-                  <dt className="text-xs text-gray-400 mb-0.5">支出用途</dt>
+                  <dt className="text-xs text-gray-500 mb-0.5">支出用途</dt>
                   <dd className="text-gray-700">{request.purpose}</dd>
                 </div>
               )}
@@ -294,7 +294,7 @@ export default async function RequestDetailPage({
             <h2 className="text-sm font-semibold text-gray-700 mb-4">費用明細</h2>
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-gray-100 text-xs text-gray-400">
+                <tr className="border-b border-gray-100 text-xs text-gray-500">
                   <th className="text-left pb-2 font-medium">品項</th>
                   <th className="text-center pb-2 font-medium w-16">數量</th>
                   <th className="text-right pb-2 font-medium w-24">單價</th>
@@ -306,7 +306,7 @@ export default async function RequestDetailPage({
                   <tr key={item.id}>
                     <td className="py-2.5">
                       <p className="text-gray-900">{item.description}</p>
-                      {item.note && <p className="text-xs text-gray-400 mt-0.5">{item.note}</p>}
+                      {item.note && <p className="text-xs text-gray-500 mt-0.5">{item.note}</p>}
                     </td>
                     <td className="py-2.5 text-center text-gray-600 tabular-nums">{item.quantity}</td>
                     <td className="py-2.5 text-right text-gray-600 tabular-nums">{Number(item.unitPrice).toLocaleString()}</td>
@@ -316,7 +316,7 @@ export default async function RequestDetailPage({
               </tbody>
               <tfoot className="border-t border-gray-200">
                 <tr>
-                  <td colSpan={3} className="pt-3 text-right text-sm font-semibold text-gray-600">合計</td>
+                  <td colSpan={3} className="pt-3 text-right text-sm font-semibold text-gray-700">合計</td>
                   <td className="pt-3 text-right text-base font-bold text-gray-900 tabular-nums">
                     {Number(request.amount).toLocaleString()}
                   </td>
@@ -331,7 +331,7 @@ export default async function RequestDetailPage({
             <AttachmentGrid attachments={regularAttachments} canDelete={canDelete} />
             {canUpload && (
               <div className="mt-4 pt-4 border-t border-gray-100">
-                <p className="text-xs font-medium text-gray-500 mb-2">新增附件</p>
+                <p className="text-xs font-medium text-gray-600 mb-2">新增附件</p>
                 <UploadZone requestId={request.id} />
               </div>
             )}
@@ -354,12 +354,12 @@ export default async function RequestDetailPage({
                 <div className="space-y-3 mb-4">
                   <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
                     <div>
-                      <dt className="text-xs text-gray-400 mb-0.5">預付金額</dt>
+                      <dt className="text-xs text-gray-500 mb-0.5">預付金額</dt>
                       <dd className="font-semibold text-gray-900 tabular-nums">{prepaidAmount.toLocaleString()} 元</dd>
                     </div>
                     {actualAmount !== null && (
                       <div>
-                        <dt className="text-xs text-gray-400 mb-0.5">實際支出</dt>
+                        <dt className="text-xs text-gray-500 mb-0.5">實際支出</dt>
                         <dd className="font-semibold text-gray-900 tabular-nums">{actualAmount.toLocaleString()} 元</dd>
                       </div>
                     )}
@@ -380,21 +380,21 @@ export default async function RequestDetailPage({
 
                   {request.reimbursementNote && (
                     <div>
-                      <dt className="text-xs text-gray-400 mb-0.5">沖銷說明</dt>
+                      <dt className="text-xs text-gray-500 mb-0.5">沖銷說明</dt>
                       <dd className="text-sm text-gray-700">{request.reimbursementNote}</dd>
                     </div>
                   )}
 
                   {request.reimbursementSubmittedAt && (
                     <div>
-                      <dt className="text-xs text-gray-400 mb-0.5">沖銷送出時間</dt>
+                      <dt className="text-xs text-gray-500 mb-0.5">沖銷送出時間</dt>
                       <dd className="text-sm text-gray-700">{request.reimbursementSubmittedAt.toLocaleString("zh-TW")}</dd>
                     </div>
                   )}
 
                   {settlementAttachments.length > 0 && (
                     <div>
-                      <p className="text-xs text-gray-400 mb-2">沖銷附件</p>
+                      <p className="text-xs text-gray-500 mb-2">沖銷附件</p>
                       <AttachmentGrid attachments={settlementAttachments} canDelete={false} />
                     </div>
                   )}
@@ -406,12 +406,12 @@ export default async function RequestDetailPage({
                 <div className="border-t border-gray-100 pt-3 space-y-1 text-sm">
                   {request.offsetReviewedBy && (
                     <div className="flex justify-between text-xs">
-                      <dt className="text-gray-400">確認人</dt>
+                      <dt className="text-gray-500">確認人</dt>
                       <dd className="text-gray-700">{request.offsetReviewedBy}</dd>
                     </div>
                   )}
                   <div className="flex justify-between text-xs">
-                    <dt className="text-gray-400">確認時間</dt>
+                    <dt className="text-gray-500">確認時間</dt>
                     <dd className="text-gray-700">{request.offsetReviewedAt.toLocaleString("zh-TW")}</dd>
                   </div>
                 </div>
@@ -420,7 +420,7 @@ export default async function RequestDetailPage({
               {/* PENDING_SETTLEMENT or OFFSET_RETURNED: show attachment list before submission */}
               {(request.status === "PENDING_SETTLEMENT" || request.status === "OFFSET_RETURNED") && isOwner && settlementAttachments.length > 0 && (
                 <div className="mb-4">
-                  <p className="text-xs text-gray-500 mb-2">已上傳沖銷附件</p>
+                  <p className="text-xs text-gray-600 mb-2">已上傳沖銷附件</p>
                   <AttachmentGrid attachments={settlementAttachments} canDelete={true} />
                 </div>
               )}
@@ -453,7 +453,7 @@ export default async function RequestDetailPage({
               </dl>
               {request.paymentInfoNote && (
                 <div className="mt-3 pt-3 border-t border-gray-100 text-sm">
-                  <dt className="text-xs text-gray-400 mb-0.5">備註</dt>
+                  <dt className="text-xs text-gray-500 mb-0.5">備註</dt>
                   <dd className="text-gray-700">{request.paymentInfoNote}</dd>
                 </div>
               )}
@@ -528,44 +528,44 @@ export default async function RequestDetailPage({
               <dl className="space-y-2 text-sm">
                 {request.paymentMethod && (
                   <div className="flex justify-between">
-                    <dt className="text-gray-400">付款方式</dt>
+                    <dt className="text-gray-500">付款方式</dt>
                     <dd className="text-gray-800 font-medium">
                       {PAYMENT_METHOD_LABEL[request.paymentMethod] ?? request.paymentMethod}
                     </dd>
                   </div>
                 )}
                 <div className="flex justify-between">
-                  <dt className="text-gray-400">付款日期</dt>
+                  <dt className="text-gray-500">付款日期</dt>
                   <dd className="text-gray-800">{request.paidAt.toLocaleDateString("zh-TW")}</dd>
                 </div>
                 {request.paymentRecipientName && (
                   <div className="flex justify-between">
-                    <dt className="text-gray-400">付款對象</dt>
+                    <dt className="text-gray-500">付款對象</dt>
                     <dd className="text-gray-800 font-medium">{request.paymentRecipientName}</dd>
                   </div>
                 )}
                 {request.bankLastFive && (
                   <div className="flex justify-between">
-                    <dt className="text-gray-400">匯款帳號後五碼</dt>
+                    <dt className="text-gray-500">匯款帳號後五碼</dt>
                     <dd className="text-gray-800 font-mono">*{request.bankLastFive}</dd>
                   </div>
                 )}
                 {request.paidBy && (
                   <div className="flex justify-between">
-                    <dt className="text-gray-400">付款處理人</dt>
+                    <dt className="text-gray-500">付款處理人</dt>
                     <dd className="text-gray-800">{request.paidBy}</dd>
                   </div>
                 )}
                 {request.paymentNote && (
                   <div className="pt-1 border-t border-gray-100">
-                    <dt className="text-gray-400 mb-0.5">付款備註</dt>
+                    <dt className="text-gray-500 mb-0.5">付款備註</dt>
                     <dd className="text-gray-700">{request.paymentNote}</dd>
                   </div>
                 )}
               </dl>
               {paymentAttachments.length > 0 && (
                 <div className="mt-3 pt-3 border-t border-gray-100">
-                  <p className="text-xs text-gray-400 mb-2">付款證明附件</p>
+                  <p className="text-xs text-gray-500 mb-2">付款證明附件</p>
                   <AttachmentGrid attachments={paymentAttachments} canDelete={false} />
                 </div>
               )}
@@ -586,7 +586,7 @@ export default async function RequestDetailPage({
 function InfoRow({ icon: Icon, label, value }: { icon: React.ComponentType<{ size?: number; className?: string }>; label: string; value: string }) {
   return (
     <div>
-      <dt className="flex items-center gap-1 text-xs text-gray-400 mb-0.5">
+      <dt className="flex items-center gap-1 text-xs text-gray-500 mb-0.5">
         <Icon size={11} />
         {label}
       </dt>

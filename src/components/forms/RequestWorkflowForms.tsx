@@ -70,7 +70,7 @@ export function FinanceReturnForm({ requestId }: { requestId: string }) {
           onChange={(e) => setComment(e.target.value)}
           rows={3}
           placeholder="請說明需補正的資料…"
-          className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+          className="w-full px-3 py-2 text-sm text-gray-800 border border-slate-300 rounded-lg placeholder:text-slate-400 hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
         />
       </div>
       {error && <p className="text-xs text-red-600 bg-red-50 px-3 py-2 rounded-lg">{error}</p>}

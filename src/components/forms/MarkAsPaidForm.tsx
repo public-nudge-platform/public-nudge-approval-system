@@ -70,13 +70,13 @@ export function MarkAsPaidForm({
 
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="block text-xs text-gray-500 mb-1">付款方式 <span className="text-red-500">*</span></label>
+          <label className="block text-xs text-gray-600 mb-1">付款方式 <span className="text-red-500">*</span></label>
           <select
             name="paymentMethod"
             required
             value={selectedMethod}
             onChange={(e) => setSelectedMethod(e.target.value)}
-            className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+            className="w-full text-sm text-gray-800 border border-slate-300 rounded-lg px-3 py-2 bg-white hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           >
             <option value="">請選擇</option>
             {PAYMENT_METHOD_OPTIONS.map((m) => (
@@ -86,12 +86,12 @@ export function MarkAsPaidForm({
         </div>
 
         <div>
-          <label className="block text-xs text-gray-500 mb-1">付款日期</label>
+          <label className="block text-xs text-gray-600 mb-1">付款日期</label>
           <input
             type="date"
             name="paidAt"
             defaultValue={new Date().toISOString().slice(0, 10)}
-            className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full text-sm text-gray-800 border border-slate-300 rounded-lg px-3 py-2 placeholder:text-slate-400 hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           />
         </div>
       </div>
@@ -101,7 +101,7 @@ export function MarkAsPaidForm({
         <select
           value={recipientValue}
           onChange={(e) => setRecipientValue(e.target.value)}
-          className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+          className="w-full text-sm text-gray-800 border border-slate-300 rounded-lg px-3 py-2 bg-white hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
         >
           <option value="">請選擇（選填）</option>
           {recipients.map((r) => (
@@ -122,14 +122,14 @@ export function MarkAsPaidForm({
 
       {selectedMethod === "BANK_TRANSFER" && (
         <div>
-          <label className="block text-xs text-gray-500 mb-1">匯款帳號後五碼</label>
+          <label className="block text-xs text-gray-600 mb-1">匯款帳號後五碼</label>
           <input
             type="text"
             name="bankLastFive"
             maxLength={5}
             pattern="\d{1,5}"
             placeholder="例：12345"
-            className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
+            className="w-full text-sm text-gray-800 border border-slate-300 rounded-lg px-3 py-2 placeholder:text-slate-400 hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono"
           />
         </div>
       )}
@@ -140,7 +140,7 @@ export function MarkAsPaidForm({
           name="paymentNote"
           rows={2}
           placeholder="付款備註（選填）"
-          className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+          className="w-full text-sm text-gray-800 border border-slate-300 rounded-lg px-3 py-2 placeholder:text-slate-400 hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
         />
       </div>
 
