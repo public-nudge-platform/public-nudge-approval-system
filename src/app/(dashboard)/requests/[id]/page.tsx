@@ -185,11 +185,14 @@ export default async function RequestDetailPage({
 
   if (!request) notFound();
 
+  const role = session!.user.role as UserRole;
+  const userId = session!.user.id;
+  const canViewAll = (["ADMIN", "PRESIDENT", "FOUNDER_AGENT", "FINANCE"] as UserRole[]).includes(role);
+  if (!canViewAll && request.submitterId !== userId) notFound();
+
   const canMarkPaidEarly = ["FINANCE", "ADMIN"].includes(session!.user.role) && request.status === "APPROVED";
   const activeRecipients = canMarkPaidEarly ? await getActiveRecipients() : [];
 
-  const role = session!.user.role as UserRole;
-  const userId = session!.user.id;
   const isApprover = APPROVAL_ROLES.includes(role) || role === "ADMIN";
   const isFinance = FINANCE_ROLES.includes(role);
   const pendingStep = request.status === "PENDING"

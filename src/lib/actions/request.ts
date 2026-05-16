@@ -77,6 +77,20 @@ export async function createRequest(data: CreateRequestInput) {
   const session = await auth();
   if (!session) return { error: "未登入" };
 
+  if (!data.title?.trim()) return { error: "標題為必填" };
+  if (data.title.length > 100) return { error: "標題不可超過 100 字" };
+  if (data.description && data.description.length > 2000) return { error: "說明不可超過 2000 字" };
+  if (data.purpose && data.purpose.length > 2000) return { error: "支出用途不可超過 2000 字" };
+  if (data.paymentInfoNote && data.paymentInfoNote.length > 500) return { error: "收款備註不可超過 500 字" };
+  if (data.neededBy && isNaN(Date.parse(data.neededBy))) return { error: "需款日期格式不正確" };
+  for (const item of data.items) {
+    if (!item.description?.trim()) return { error: "品項說明為必填" };
+    if (item.description.length > 200) return { error: "品項說明不可超過 200 字" };
+    if (!Number.isFinite(item.quantity) || item.quantity <= 0 || !Number.isInteger(item.quantity)) return { error: "數量須為正整數" };
+    if (!Number.isFinite(item.unitPrice) || item.unitPrice <= 0) return { error: "單價須大於 0" };
+    if (item.note && item.note.length > 200) return { error: "品項備註不可超過 200 字" };
+  }
+
   const totalAmount = data.items.reduce(
     (sum, item) => sum + item.quantity * item.unitPrice,
     0
@@ -220,6 +234,20 @@ export async function submitRequest(requestId: string) {
 export async function updateRequest(requestId: string, data: UpdateRequestInput) {
   const session = await auth();
   if (!session) return { error: "未登入" };
+
+  if (!data.title?.trim()) return { error: "標題為必填" };
+  if (data.title.length > 100) return { error: "標題不可超過 100 字" };
+  if (data.description && data.description.length > 2000) return { error: "說明不可超過 2000 字" };
+  if (data.purpose && data.purpose.length > 2000) return { error: "支出用途不可超過 2000 字" };
+  if (data.paymentInfoNote && data.paymentInfoNote.length > 500) return { error: "收款備註不可超過 500 字" };
+  if (data.neededBy && isNaN(Date.parse(data.neededBy))) return { error: "需款日期格式不正確" };
+  for (const item of data.items) {
+    if (!item.description?.trim()) return { error: "品項說明為必填" };
+    if (item.description.length > 200) return { error: "品項說明不可超過 200 字" };
+    if (!Number.isFinite(item.quantity) || item.quantity <= 0 || !Number.isInteger(item.quantity)) return { error: "數量須為正整數" };
+    if (!Number.isFinite(item.unitPrice) || item.unitPrice <= 0) return { error: "單價須大於 0" };
+    if (item.note && item.note.length > 200) return { error: "品項備註不可超過 200 字" };
+  }
 
   const request = await prisma.request.findUnique({
     where: { id: requestId, submitterId: session.user.id },
@@ -618,6 +646,10 @@ export async function markAsPaid(requestId: string, input: MarkAsPaidInput) {
   const role = session.user.role;
   if (!["FINANCE", "ADMIN"].includes(role)) return { error: "無財務權限" };
 
+  if (input.paidAt && isNaN(Date.parse(input.paidAt))) return { error: "付款日期格式不正確" };
+  if (input.paymentNote && input.paymentNote.length > 500) return { error: "付款備註不可超過 500 字" };
+  if (input.bankLastFive && !/^\d{1,5}$/.test(input.bankLastFive)) return { error: "帳號後五碼格式不正確" };
+
   const request = await prisma.request.findUnique({
     where: { id: requestId },
     select: {
@@ -726,6 +758,8 @@ export async function submitSettlement(requestId: string, data: { actualAmount: 
     return { error: "此申請單不在待沖銷或沖銷退回狀態" };
   }
   if (!data.actualAmount || data.actualAmount <= 0) return { error: "實際支出金額必須大於 0" };
+  if (!Number.isFinite(data.actualAmount)) return { error: "實際支出金額格式不正確" };
+  if (data.reimbursementNote && data.reimbursementNote.length > 2000) return { error: "沖銷說明不可超過 2000 字" };
 
   await prisma.request.update({
     where: { id: requestId },
