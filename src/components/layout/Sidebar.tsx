@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { clsx } from "clsx";
 import {
@@ -102,13 +103,13 @@ export function Sidebar({ role, onClose }: { role: UserRole; onClose?: () => voi
       {/* Logo */}
       <div className="px-5 py-5 border-b border-gray-100">
         <div className="flex items-center gap-2">
-          <div className="w-7 h-7 bg-blue-600 rounded-lg flex items-center justify-center">
-            <FileText size={14} className="text-white" />
-          </div>
-          <div>
-            <p className="text-sm font-bold text-gray-900 leading-tight">Public Nudge</p>
-            <p className="text-[10px] text-gray-500 leading-tight">請款簽核系統</p>
-          </div>
+          <Image
+            src="/公民幫推--logo去背.png"
+            alt="Public Nudge"
+            width={80}
+            height={40}
+            className="object-contain"
+          />
         </div>
       </div>
 
