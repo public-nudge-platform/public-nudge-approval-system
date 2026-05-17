@@ -235,15 +235,48 @@ export function AuditLogsClient({ logs, users }: Props) {
       {/* Result count */}
       <p className="text-xs text-gray-500 mb-2">共 {filtered.length} 筆紀錄</p>
 
-      {/* Table */}
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+      {/* Mobile cards */}
+      <ul className="md:hidden space-y-2">
+        {filtered.length === 0 && (
+          <li className="bg-white rounded-xl border border-gray-200 px-5 py-10 text-center text-sm text-gray-500">
+            無紀錄
+          </li>
+        )}
+        {filtered.map((log) => (
+          <li
+            key={log.id}
+            className="bg-white rounded-xl border border-gray-200 px-4 py-3 cursor-pointer hover:bg-gray-50 transition-colors"
+            onClick={() => setExpandedLog(log)}
+          >
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-sm font-medium text-gray-900">{log.userName}</span>
+              <span className="text-xs text-gray-400 whitespace-nowrap">
+                {log.createdAt.toLocaleString("zh-TW", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })}
+              </span>
+            </div>
+            <div className="flex items-center gap-2 mt-1.5">
+              <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${AUDIT_ACTION_COLOR[log.action]}`}>
+                {AUDIT_ACTION_LABEL[log.action]}
+              </span>
+              <span className="text-xs text-gray-500">
+                {log.entityType}
+                {log.entityId && <span className="ml-1 font-mono">{log.entityId.slice(0, 8)}…</span>}
+              </span>
+            </div>
+            <p className="text-xs text-gray-600 mt-1 truncate">{log.description}</p>
+          </li>
+        ))}
+      </ul>
+
+      {/* Desktop table */}
+      <div className="hidden md:block bg-white rounded-xl border border-gray-200 overflow-hidden">
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-gray-50 border-b border-gray-200">
               <th className="px-5 py-3 text-left text-xs font-semibold text-gray-600">操作者</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">操作類型</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">操作對象</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 hidden md:table-cell">描述</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">描述</th>
               <th className="px-5 py-3 text-right text-xs font-semibold text-gray-600">時間</th>
             </tr>
           </thead>
@@ -273,7 +306,7 @@ export function AuditLogsClient({ logs, users }: Props) {
                     <span className="ml-1 font-mono text-gray-500">{log.entityId.slice(0, 8)}…</span>
                   )}
                 </td>
-                <td className="px-4 py-3 text-gray-600 hidden md:table-cell max-w-xs truncate">
+                <td className="px-4 py-3 text-gray-600 max-w-xs truncate">
                   {log.description}
                 </td>
                 <td className="px-5 py-3 text-right text-xs text-gray-500 whitespace-nowrap">
