@@ -187,7 +187,7 @@ export default async function FinancePage({
               <Link
                 key={req.id}
                 href={`/requests/${req.id}`}
-                className="flex items-center gap-4 bg-white rounded-xl border border-amber-200 px-5 py-4 hover:border-amber-400 hover:shadow-sm transition-all"
+                className="flex flex-col gap-3 bg-white rounded-xl border border-amber-200 px-5 py-4 hover:border-amber-400 hover:shadow-sm transition-all sm:flex-row sm:items-center sm:gap-4"
               >
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
@@ -204,12 +204,14 @@ export default async function FinancePage({
                     </p>
                   )}
                 </div>
-                <div className="text-right flex-shrink-0">
+                <div className="flex items-center justify-between flex-shrink-0 sm:flex-col sm:items-end sm:text-right">
                   <p className="text-lg font-bold text-gray-900 tabular-nums">
                     {Number(req.amount).toLocaleString()} 元
                   </p>
-                  <StatusBadge status={req.status} />
-                  <p className="text-xs text-gray-500 mt-1">點擊進入詳情頁付款</p>
+                  <div className="flex flex-col items-end gap-1">
+                    <StatusBadge status={req.status} />
+                    <p className="text-xs text-gray-500">點擊進入詳情頁付款</p>
+                  </div>
                 </div>
               </Link>
             ))}
@@ -323,7 +325,7 @@ export default async function FinancePage({
                   <Link
                     key={req.id}
                     href={`/requests/${req.id}`}
-                    className="flex items-center gap-4 bg-white rounded-xl border border-gray-200 px-5 py-4 hover:border-gray-400 hover:shadow-sm transition-all opacity-75"
+                    className="flex flex-col gap-3 bg-white rounded-xl border border-gray-200 px-5 py-4 hover:border-gray-400 hover:shadow-sm transition-all opacity-75 sm:flex-row sm:items-center sm:gap-4"
                   >
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
@@ -335,7 +337,7 @@ export default async function FinancePage({
                       <p className="font-semibold text-gray-900 mt-1">{req.title}</p>
                       <p className="text-sm text-gray-600 mt-0.5">{req.submitter.name}</p>
                     </div>
-                    <div className="text-right flex-shrink-0">
+                    <div className="flex items-center justify-between flex-shrink-0 sm:flex-col sm:items-end sm:text-right">
                       <p className="text-lg font-bold text-gray-900 tabular-nums">
                         {Number(req.amount).toLocaleString()} 元
                       </p>
@@ -357,7 +359,7 @@ export default async function FinancePage({
                   <Link
                     key={req.id}
                     href={`/requests/${req.id}`}
-                    className="flex items-center gap-4 bg-white rounded-xl border border-orange-200 px-5 py-4 hover:border-orange-400 hover:shadow-sm transition-all"
+                    className="flex flex-col gap-3 bg-white rounded-xl border border-orange-200 px-5 py-4 hover:border-orange-400 hover:shadow-sm transition-all sm:flex-row sm:items-center sm:gap-4"
                   >
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
@@ -369,7 +371,7 @@ export default async function FinancePage({
                       <p className="font-semibold text-gray-900 mt-1">{req.title}</p>
                       <p className="text-sm text-gray-600 mt-0.5">{req.submitter.name}</p>
                     </div>
-                    <div className="text-right flex-shrink-0">
+                    <div className="flex items-center justify-between flex-shrink-0 sm:flex-col sm:items-end sm:text-right">
                       <p className="text-lg font-bold text-gray-900 tabular-nums">
                         {Number(req.amount).toLocaleString()} 元
                       </p>

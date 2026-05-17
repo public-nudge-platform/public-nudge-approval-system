@@ -59,7 +59,7 @@ export default async function ApprovalsPage() {
               <Link
                 key={req.id}
                 href={`/requests/${req.id}`}
-                className="flex items-center gap-4 bg-white rounded-xl border border-blue-200 px-5 py-4 hover:border-blue-400 hover:shadow-sm transition-all"
+                className="flex flex-col gap-3 bg-white rounded-xl border border-blue-200 px-5 py-4 hover:border-blue-400 hover:shadow-sm transition-all sm:flex-row sm:items-center sm:gap-4"
               >
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
@@ -79,19 +79,21 @@ export default async function ApprovalsPage() {
                   )}
                 </div>
 
-                <div className="text-right flex-shrink-0">
-                  <p className="text-lg font-bold text-gray-900 tabular-nums">
-                    {Number(req.amount).toLocaleString()} 元
-                  </p>
-                  {req.submittedAt && (
-                    <p className="text-xs text-gray-400 mt-0.5">
-                      {req.submittedAt.toLocaleDateString("zh-TW")} 送出
+                <div className="flex items-center justify-between flex-shrink-0 sm:flex-col sm:items-end sm:text-right">
+                  <div>
+                    <p className="text-lg font-bold text-gray-900 tabular-nums">
+                      {Number(req.amount).toLocaleString()} 元
                     </p>
-                  )}
-                  <div className="mt-1">
-                    <StatusBadge status={req.status} />
+                    {req.submittedAt && (
+                      <p className="text-xs text-gray-400 mt-0.5 sm:text-right">
+                        {req.submittedAt.toLocaleDateString("zh-TW")} 送出
+                      </p>
+                    )}
                   </div>
-                  <p className="text-xs text-gray-400 mt-1">點擊進入詳情頁簽核</p>
+                  <div className="flex flex-col items-end gap-1">
+                    <StatusBadge status={req.status} />
+                    <p className="text-xs text-gray-400">點擊進入詳情頁簽核</p>
+                  </div>
                 </div>
               </Link>
             ))}
