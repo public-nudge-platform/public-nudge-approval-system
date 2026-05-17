@@ -127,12 +127,10 @@ export default async function DashboardPage() {
               <li key={req.id}>
                 <Link
                   href={`/requests/${req.id}`}
-                  className="flex items-center gap-4 px-5 py-3.5 hover:bg-gray-50 transition-colors"
+                  className="flex flex-col gap-1.5 px-5 py-3.5 hover:bg-gray-50 transition-colors sm:flex-row sm:items-center sm:gap-4"
                 >
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium text-gray-900 truncate">{req.title}</span>
-                    </div>
+                    <span className="block text-sm font-medium text-gray-900 truncate">{req.title}</span>
                     <div className="flex items-center gap-2 mt-0.5">
                       {req.requestNumber && (
                         <span className="text-xs text-gray-500 font-mono">{req.requestNumber}</span>
@@ -141,10 +139,10 @@ export default async function DashboardPage() {
                       <span className="text-xs text-gray-600">{req.submitter.name}</span>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3 flex-shrink-0">
+                  <div className="flex items-center gap-2 flex-shrink-0">
                     <TypeBadge type={req.type} />
                     <StatusBadge status={req.status} />
-                    <span className="text-sm font-medium text-gray-700 tabular-nums w-24 text-right">
+                    <span className="text-sm font-medium text-gray-700 tabular-nums ml-auto sm:ml-0 sm:w-24 sm:text-right">
                       {Number(req.amount).toLocaleString()} 元
                     </span>
                   </div>
