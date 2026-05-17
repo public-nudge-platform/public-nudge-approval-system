@@ -102,14 +102,18 @@ export function Sidebar({ role, onClose }: { role: UserRole; onClose?: () => voi
     <aside className="w-56 flex-shrink-0 bg-white border-r border-gray-200 flex flex-col h-full">
       {/* Logo */}
       <div className="px-5 py-5 border-b border-gray-100">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           <Image
             src="/公民幫推--logo去背.png"
             alt="Public Nudge"
             width={80}
             height={40}
-            className="object-contain"
+            className="shrink-0 object-contain"
           />
+          <div className="min-w-0 leading-tight">
+            <p className="whitespace-nowrap text-sm font-bold text-gray-900">公民幫推</p>
+            <p className="mt-0.5 whitespace-nowrap text-xs font-medium text-gray-500">簽核管理系統</p>
+          </div>
         </div>
       </div>
 
