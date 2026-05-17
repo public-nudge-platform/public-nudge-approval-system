@@ -185,7 +185,7 @@ function ProjectRow({
               value={project.status}
               onChange={(e) => onSetStatus(project.id, e.target.value as ProjectStatus)}
               disabled={pending}
-              className="text-xs border border-slate-300 rounded-md px-1.5 py-1 bg-white text-gray-700 hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:opacity-50"
+              className="hidden sm:block text-xs border border-slate-300 rounded-md px-1.5 py-1 bg-white text-gray-700 hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:opacity-50"
             >
               <option value="NOT_STARTED">尚未啟動</option>
               <option value="IN_PROGRESS">進行中</option>

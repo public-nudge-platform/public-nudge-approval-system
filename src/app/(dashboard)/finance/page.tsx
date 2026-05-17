@@ -247,8 +247,8 @@ export default async function FinancePage({
                   <AlertTriangle size={11} />
                   以下沖銷單已由申請人送出，待財務確認
                 </p>
-                <div className="bg-white rounded-xl border border-indigo-200 overflow-hidden">
-                  <table className="w-full text-sm">
+                <div className="bg-white rounded-xl border border-indigo-200 overflow-x-auto">
+                  <table className="w-full text-sm min-w-[560px]">
                     <thead>
                       <tr className="border-b border-gray-100 bg-indigo-50">
                         <th className="text-left px-4 py-2.5 text-xs font-semibold text-indigo-700">申請單</th>
@@ -404,8 +404,8 @@ export default async function FinancePage({
             </p>
           </div>
         ) : (
-          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-            <table className="w-full text-sm">
+          <div className="bg-white rounded-xl border border-gray-200 overflow-x-auto">
+            <table className="w-full text-sm min-w-[700px]">
               <thead>
                 <tr className="border-b border-gray-100 bg-gray-50">
                   <th className="text-left px-5 py-3 text-xs font-semibold text-gray-600">申請單</th>

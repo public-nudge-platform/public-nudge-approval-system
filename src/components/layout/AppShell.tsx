@@ -18,7 +18,7 @@ export function AppShell({ role, user, unreadCount, children }: Props) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <div className="flex h-screen bg-gray-50 overflow-hidden">
+    <div className="flex h-dvh bg-gray-50 overflow-hidden">
       {/* Mobile backdrop */}
       {sidebarOpen && (
         <div
