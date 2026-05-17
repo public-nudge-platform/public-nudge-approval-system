@@ -64,7 +64,7 @@ function RequestsTable({ requests, projectId, totalCount }: {
   return (
     <div>
       <div className="overflow-x-auto">
-        <table className="w-full text-xs">
+        <table className="w-full text-xs min-w-[680px]">
           <thead>
             <tr className="bg-gray-50/80 border-b border-gray-100">
               <th className="px-4 py-2 text-left font-semibold text-gray-500">流水編號</th>
