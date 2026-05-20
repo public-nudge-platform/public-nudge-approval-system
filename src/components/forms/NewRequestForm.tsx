@@ -10,6 +10,7 @@ import { useRouter } from "next/navigation";
 
 type ActiveProject = { id: string; name: string };
 type ActiveRecipient = { id: string; name: string };
+type ActiveAccountingSubject = { id: string; code: string; name: string; direction: string };
 
 type Item = {
   id: string;
@@ -33,6 +34,7 @@ type InitialRequest = {
   branchName: string | null;
   branchCode: string | null;
   paymentInfoNote: string | null;
+  accountingSubjectId: string | null;
   items: {
     id: string;
     description: string;
@@ -50,7 +52,7 @@ function formatNumber(n: number) {
   return n.toLocaleString("zh-TW");
 }
 
-export function NewRequestForm({ projects = [], recipients = [], initialRequest }: { projects?: ActiveProject[]; recipients?: ActiveRecipient[]; initialRequest?: InitialRequest }) {
+export function NewRequestForm({ projects = [], recipients = [], accountingSubjects = [], initialRequest }: { projects?: ActiveProject[]; recipients?: ActiveRecipient[]; accountingSubjects?: ActiveAccountingSubject[]; initialRequest?: InitialRequest }) {
   const isEdit = !!initialRequest;
   const [type, setType] = useState<RequestType>(initialRequest?.type ?? "REIMBURSEMENT");
   const [title, setTitle] = useState(initialRequest?.title ?? "");
@@ -64,6 +66,7 @@ export function NewRequestForm({ projects = [], recipients = [], initialRequest 
   const [branchName, setBranchName] = useState(initialRequest?.branchName ?? "");
   const [branchCode, setBranchCode] = useState(initialRequest?.branchCode ?? "");
   const [paymentInfoNote, setPaymentInfoNote] = useState(initialRequest?.paymentInfoNote ?? "");
+  const [accountingSubjectId, setAccountingSubjectId] = useState(initialRequest?.accountingSubjectId ?? "");
   const [items, setItems] = useState<Item[]>(
     initialRequest?.items.map((item) => ({
       id: item.id,
@@ -94,6 +97,7 @@ export function NewRequestForm({ projects = [], recipients = [], initialRequest 
 
     if (!title.trim()) { setError("請填寫標題"); return; }
     if (!projectId) { setError("請選擇專案"); return; }
+    if (!accountingSubjectId) { setError("請選擇會計科目"); return; }
     if (items.some((i) => !i.description.trim())) { setError("請填寫所有品項說明"); return; }
     if (items.some((i) => i.quantity <= 0 || i.unitPrice <= 0)) { setError("品項數量與單價必須大於 0"); return; }
 
@@ -111,6 +115,7 @@ export function NewRequestForm({ projects = [], recipients = [], initialRequest 
         branchName: branchName.trim() || undefined,
         branchCode: branchCode.trim() || undefined,
         paymentInfoNote: paymentInfoNote.trim() || undefined,
+        accountingSubjectId: accountingSubjectId || undefined,
         items: items.map((i) => ({
           description: i.description.trim(),
           quantity: Number(i.quantity),
@@ -206,6 +211,22 @@ export function NewRequestForm({ projects = [], recipients = [], initialRequest 
               className="w-full px-3 py-2 text-sm text-gray-800 border border-slate-300 rounded-lg placeholder:text-slate-400 hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
           </div>
+        </div>
+
+        <div>
+          <label className="block text-xs font-medium text-gray-600 mb-1">
+            申請會計科目 <span className="text-red-500">*</span>
+          </label>
+          <select
+            value={accountingSubjectId}
+            onChange={(e) => setAccountingSubjectId(e.target.value)}
+            className="w-full px-3 py-2 text-sm text-gray-800 border border-slate-300 rounded-lg bg-white hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          >
+            <option value="">請選擇會計科目</option>
+            {accountingSubjects.map((s) => (
+              <option key={s.id} value={s.id}>{s.code} {s.name}</option>
+            ))}
+          </select>
         </div>
 
         <div>

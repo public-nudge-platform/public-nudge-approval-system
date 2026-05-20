@@ -32,6 +32,8 @@ export default async function ProjectsPage() {
           requestDate: true,
           paidAt: true,
           submitter: { select: { name: true } },
+          accountingSubject: { select: { code: true, name: true } },
+          finalAccountingSubject: { select: { code: true, name: true } },
         },
       },
     },

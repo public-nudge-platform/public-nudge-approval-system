@@ -24,6 +24,8 @@ type RequestRow = {
   requestDate: Date;
   paidAt: Date | null;
   submitter: { name: string };
+  accountingSubject: { code: string; name: string } | null;
+  finalAccountingSubject: { code: string; name: string } | null;
 };
 
 type Project = {
@@ -74,7 +76,8 @@ function RequestsTable({ requests, projectId, totalCount }: {
               <th className="px-3 py-2 text-right font-semibold text-gray-500">金額</th>
               <th className="px-3 py-2 text-left font-semibold text-gray-500">狀態</th>
               <th className="px-3 py-2 text-left font-semibold text-gray-500">申請日期</th>
-              <th className="px-3 py-2 text-left font-semibold text-gray-500">付款狀態</th>
+              <th className="px-3 py-2 text-left font-semibold text-gray-500">申請科目</th>
+              <th className="px-3 py-2 text-left font-semibold text-gray-500">正式科目</th>
               <th className="px-4 py-2 text-right font-semibold text-gray-500" />
             </tr>
           </thead>
@@ -92,16 +95,15 @@ function RequestsTable({ requests, projectId, totalCount }: {
                 <td className="px-3 py-2 text-gray-500 tabular-nums">
                   {new Date(req.requestDate).toLocaleDateString("zh-TW")}
                 </td>
-                <td className="px-3 py-2">
-                  {req.status === "PAID" ? (
-                    <span className="text-blue-600 font-medium">
-                      {req.paidAt ? new Date(req.paidAt).toLocaleDateString("zh-TW") : "已付款"}
+                <td className="px-3 py-2 font-mono text-gray-500 text-xs max-w-[100px] truncate" title={req.accountingSubject ? `${req.accountingSubject.code} ${req.accountingSubject.name}` : ""}>
+                  {req.accountingSubject ? `${req.accountingSubject.code}` : <span className="text-gray-300">—</span>}
+                </td>
+                <td className="px-3 py-2 font-mono text-gray-500 text-xs max-w-[100px] truncate" title={req.finalAccountingSubject ? `${req.finalAccountingSubject.code} ${req.finalAccountingSubject.name}` : ""}>
+                  {req.finalAccountingSubject ? (
+                    <span className={req.finalAccountingSubject.code !== req.accountingSubject?.code ? "text-amber-600" : ""}>
+                      {req.finalAccountingSubject.code}
                     </span>
-                  ) : req.status === "APPROVED" ? (
-                    <span className="text-amber-600">待付款</span>
-                  ) : (
-                    <span className="text-gray-300">—</span>
-                  )}
+                  ) : <span className="text-gray-300">—</span>}
                 </td>
                 <td className="px-4 py-2 text-right">
                   <Link

@@ -15,7 +15,8 @@ import type { TimelineStep } from "@/components/ui/Timeline";
 import type { UserRole } from "@prisma/client";
 import { APPROVAL_ROLES, FINANCE_ROLES, OFFSET_REVIEW_ROLES, PAYMENT_METHOD_LABEL } from "@/lib/constants";
 import Link from "next/link";
-import { ChevronLeft, Calendar, User, Building2, Banknote, FolderOpen, Hash, Receipt, Info, Pencil } from "lucide-react";
+import { ChevronLeft, Calendar, User, Building2, Banknote, FolderOpen, Hash, Receipt, Info, Pencil, BookOpen } from "lucide-react";
+import { FinalAccountingSubjectForm } from "@/components/forms/FinalAccountingSubjectForm";
 import { UploadZone } from "@/components/ui/UploadZone";
 
 const OFFSET_STATUSES = ["PENDING_SETTLEMENT", "OFFSET_SUBMITTED", "OFFSET_RETURNED", "CLOSED"] as const;
@@ -154,6 +155,8 @@ async function getRequest(id: string) {
       project: { select: { id: true, name: true, status: true } },
       items: true,
       attachments: true,
+      accountingSubject: { select: { id: true, code: true, name: true, direction: true } },
+      finalAccountingSubject: { select: { id: true, code: true, name: true, direction: true } },
       approvalSteps: {
         orderBy: { stepOrder: "asc" },
         include: {
@@ -175,6 +178,14 @@ async function getActiveRecipients() {
   });
 }
 
+async function getActiveAccountingSubjects() {
+  return prisma.accountingSubject.findMany({
+    where: { isActive: true },
+    orderBy: { code: "asc" },
+    select: { id: true, code: true, name: true, direction: true },
+  });
+}
+
 export default async function RequestDetailPage({
   params,
 }: {
@@ -191,7 +202,11 @@ export default async function RequestDetailPage({
   if (!canViewAll && request.submitterId !== userId) notFound();
 
   const canMarkPaidEarly = ["FINANCE", "ADMIN"].includes(session!.user.role) && request.status === "APPROVED";
-  const activeRecipients = canMarkPaidEarly ? await getActiveRecipients() : [];
+  const canEditFinalSubject = ["FINANCE", "ADMIN"].includes(role);
+  const [activeRecipients, accountingSubjects] = await Promise.all([
+    canMarkPaidEarly ? getActiveRecipients() : Promise.resolve([]),
+    canEditFinalSubject ? getActiveAccountingSubjects() : Promise.resolve([]),
+  ]);
 
   const isApprover = APPROVAL_ROLES.includes(role) || role === "ADMIN";
   const isFinance = FINANCE_ROLES.includes(role);
@@ -291,6 +306,58 @@ export default async function RequestDetailPage({
               )}
             </dl>
           </div>
+
+          {/* Accounting subjects */}
+          {(request.accountingSubject || request.finalAccountingSubject || isFinance) && (
+            <div className="bg-white rounded-xl border border-gray-200 p-5">
+              <div className="flex items-center gap-2 mb-4">
+                <BookOpen size={14} className="text-teal-600" />
+                <h2 className="text-sm font-semibold text-gray-700">會計科目</h2>
+              </div>
+              <dl className="space-y-3 text-sm">
+                {request.accountingSubject && (
+                  <div>
+                    <dt className="text-xs text-gray-500 mb-0.5">申請會計科目</dt>
+                    <dd className="text-gray-800 font-medium font-mono">
+                      {request.accountingSubject.code} {request.accountingSubject.name}
+                      {request.accountingSubject.direction && (
+                        <span className="ml-1 text-xs text-gray-500">（{request.accountingSubject.direction}）</span>
+                      )}
+                    </dd>
+                  </div>
+                )}
+                <div>
+                  <dt className="text-xs text-gray-500 mb-0.5">正式會計科目</dt>
+                  {request.finalAccountingSubject ? (
+                    <dd className={`font-medium font-mono ${
+                      request.finalAccountingSubjectId !== request.accountingSubjectId
+                        ? "text-amber-700"
+                        : "text-gray-800"
+                    }`}>
+                      {request.finalAccountingSubject.code} {request.finalAccountingSubject.name}
+                      {request.finalAccountingSubject.direction && (
+                        <span className="ml-1 text-xs text-gray-500">（{request.finalAccountingSubject.direction}）</span>
+                      )}
+                      {request.finalAccountingSubjectId !== request.accountingSubjectId && (
+                        <span className="ml-2 text-xs text-amber-600 font-normal">（已由財務修正）</span>
+                      )}
+                    </dd>
+                  ) : (
+                    <dd className="text-gray-400 text-xs">尚未設定</dd>
+                  )}
+                </div>
+              </dl>
+              {canEditFinalSubject && (
+                <div className="mt-4 pt-3 border-t border-gray-100">
+                  <FinalAccountingSubjectForm
+                    requestId={request.id}
+                    currentFinalSubjectId={request.finalAccountingSubjectId}
+                    accountingSubjects={accountingSubjects}
+                  />
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Items */}
           <div className="bg-white rounded-xl border border-gray-200 p-5">
@@ -492,7 +559,13 @@ export default async function RequestDetailPage({
           {/* Payment action */}
           {canMarkPaid && (
             <div className="bg-white rounded-xl border border-green-200 p-5 ring-1 ring-green-100 space-y-4">
-              <MarkAsPaidForm requestId={request.id} defaultPaymentMethod={request.paymentMethod ?? undefined} recipients={activeRecipients} />
+              <MarkAsPaidForm
+                requestId={request.id}
+                defaultPaymentMethod={request.paymentMethod ?? undefined}
+                recipients={activeRecipients}
+                accountingSubjects={accountingSubjects}
+                currentFinalSubjectId={request.finalAccountingSubjectId}
+              />
               {canFinanceReturn && (
                 <div className="border-t border-green-100 pt-4">
                   <FinanceReturnForm requestId={request.id} />

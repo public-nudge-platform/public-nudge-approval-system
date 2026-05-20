@@ -72,6 +72,10 @@ enum AuditAction {
   USER_DEACTIVATED
   PASSWORD_RESET
   DATA_EXPORTED
+  ACCOUNTING_SUBJECT_CREATED
+  ACCOUNTING_SUBJECT_UPDATED
+  ACCOUNTING_SUBJECT_DEACTIVATED
+  ACCOUNTING_SUBJECT_CHANGED
 }
 
 enum NotificationType {
@@ -152,6 +156,10 @@ model Request {
   offsetReviewedAt         DateTime?
   offsetReviewedBy         String?
   offsetReviewNote         String?
+  accountingSubjectId      String?
+  accountingSubject        AccountingSubject? @relation("AccountingSubject", fields: [accountingSubjectId], references: [id])
+  finalAccountingSubjectId String?
+  finalAccountingSubject   AccountingSubject? @relation("FinalAccountingSubject", fields: [finalAccountingSubjectId], references: [id])
   submitterId    String
   submitter      User           @relation(fields: [submitterId], references: [id])
   items          RequestItem[]
@@ -262,6 +270,20 @@ model PaymentRecipient {
   updatedAt DateTime @updatedAt
 
   @@map("payment_recipients")
+}
+
+model AccountingSubject {
+  id        String    @id @default(cuid())
+  code      String    @unique
+  name      String
+  direction String
+  isActive  Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  requests      Request[] @relation("AccountingSubject")
+  finalRequests Request[] @relation("FinalAccountingSubject")
+
+  @@map("accounting_subjects")
 }
 
 model ApprovalRecord {

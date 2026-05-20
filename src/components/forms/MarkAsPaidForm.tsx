@@ -9,15 +9,20 @@ import { Banknote } from "lucide-react";
 import { PAYMENT_METHOD_OPTIONS } from "@/lib/constants";
 
 type Recipient = { id: string; name: string };
+type AccountingSubject = { id: string; code: string; name: string; direction: string };
 
 export function MarkAsPaidForm({
   requestId,
   defaultPaymentMethod,
   recipients = [],
+  accountingSubjects = [],
+  currentFinalSubjectId,
 }: {
   requestId: string;
   defaultPaymentMethod?: string;
   recipients?: Recipient[];
+  accountingSubjects?: AccountingSubject[];
+  currentFinalSubjectId?: string | null;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -26,6 +31,7 @@ export function MarkAsPaidForm({
   const [selectedMethod, setSelectedMethod] = useState(defaultPaymentMethod ?? "");
   const [recipientValue, setRecipientValue] = useState("");
   const [customRecipient, setCustomRecipient] = useState("");
+  const [finalSubjectId, setFinalSubjectId] = useState(currentFinalSubjectId ?? "");
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -43,6 +49,7 @@ export function MarkAsPaidForm({
         paidAt: (data.get("paidAt") as string) || undefined,
         bankLastFive: (data.get("bankLastFive") as string) || undefined,
         paymentRecipientName,
+        finalAccountingSubjectId: finalSubjectId || undefined,
       });
       if (result?.error) {
         setError(result.error);
@@ -131,6 +138,22 @@ export function MarkAsPaidForm({
             placeholder="例：12345"
             className="w-full text-sm text-gray-800 border border-slate-300 rounded-lg px-3 py-2 placeholder:text-slate-400 hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono"
           />
+        </div>
+      )}
+
+      {accountingSubjects.length > 0 && (
+        <div>
+          <label className="block text-xs text-gray-600 mb-1">正式會計科目（選填）</label>
+          <select
+            value={finalSubjectId}
+            onChange={(e) => setFinalSubjectId(e.target.value)}
+            className="w-full text-sm text-gray-800 border border-slate-300 rounded-lg px-3 py-2 bg-white hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          >
+            <option value="">請選擇（如需修正）</option>
+            {accountingSubjects.map((s) => (
+              <option key={s.id} value={s.id}>{s.code} {s.name}</option>
+            ))}
+          </select>
         </div>
       )}
 

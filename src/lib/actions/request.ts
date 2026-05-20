@@ -35,6 +35,7 @@ type CreateRequestInput = {
   branchName?: string;
   branchCode?: string;
   paymentInfoNote?: string;
+  accountingSubjectId?: string;
   items: RequestItemInput[];
   submit: boolean;
 };
@@ -123,6 +124,8 @@ export async function createRequest(data: CreateRequestInput) {
       branchName: data.branchName || null,
       branchCode: data.branchCode || null,
       paymentInfoNote: data.paymentInfoNote || null,
+      accountingSubjectId: data.accountingSubjectId || null,
+      finalAccountingSubjectId: data.accountingSubjectId || null,
       amount: totalAmount,
       status: data.submit ? "PENDING" : "DRAFT",
       requestNumber: requestNumber ?? null,
@@ -292,6 +295,7 @@ export async function updateRequest(requestId: string, data: UpdateRequestInput)
       branchName: data.branchName || null,
       branchCode: data.branchCode || null,
       paymentInfoNote: data.paymentInfoNote || null,
+      accountingSubjectId: data.accountingSubjectId || null,
       amount: totalAmount,
       ...(data.submit && {
         status: "PENDING",
@@ -631,12 +635,59 @@ export async function returnApprovedRequest(requestId: string, comment?: string)
   revalidatePath("/dashboard");
 }
 
+export async function updateFinalAccountingSubject(requestId: string, finalAccountingSubjectId: string) {
+  const session = await auth();
+  if (!session) return { error: "未登入" };
+
+  const role = session.user.role;
+  if (!["FINANCE", "ADMIN"].includes(role)) return { error: "無修改正式會計科目權限" };
+
+  const request = await prisma.request.findUnique({
+    where: { id: requestId },
+    select: {
+      title: true,
+      finalAccountingSubjectId: true,
+      finalAccountingSubject: { select: { code: true, name: true } },
+    },
+  });
+  if (!request) return { error: "找不到申請單" };
+
+  const newSubject = await prisma.accountingSubject.findUnique({
+    where: { id: finalAccountingSubjectId },
+    select: { code: true, name: true },
+  });
+  if (!newSubject) return { error: "找不到會計科目" };
+
+  await prisma.request.update({
+    where: { id: requestId },
+    data: { finalAccountingSubjectId },
+  });
+
+  await logAuditAction({
+    userId: session.user.id,
+    userName: session.user.name ?? session.user.email ?? "unknown",
+    action: "ACCOUNTING_SUBJECT_CHANGED",
+    entityType: "Request",
+    entityId: requestId,
+    description: `修改正式會計科目「${request.title}」`,
+    beforeData: request.finalAccountingSubject
+      ? { code: request.finalAccountingSubject.code, name: request.finalAccountingSubject.name }
+      : undefined,
+    afterData: { code: newSubject.code, name: newSubject.name },
+  });
+
+  revalidatePath(`/requests/${requestId}`);
+  revalidatePath("/finance");
+  return { ok: true };
+}
+
 type MarkAsPaidInput = {
   paymentMethod: string;
   paymentNote?: string;
   paidAt?: string;
   bankLastFive?: string;
   paymentRecipientName?: string;
+  finalAccountingSubjectId?: string;
 };
 
 export async function markAsPaid(requestId: string, input: MarkAsPaidInput) {
@@ -678,6 +729,7 @@ export async function markAsPaid(requestId: string, input: MarkAsPaidInput) {
       paidAt: input.paidAt ? new Date(input.paidAt) : new Date(),
       bankLastFive: input.bankLastFive || null,
       paymentRecipientName: input.paymentRecipientName || null,
+      ...(input.finalAccountingSubjectId && { finalAccountingSubjectId: input.finalAccountingSubjectId }),
     },
   });
 

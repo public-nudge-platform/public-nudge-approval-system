@@ -17,6 +17,7 @@ import {
   Bell,
   ClipboardList,
   BookUser,
+  BookOpen,
 } from "lucide-react";
 import type { UserRole } from "@prisma/client";
 
@@ -96,6 +97,7 @@ export function Sidebar({ role, onClose }: { role: UserRole; onClose?: () => voi
   const isFinance = ["FINANCE", "ADMIN", "PRESIDENT", "FOUNDER_AGENT"].includes(role);
   const canManageUsers = ["ADMIN", "PRESIDENT", "FOUNDER_AGENT"].includes(role);
   const canManageRecipients = ["ADMIN", "PRESIDENT", "FOUNDER_AGENT", "FINANCE"].includes(role);
+  const canManageAccounting = ["ADMIN", "PRESIDENT", "FOUNDER_AGENT", "FINANCE"].includes(role);
   const isAdmin = role === "ADMIN";
 
   return (
@@ -135,7 +137,7 @@ export function Sidebar({ role, onClose }: { role: UserRole; onClose?: () => voi
         {isApprover && <NavSection title="簽核" items={approverNav} pathname={pathname} onClose={onClose} />}
         {isFinance && <NavSection title="財務" items={financeNav} pathname={pathname} onClose={onClose} />}
         {isFinance && <NavSection title="專案" items={[{ href: "/projects", label: "專案管理", icon: FolderOpen }]} pathname={pathname} onClose={onClose} />}
-        {(canManageUsers || canManageRecipients) && (
+        {(canManageUsers || canManageRecipients || canManageAccounting) && (
           <NavSection
             title="管理"
             items={[
@@ -145,6 +147,9 @@ export function Sidebar({ role, onClose }: { role: UserRole; onClose?: () => voi
               ] : []),
               ...(canManageRecipients ? [
                 { href: "/admin/recipients", label: "付款對象", icon: BookUser },
+              ] : []),
+              ...(canManageAccounting ? [
+                { href: "/admin/accounting-subjects", label: "會計科目", icon: BookOpen },
               ] : []),
             ]}
             pathname={pathname}

@@ -109,6 +109,8 @@ export default async function ProjectRequestsPage({
           requestDate: true,
           paidAt: true,
           submitter: { select: { name: true } },
+          accountingSubject: { select: { code: true, name: true } },
+          finalAccountingSubject: { select: { code: true, name: true } },
         },
       },
     },
@@ -198,7 +200,8 @@ export default async function ProjectRequestsPage({
                   <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500">金額</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500">狀態</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500">申請日期</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500">付款狀態</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500">申請科目</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500">正式科目</th>
                   <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500">詳情</th>
                 </tr>
               </thead>
@@ -228,16 +231,15 @@ export default async function ProjectRequestsPage({
                     <td className="px-4 py-3 text-gray-500 text-xs tabular-nums">
                       {req.requestDate.toLocaleDateString("zh-TW")}
                     </td>
-                    <td className="px-4 py-3 text-sm">
-                      {req.status === "PAID" ? (
-                        <span className="text-blue-600 font-medium text-xs">
-                          {req.paidAt ? req.paidAt.toLocaleDateString("zh-TW") : "已付款"}
+                    <td className="px-4 py-3 font-mono text-xs text-gray-500 max-w-[100px] truncate" title={req.accountingSubject ? `${req.accountingSubject.code} ${req.accountingSubject.name}` : ""}>
+                      {req.accountingSubject?.code ?? <span className="text-gray-300">—</span>}
+                    </td>
+                    <td className="px-4 py-3 font-mono text-xs max-w-[100px] truncate" title={req.finalAccountingSubject ? `${req.finalAccountingSubject.code} ${req.finalAccountingSubject.name}` : ""}>
+                      {req.finalAccountingSubject ? (
+                        <span className={req.finalAccountingSubject.code !== req.accountingSubject?.code ? "text-amber-600" : "text-gray-500"}>
+                          {req.finalAccountingSubject.code}
                         </span>
-                      ) : req.status === "APPROVED" ? (
-                        <span className="text-amber-600 text-xs">待付款</span>
-                      ) : (
-                        <span className="text-gray-300 text-xs">—</span>
-                      )}
+                      ) : <span className="text-gray-300">—</span>}
                     </td>
                     <td className="px-4 py-3 text-right">
                       <Link

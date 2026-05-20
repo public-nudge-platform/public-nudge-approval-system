@@ -84,6 +84,7 @@ export const APPROVAL_ROLES: UserRole[] = ["PRESIDENT", "FOUNDER_AGENT"];
 export const FINANCE_ROLES: UserRole[] = ["FINANCE", "ADMIN", "PRESIDENT", "FOUNDER_AGENT"];
 export const OFFSET_REVIEW_ROLES: UserRole[] = ["FINANCE", "PRESIDENT", "FOUNDER_AGENT"];
 export const ADMIN_ROLES: UserRole[] = ["ADMIN"];
+export const ACCOUNTING_MANAGE_ROLES: UserRole[] = ["ADMIN", "PRESIDENT", "FOUNDER_AGENT", "FINANCE"];
 export const PROJECT_MANAGE_ROLES: UserRole[] = ["ADMIN", "PRESIDENT", "FOUNDER_AGENT"];
 export const PROJECT_VIEW_ROLES: UserRole[] = ["ADMIN", "PRESIDENT", "FOUNDER_AGENT", "FINANCE"];
 
@@ -110,7 +111,11 @@ export const AUDIT_ACTION_LABEL: Record<AuditAction, string> = {
   USER_UPDATED:          "編輯使用者",
   USER_DEACTIVATED:      "停用使用者",
   PASSWORD_RESET:        "重設密碼",
-  DATA_EXPORTED:         "匯出資料",
+  DATA_EXPORTED:              "匯出資料",
+  ACCOUNTING_SUBJECT_CREATED:    "新增會計科目",
+  ACCOUNTING_SUBJECT_UPDATED:    "編輯會計科目",
+  ACCOUNTING_SUBJECT_DEACTIVATED:"停用會計科目",
+  ACCOUNTING_SUBJECT_CHANGED:    "修改正式會計科目",
 };
 
 export const AUDIT_ACTION_COLOR: Record<AuditAction, string> = {
@@ -136,5 +141,9 @@ export const AUDIT_ACTION_COLOR: Record<AuditAction, string> = {
   USER_UPDATED:          "bg-blue-50 text-blue-700",
   USER_DEACTIVATED:      "bg-red-50 text-red-700",
   PASSWORD_RESET:        "bg-amber-50 text-amber-700",
-  DATA_EXPORTED:         "bg-emerald-50 text-emerald-700",
+  DATA_EXPORTED:                 "bg-emerald-50 text-emerald-700",
+  ACCOUNTING_SUBJECT_CREATED:    "bg-teal-50 text-teal-700",
+  ACCOUNTING_SUBJECT_UPDATED:    "bg-teal-50 text-teal-700",
+  ACCOUNTING_SUBJECT_DEACTIVATED:"bg-slate-100 text-slate-700",
+  ACCOUNTING_SUBJECT_CHANGED:    "bg-violet-50 text-violet-700",
 };

@@ -27,6 +27,7 @@ type SearchParams = {
   sortDir?: string;
   payStatus?: string;
   offsetStatus?: string;
+  accountingSubject?: string;
 };
 
 const ALL_STATUSES = Object.keys(REQUEST_STATUS_LABEL) as RequestStatus[];
@@ -91,6 +92,16 @@ async function getRequests(userId: string, role: UserRole, params: SearchParams)
         { description: { contains: params.q, mode: "insensitive" as const } },
         { submitter: { name: { contains: params.q, mode: "insensitive" as const } } },
         { reimbursementNote: { contains: params.q, mode: "insensitive" as const } },
+        { accountingSubject: { code: { contains: params.q, mode: "insensitive" as const } } },
+        { accountingSubject: { name: { contains: params.q, mode: "insensitive" as const } } },
+        { finalAccountingSubject: { code: { contains: params.q, mode: "insensitive" as const } } },
+        { finalAccountingSubject: { name: { contains: params.q, mode: "insensitive" as const } } },
+      ],
+    }),
+    ...(params.accountingSubject && {
+      OR: [
+        { accountingSubjectId: params.accountingSubject },
+        { finalAccountingSubjectId: params.accountingSubject },
       ],
     }),
     ...((params.dateFrom || params.dateTo) && {
@@ -113,6 +124,8 @@ async function getRequests(userId: string, role: UserRole, params: SearchParams)
     include: {
       submitter: { select: { name: true } },
       project: { select: { id: true, name: true } },
+      accountingSubject: { select: { code: true, name: true } },
+      finalAccountingSubject: { select: { code: true, name: true } },
     },
   });
 }
@@ -125,12 +138,13 @@ export default async function RequestsPage({
   const session = await auth();
   const role = session!.user.role as UserRole;
   const params = await searchParams;
-  const [requests, projects] = await Promise.all([
+  const [requests, projects, accountingSubjects] = await Promise.all([
     getRequests(session!.user.id, role, params),
     prisma.project.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } }),
+    prisma.accountingSubject.findMany({ orderBy: { code: "asc" }, select: { id: true, code: true, name: true } }),
   ]);
 
-  const hasBasicFilters = !!(params.status || params.type || params.q || params.project);
+  const hasBasicFilters = !!(params.status || params.type || params.q || params.project || params.accountingSubject);
   const hasAdvancedFilters = !!(params.dateFrom || params.dateTo || params.amountMin || params.amountMax || params.payStatus || params.offsetStatus);
   const hasSortOverride = !!(params.sortBy || (params.sortDir && params.sortDir !== "desc"));
   const hasFilters = hasBasicFilters || hasAdvancedFilters || hasSortOverride;
@@ -184,6 +198,12 @@ export default async function RequestsPage({
               value={params.type}
               label="全部類型"
               options={ALL_TYPES.map((t) => ({ value: t, label: REQUEST_TYPE_LABEL[t] }))}
+            />
+            <FilterSelect
+              name="accountingSubject"
+              value={params.accountingSubject}
+              label="全部科目"
+              options={accountingSubjects.map((s) => ({ value: s.id, label: `${s.code} ${s.name}` }))}
             />
             <FilterSelect
               name="sortBy"

@@ -106,6 +106,8 @@ export async function GET(req: NextRequest) {
       include: {
         submitter: { select: { name: true } },
         project: { select: { name: true } },
+        accountingSubject: { select: { code: true, name: true, direction: true } },
+        finalAccountingSubject: { select: { code: true, name: true, direction: true } },
       },
     }),
     projectId
@@ -127,6 +129,11 @@ export async function GET(req: NextRequest) {
       申請人: req.submitter.name,
       申請日期: formatDate(req.requestDate),
       狀態: REQUEST_STATUS_LABEL[req.status],
+      申請會計科目代號: req.accountingSubject?.code ?? "",
+      申請會計科目名稱: req.accountingSubject?.name ?? "",
+      正式會計科目代號: req.finalAccountingSubject?.code ?? "",
+      正式會計科目名稱: req.finalAccountingSubject?.name ?? "",
+      借貸: req.finalAccountingSubject?.direction ?? req.accountingSubject?.direction ?? "",
       請款金額: amount,
       實際付款金額: actual ?? "",
       沖銷金額: actual ?? "",
@@ -148,7 +155,8 @@ export async function GET(req: NextRequest) {
 
   ws["!cols"] = [
     { wch: 14 }, { wch: 22 }, { wch: 10 }, { wch: 10 }, { wch: 12 },
-    { wch: 14 }, { wch: 12 }, { wch: 14 }, { wch: 10 }, { wch: 10 },
+    { wch: 14 }, { wch: 10 }, { wch: 24 }, { wch: 10 }, { wch: 24 },
+    { wch: 6 },  { wch: 12 }, { wch: 14 }, { wch: 10 }, { wch: 10 },
     { wch: 12 }, { wch: 10 }, { wch: 14 }, { wch: 20 }, { wch: 12 },
     { wch: 12 }, { wch: 20 }, { wch: 16 },
   ];

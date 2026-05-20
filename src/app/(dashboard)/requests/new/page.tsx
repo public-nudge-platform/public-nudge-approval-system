@@ -7,7 +7,7 @@ import Link from "next/link";
 export default async function NewRequestPage() {
   await auth();
 
-  const [projects, recipients] = await Promise.all([
+  const [projects, recipients, accountingSubjects] = await Promise.all([
     prisma.project.findMany({
       where: { status: "IN_PROGRESS" },
       orderBy: { name: "asc" },
@@ -17,6 +17,11 @@ export default async function NewRequestPage() {
       where: { isActive: true },
       orderBy: { createdAt: "asc" },
       select: { id: true, name: true },
+    }),
+    prisma.accountingSubject.findMany({
+      where: { isActive: true },
+      orderBy: { code: "asc" },
+      select: { id: true, code: true, name: true, direction: true },
     }),
   ]);
 
@@ -30,7 +35,7 @@ export default async function NewRequestPage() {
         <span className="text-gray-300">/</span>
         <h1 className="text-lg font-semibold text-gray-900">新增申請單</h1>
       </div>
-      <NewRequestForm projects={projects} recipients={recipients} />
+      <NewRequestForm projects={projects} recipients={recipients} accountingSubjects={accountingSubjects} />
     </div>
   );
 }
