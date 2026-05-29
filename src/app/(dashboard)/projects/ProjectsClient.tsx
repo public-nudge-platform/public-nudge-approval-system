@@ -19,7 +19,7 @@ type RequestRow = {
   requestNumber: string | null;
   type: RequestType;
   title: string;
-  amount: unknown; // Decimal serialised as string from server
+  amount: number;
   status: RequestStatus;
   requestDate: Date;
   paidAt: Date | null;

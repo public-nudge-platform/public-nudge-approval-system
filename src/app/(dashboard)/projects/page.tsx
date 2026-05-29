@@ -41,5 +41,13 @@ export default async function ProjectsPage() {
 
   const canManage = PROJECT_MANAGE_ROLES.includes(role);
 
-  return <ProjectsClient projects={projects} canManage={canManage} />;
+  const serializedProjects = projects.map((p) => ({
+    ...p,
+    requests: p.requests.map((r) => ({
+      ...r,
+      amount: Number(r.amount),
+    })),
+  }));
+
+  return <ProjectsClient projects={serializedProjects} canManage={canManage} />;
 }
