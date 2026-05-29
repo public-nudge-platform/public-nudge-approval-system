@@ -9,15 +9,87 @@ import {
   AlertCircle, Banknote, TrendingUp, Users, BadgeCheck, Bell, Receipt,
 } from "lucide-react";
 import Link from "next/link";
-import { APPROVAL_ROLES, FINANCE_ROLES, OFFSET_REVIEW_ROLES } from "@/lib/constants";
-import type { UserRole } from "@prisma/client";
+import { APPROVAL_ROLES, AUDIT_ACTION_LABEL, FINANCE_ROLES, OFFSET_REVIEW_ROLES } from "@/lib/constants";
+import type { AuditAction, AuditLog, UserRole } from "@prisma/client";
+
+// Roles that can only see their own request activities
+const LIMITED_ROLES = new Set<UserRole>(["APPLICANT", "SECRETARY", "DIRECTOR", "SUPERVISOR"]);
+
+// AuditActions visible per role group
+const PRESIDENT_ACTIONS: AuditAction[] = [
+  "REQUEST_SUBMITTED", "REQUEST_APPROVED", "REQUEST_RETURNED", "REQUEST_REJECTED",
+  "REQUEST_WITHDRAWN", "PAYMENT_MARKED", "SETTLEMENT_SUBMITTED", "SETTLEMENT_RETURNED",
+  "SETTLEMENT_APPROVED", "PAYMENT_ADJUSTMENT_CREATED", "PAYMENT_ADJUSTMENT_UPDATED",
+  "PAYMENT_ADJUSTMENT_DELETED",
+];
+
+const FINANCE_ACTIONS: AuditAction[] = [
+  "REQUEST_APPROVED", "PAYMENT_MARKED", "SETTLEMENT_SUBMITTED", "SETTLEMENT_RETURNED",
+  "SETTLEMENT_APPROVED", "PAYMENT_ADJUSTMENT_CREATED", "PAYMENT_ADJUSTMENT_UPDATED",
+  "PAYMENT_ADJUSTMENT_DELETED", "ACCOUNTING_SUBJECT_CHANGED",
+];
+
+const APPLICANT_ACTIONS: AuditAction[] = [
+  "REQUEST_SUBMITTED", "REQUEST_APPROVED", "REQUEST_RETURNED", "REQUEST_REJECTED",
+  "REQUEST_WITHDRAWN", "PAYMENT_MARKED", "SETTLEMENT_SUBMITTED", "SETTLEMENT_RETURNED",
+  "SETTLEMENT_APPROVED",
+];
+
+async function getRecentActivity(userId: string, role: UserRole) {
+  if (LIMITED_ROLES.has(role)) {
+    const myReqs = await prisma.request.findMany({
+      where: { submitterId: userId },
+      select: { id: true },
+      take: 300,
+    });
+    if (myReqs.length === 0) return [];
+    const ids = myReqs.map((r) => r.id);
+    return prisma.auditLog.findMany({
+      where: { entityType: "Request", entityId: { in: ids }, action: { in: APPLICANT_ACTIONS } },
+      orderBy: { createdAt: "desc" },
+      take: 10,
+    });
+  }
+
+  if (role === "FINANCE") {
+    return prisma.auditLog.findMany({
+      where: { action: { in: FINANCE_ACTIONS } },
+      orderBy: { createdAt: "desc" },
+      take: 10,
+    });
+  }
+
+  if (role === "PRESIDENT" || role === "FOUNDER_AGENT") {
+    return prisma.auditLog.findMany({
+      where: { action: { in: PRESIDENT_ACTIONS } },
+      orderBy: { createdAt: "desc" },
+      take: 10,
+    });
+  }
+
+  // ADMIN: all except login
+  return prisma.auditLog.findMany({
+    where: { action: { not: "USER_LOGIN" } },
+    orderBy: { createdAt: "desc" },
+    take: 10,
+  });
+}
+
+function activityLink(log: AuditLog): string | null {
+  if (log.entityType === "Request" && log.entityId) return `/requests/${log.entityId}`;
+  if (log.entityType === "PaymentAdjustment") {
+    const d = (log.afterData ?? log.beforeData) as Record<string, unknown> | null;
+    if (d?.requestId) return `/requests/${d.requestId as string}`;
+  }
+  return null;
+}
 
 async function getDashboardStats(userId: string, role: UserRole) {
   const isApprover = APPROVAL_ROLES.includes(role) || role === "ADMIN";
   const isFinance = FINANCE_ROLES.includes(role);
   const isOffsetReviewer = OFFSET_REVIEW_ROLES.includes(role) || role === "ADMIN";
 
-  const [myTotal, myPending, myApproved, myDraft, myPaid, myPendingOffset, pendingApprovals, recentRequests] =
+  const [myTotal, myPending, myApproved, myDraft, myPaid, myPendingOffset, pendingApprovals] =
     await Promise.all([
       prisma.request.count({ where: { submitterId: userId } }),
       prisma.request.count({ where: { submitterId: userId, status: "PENDING" } }),
@@ -31,14 +103,6 @@ async function getDashboardStats(userId: string, role: UserRole) {
         },
       }),
       isApprover ? prisma.request.count({ where: { status: "PENDING" } }) : Promise.resolve(0),
-      prisma.request.findMany({
-        where: role === "ADMIN" || isApprover ? {} : { submitterId: userId },
-        orderBy: { updatedAt: "desc" },
-        take: 5,
-        include: {
-          submitter: { select: { name: true } },
-        },
-      }),
     ]);
 
   const [awaitingPayment, awaitingOffsetReview, allPendingOffset] = isFinance
@@ -53,14 +117,15 @@ async function getDashboardStats(userId: string, role: UserRole) {
     ? [0, await prisma.request.count({ where: { status: "OFFSET_SUBMITTED" } }), 0]
     : [0, 0, 0];
 
-  return { myTotal, myPending, myApproved, myDraft, myPaid, myPendingOffset, pendingApprovals, awaitingPayment, awaitingOffsetReview, allPendingOffset, recentRequests, isOffsetReviewer };
+  return { myTotal, myPending, myApproved, myDraft, myPaid, myPendingOffset, pendingApprovals, awaitingPayment, awaitingOffsetReview, allPendingOffset, isOffsetReviewer };
 }
 
 export default async function DashboardPage() {
   const session = await auth();
   const role = session!.user.role as UserRole;
-  const [stats, recentNotifications] = await Promise.all([
-    getDashboardStats(session!.user.id, role as UserRole),
+  const [stats, recentActivity, recentNotifications] = await Promise.all([
+    getDashboardStats(session!.user.id, role),
+    getRecentActivity(session!.user.id, role),
     prisma.notification.findMany({
       where: { userId: session!.user.id },
       orderBy: { createdAt: "desc" },
@@ -87,7 +152,6 @@ export default async function DashboardPage() {
         <StatsCard label="已核准，待付款" value={stats.myApproved} icon={CheckCircle} color="green" href="/requests?status=APPROVED" />
         <StatsCard label="已付款" value={stats.myPaid} icon={BadgeCheck} color="blue" href="/requests?status=PAID" />
         <StatsCard label="草稿" value={stats.myDraft} icon={AlertCircle} color="slate" href="/requests?status=DRAFT" />
-        {/* Finance/Admin see system-wide offset count; others see their own */}
         {isFinance ? (
           <StatsCard label="待沖銷" value={stats.allPendingOffset} icon={Receipt} color="purple" href="/finance" />
         ) : stats.myPendingOffset > 0 ? (
@@ -104,51 +168,55 @@ export default async function DashboardPage() {
         )}
       </div>
 
-      {/* Recent activity */}
+      {/* Recent activity — role-filtered AuditLog */}
       <div className="bg-white rounded-xl border border-gray-200">
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
           <div className="flex items-center gap-2">
             <TrendingUp size={16} className="text-gray-400" />
             <h2 className="text-sm font-semibold text-gray-800">最新動態</h2>
           </div>
-          <Link href="/requests" className="text-xs text-blue-600 hover:underline">
+          <Link
+            href={role === "ADMIN" ? "/admin/audit-logs" : "/requests"}
+            className="text-xs text-blue-600 hover:underline"
+          >
             查看全部
           </Link>
         </div>
 
-        {stats.recentRequests.length === 0 ? (
+        {recentActivity.length === 0 ? (
           <div className="py-10 text-center text-gray-400">
             <FileText size={32} className="mx-auto mb-2 opacity-30" />
-            <p className="text-sm text-gray-500">尚無申請記錄</p>
+            <p className="text-sm text-gray-500">尚無相關動態</p>
           </div>
         ) : (
           <ul className="divide-y divide-gray-50">
-            {stats.recentRequests.map((req) => (
-              <li key={req.id}>
-                <Link
-                  href={`/requests/${req.id}`}
-                  className="flex flex-col gap-1.5 px-5 py-3.5 hover:bg-gray-50 transition-colors sm:flex-row sm:items-center sm:gap-4"
-                >
+            {recentActivity.map((log) => {
+              const href = activityLink(log);
+              const inner = (
+                <div className="flex flex-col gap-1 px-5 py-3.5 hover:bg-gray-50 transition-colors sm:flex-row sm:items-center sm:gap-4">
                   <div className="flex-1 min-w-0">
-                    <span className="block text-sm font-medium text-gray-900 truncate">{req.title}</span>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      {req.requestNumber && (
-                        <span className="text-xs text-gray-500 font-mono">{req.requestNumber}</span>
-                      )}
-                      <span className="text-xs text-gray-500">·</span>
-                      <span className="text-xs text-gray-600">{req.submitter.name}</span>
+                    <span className="block text-sm text-gray-800 truncate">{log.description}</span>
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                      <span className="text-xs text-gray-500">{log.userName}</span>
+                      <span className="text-xs text-gray-300">·</span>
+                      <span className="text-xs text-gray-400">{AUDIT_ACTION_LABEL[log.action]}</span>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <TypeBadge type={req.type} />
-                    <StatusBadge status={req.status} />
-                    <span className="text-sm font-medium text-gray-700 tabular-nums ml-auto sm:ml-0 sm:w-24 sm:text-right">
-                      {Number(req.amount).toLocaleString()} 元
-                    </span>
-                  </div>
-                </Link>
-              </li>
-            ))}
+                  <span className="text-xs text-gray-400 flex-shrink-0 tabular-nums">
+                    {log.createdAt.toLocaleDateString("zh-TW")}
+                  </span>
+                </div>
+              );
+              return (
+                <li key={log.id}>
+                  {href ? (
+                    <Link href={href}>{inner}</Link>
+                  ) : (
+                    <div>{inner}</div>
+                  )}
+                </li>
+              );
+            })}
           </ul>
         )}
       </div>
