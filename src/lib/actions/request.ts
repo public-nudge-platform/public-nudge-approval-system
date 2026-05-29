@@ -55,6 +55,16 @@ async function getNextApprovalStepOrder(requestId: string) {
   return (lastStep?.stepOrder ?? 0) + 1;
 }
 
+async function detectReturnSource(requestId: string): Promise<"FINANCE" | "APPROVER"> {
+  const lastReturn = await prisma.approvalRecord.findFirst({
+    where: { step: { requestId }, action: "RETURNED" },
+    include: { step: { select: { title: true } } },
+    orderBy: { actedAt: "desc" },
+  });
+  if (lastReturn?.step.title === "財務退回修改") return "FINANCE";
+  return "APPROVER";
+}
+
 async function generateRequestNumber(): Promise<string> {
   const now = new Date();
   const year = now.getFullYear();
@@ -196,39 +206,69 @@ export async function submitRequest(requestId: string) {
   if (!EDITABLE_STATUSES.has(request.status)) return { error: "此申請單不可送出" };
 
   const requestNumber = request.requestNumber ?? await generateRequestNumber();
-  const nextStepOrder = await getNextApprovalStepOrder(requestId);
-
-  await prisma.request.update({
-    where: { id: requestId },
-    data: {
-      status: "PENDING",
-      requestNumber,
-      submittedAt: new Date(),
-      approvalSteps: {
-        create: [{ stepOrder: nextStepOrder, title: "理事長審核" }],
-      },
-    },
-  });
-
   const info = fmtRequestInfo({ requestNumber, title: request.title, projectName: request.projectName, type: request.type, amount: request.amount });
-  const isResubmit = request.status !== "DRAFT";
-  await createNotificationsForRoles(["PRESIDENT", "FOUNDER_AGENT"], {
-    title: isResubmit ? "請款單重新送出待審核" : "新請款單待審核",
-    message: `${session.user.name} ${isResubmit ? "重新送出" : "送出了"}${info}，請前往審核。`,
-    type: "REQUEST_SUBMITTED",
-    relatedRequestId: requestId,
-  });
 
-  await logAuditAction({
-    userId: session.user.id,
-    userName: session.user.name ?? session.user.email ?? "unknown",
-    action: "REQUEST_SUBMITTED",
-    entityType: "Request",
-    entityId: requestId,
-    description: `送出請款單「${request.title}」`,
-    beforeData: { status: request.status },
-    afterData: { status: "PENDING", requestNumber },
-  });
+  // When resubmitting a RETURNED request, route based on who originally returned it.
+  // Finance returns go back to APPROVED (skip re-approval); approver returns go back to PENDING.
+  const returnSource = request.status === "RETURNED" ? await detectReturnSource(requestId) : null;
+
+  if (returnSource === "FINANCE") {
+    await prisma.request.update({
+      where: { id: requestId },
+      data: { status: "APPROVED", requestNumber, submittedAt: new Date() },
+    });
+
+    await createNotificationsForRoles(["FINANCE"], {
+      title: "請款單補正完成，請繼續付款",
+      message: `${session.user.name} 已補正${info}，請前往完成付款。`,
+      type: "REQUEST_SUBMITTED",
+      relatedRequestId: requestId,
+    });
+
+    await logAuditAction({
+      userId: session.user.id,
+      userName: session.user.name ?? session.user.email ?? "unknown",
+      action: "REQUEST_SUBMITTED",
+      entityType: "Request",
+      entityId: requestId,
+      description: `補正後重新送出請款單「${request.title}」（回到行政出納付款階段）`,
+      beforeData: { status: "RETURNED" },
+      afterData: { status: "APPROVED", requestNumber },
+    });
+  } else {
+    const nextStepOrder = await getNextApprovalStepOrder(requestId);
+
+    await prisma.request.update({
+      where: { id: requestId },
+      data: {
+        status: "PENDING",
+        requestNumber,
+        submittedAt: new Date(),
+        approvalSteps: {
+          create: [{ stepOrder: nextStepOrder, title: "理事長審核" }],
+        },
+      },
+    });
+
+    const isResubmit = request.status !== "DRAFT";
+    await createNotificationsForRoles(["PRESIDENT", "FOUNDER_AGENT"], {
+      title: isResubmit ? "請款單重新送出待審核" : "新請款單待審核",
+      message: `${session.user.name} ${isResubmit ? "重新送出" : "送出了"}${info}，請前往審核。`,
+      type: "REQUEST_SUBMITTED",
+      relatedRequestId: requestId,
+    });
+
+    await logAuditAction({
+      userId: session.user.id,
+      userName: session.user.name ?? session.user.email ?? "unknown",
+      action: "REQUEST_SUBMITTED",
+      entityType: "Request",
+      entityId: requestId,
+      description: `送出請款單「${request.title}」`,
+      beforeData: { status: request.status },
+      afterData: { status: "PENDING", requestNumber },
+    });
+  }
 
   revalidatePath(`/requests/${requestId}`);
   revalidatePath("/requests");
@@ -277,8 +317,13 @@ export async function updateRequest(requestId: string, data: UpdateRequestInput)
     projectName = null;
   }
 
+  const returnSource = (data.submit && request.status === "RETURNED")
+    ? await detectReturnSource(requestId)
+    : null;
+  const isFinanceReturn = returnSource === "FINANCE";
+
   const requestNumber = data.submit ? request.requestNumber ?? await generateRequestNumber() : request.requestNumber;
-  const nextStepOrder = data.submit ? await getNextApprovalStepOrder(requestId) : null;
+  const nextStepOrder = (data.submit && !isFinanceReturn) ? await getNextApprovalStepOrder(requestId) : null;
 
   await prisma.request.update({
     where: { id: requestId },
@@ -300,7 +345,12 @@ export async function updateRequest(requestId: string, data: UpdateRequestInput)
       paymentInfoNote: data.paymentInfoNote || null,
       accountingSubjectId: data.accountingSubjectId || null,
       amount: totalAmount,
-      ...(data.submit && {
+      ...(data.submit && isFinanceReturn && {
+        status: "APPROVED",
+        requestNumber,
+        submittedAt: new Date(),
+      }),
+      ...(data.submit && !isFinanceReturn && {
         status: "PENDING",
         requestNumber,
         submittedAt: new Date(),
@@ -323,22 +373,41 @@ export async function updateRequest(requestId: string, data: UpdateRequestInput)
 
   if (data.submit) {
     const info = fmtRequestInfo({ requestNumber: requestNumber ?? null, title: data.title, projectName, type: data.type, amount: totalAmount });
-    await createNotificationsForRoles(["PRESIDENT", "FOUNDER_AGENT"], {
-      title: "請款單重新送出待審核",
-      message: `${session.user.name} 重新送出了${info}，請前往審核。`,
-      type: "REQUEST_SUBMITTED",
-      relatedRequestId: requestId,
-    });
-    await logAuditAction({
-      userId: session.user.id,
-      userName: session.user.name ?? session.user.email ?? "unknown",
-      action: "REQUEST_SUBMITTED",
-      entityType: "Request",
-      entityId: requestId,
-      description: `重新送出請款單「${data.title}」`,
-      beforeData: { status: request.status, amount: Number(request.amount) },
-      afterData: { status: "PENDING", amount: totalAmount, requestNumber },
-    });
+    if (isFinanceReturn) {
+      await createNotificationsForRoles(["FINANCE"], {
+        title: "請款單補正完成，請繼續付款",
+        message: `${session.user.name} 已補正${info}，請前往完成付款。`,
+        type: "REQUEST_SUBMITTED",
+        relatedRequestId: requestId,
+      });
+      await logAuditAction({
+        userId: session.user.id,
+        userName: session.user.name ?? session.user.email ?? "unknown",
+        action: "REQUEST_SUBMITTED",
+        entityType: "Request",
+        entityId: requestId,
+        description: `補正後重新送出請款單「${data.title}」（回到行政出納付款階段）`,
+        beforeData: { status: "RETURNED", amount: Number(request.amount) },
+        afterData: { status: "APPROVED", amount: totalAmount, requestNumber },
+      });
+    } else {
+      await createNotificationsForRoles(["PRESIDENT", "FOUNDER_AGENT"], {
+        title: "請款單重新送出待審核",
+        message: `${session.user.name} 重新送出了${info}，請前往審核。`,
+        type: "REQUEST_SUBMITTED",
+        relatedRequestId: requestId,
+      });
+      await logAuditAction({
+        userId: session.user.id,
+        userName: session.user.name ?? session.user.email ?? "unknown",
+        action: "REQUEST_SUBMITTED",
+        entityType: "Request",
+        entityId: requestId,
+        description: `重新送出請款單「${data.title}」`,
+        beforeData: { status: request.status, amount: Number(request.amount) },
+        afterData: { status: "PENDING", amount: totalAmount, requestNumber },
+      });
+    }
   } else {
     await logAuditAction({
       userId: session.user.id,
