@@ -34,6 +34,7 @@ type CreateRequestInput = {
   bankCode?: string;
   branchName?: string;
   branchCode?: string;
+  bankAccountNumber?: string;
   paymentInfoNote?: string;
   accountingSubjectId?: string;
   items: RequestItemInput[];
@@ -123,6 +124,7 @@ export async function createRequest(data: CreateRequestInput) {
       bankCode: data.bankCode || null,
       branchName: data.branchName || null,
       branchCode: data.branchCode || null,
+      bankAccountNumber: data.bankAccountNumber || null,
       paymentInfoNote: data.paymentInfoNote || null,
       accountingSubjectId: data.accountingSubjectId || null,
       finalAccountingSubjectId: data.accountingSubjectId || null,
@@ -294,6 +296,7 @@ export async function updateRequest(requestId: string, data: UpdateRequestInput)
       bankCode: data.bankCode || null,
       branchName: data.branchName || null,
       branchCode: data.branchCode || null,
+      bankAccountNumber: data.bankAccountNumber || null,
       paymentInfoNote: data.paymentInfoNote || null,
       accountingSubjectId: data.accountingSubjectId || null,
       amount: totalAmount,

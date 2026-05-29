@@ -9,7 +9,16 @@ import type { RequestType } from "@prisma/client";
 import { useRouter } from "next/navigation";
 
 type ActiveProject = { id: string; name: string };
-type ActiveRecipient = { id: string; name: string };
+type ActiveRecipient = {
+  id: string;
+  name: string;
+  bankName: string | null;
+  bankCode: string | null;
+  branchName: string | null;
+  branchCode: string | null;
+  bankAccountNumber: string | null;
+  paymentInfoNote: string | null;
+};
 type ActiveAccountingSubject = { id: string; code: string; name: string; direction: string };
 
 type Item = {
@@ -33,6 +42,7 @@ type InitialRequest = {
   bankCode: string | null;
   branchName: string | null;
   branchCode: string | null;
+  bankAccountNumber: string | null;
   paymentInfoNote: string | null;
   accountingSubjectId: string | null;
   items: {
@@ -65,6 +75,7 @@ export function NewRequestForm({ projects = [], recipients = [], accountingSubje
   const [bankCode, setBankCode] = useState(initialRequest?.bankCode ?? "");
   const [branchName, setBranchName] = useState(initialRequest?.branchName ?? "");
   const [branchCode, setBranchCode] = useState(initialRequest?.branchCode ?? "");
+  const [bankAccountNumber, setBankAccountNumber] = useState(initialRequest?.bankAccountNumber ?? "");
   const [paymentInfoNote, setPaymentInfoNote] = useState(initialRequest?.paymentInfoNote ?? "");
   const [accountingSubjectId, setAccountingSubjectId] = useState(initialRequest?.accountingSubjectId ?? "");
   const [items, setItems] = useState<Item[]>(
@@ -92,12 +103,21 @@ export function NewRequestForm({ projects = [], recipients = [], accountingSubje
     setItems((prev) => prev.filter((item) => item.id !== id));
   }
 
+  function applyRecipient(recipient: ActiveRecipient) {
+    setRecipientName(recipient.name);
+    setBankName(recipient.bankName ?? "");
+    setBankCode(recipient.bankCode ?? "");
+    setBranchName(recipient.branchName ?? "");
+    setBranchCode(recipient.branchCode ?? "");
+    setBankAccountNumber(recipient.bankAccountNumber ?? "");
+    setPaymentInfoNote(recipient.paymentInfoNote ?? "");
+  }
+
   function handleSubmit(submit: boolean) {
     setError(null);
 
     if (!title.trim()) { setError("請填寫標題"); return; }
     if (!projectId) { setError("請選擇專案"); return; }
-    if (!accountingSubjectId) { setError("請選擇會計科目"); return; }
     if (items.some((i) => !i.description.trim())) { setError("請填寫所有品項說明"); return; }
     if (items.some((i) => i.quantity <= 0 || i.unitPrice <= 0)) { setError("品項數量與單價必須大於 0"); return; }
 
@@ -114,6 +134,7 @@ export function NewRequestForm({ projects = [], recipients = [], accountingSubje
         bankCode: bankCode.trim() || undefined,
         branchName: branchName.trim() || undefined,
         branchCode: branchCode.trim() || undefined,
+        bankAccountNumber: bankAccountNumber.trim() || undefined,
         paymentInfoNote: paymentInfoNote.trim() || undefined,
         accountingSubjectId: accountingSubjectId || undefined,
         items: items.map((i) => ({
@@ -215,14 +236,14 @@ export function NewRequestForm({ projects = [], recipients = [], accountingSubje
 
         <div>
           <label className="block text-xs font-medium text-gray-600 mb-1">
-            申請會計科目 <span className="text-red-500">*</span>
+            申請會計科目
           </label>
           <select
             value={accountingSubjectId}
             onChange={(e) => setAccountingSubjectId(e.target.value)}
             className="w-full px-3 py-2 text-sm text-gray-800 border border-slate-300 rounded-lg bg-white hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           >
-            <option value="">請選擇會計科目</option>
+            <option value="">請選擇會計科目（選填）</option>
             {accountingSubjects.map((s) => (
               <option key={s.id} value={s.id}>{s.code} {s.name}</option>
             ))}
@@ -341,7 +362,7 @@ export function NewRequestForm({ projects = [], recipients = [], accountingSubje
                 <button
                   key={r.id}
                   type="button"
-                  onClick={() => setRecipientName(r.name)}
+                  onClick={() => applyRecipient(r)}
                   className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
                     recipientName === r.name
                       ? "bg-blue-600 text-white border-blue-600"
@@ -401,6 +422,16 @@ export function NewRequestForm({ projects = [], recipients = [], accountingSubje
               className="w-full px-3 py-2 text-sm text-gray-800 border border-slate-300 rounded-lg placeholder:text-slate-400 hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
           </div>
+        </div>
+
+        <div>
+          <label className="block text-xs font-medium text-gray-600 mb-1">銀行帳號</label>
+          <input
+            value={bankAccountNumber}
+            onChange={(e) => setBankAccountNumber(e.target.value)}
+            placeholder="請輸入完整帳號"
+            className="w-full px-3 py-2 text-sm text-gray-800 border border-slate-300 rounded-lg placeholder:text-slate-400 hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          />
         </div>
 
         <div>

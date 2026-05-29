@@ -161,6 +161,7 @@ model Request {
   bankCode           String?
   branchName         String?
   branchCode         String?
+  bankAccountNumber  String?
   recipientName      String?
   paymentInfoNote    String?
   actualAmount             Decimal?  @db.Decimal(12, 2)
@@ -277,11 +278,17 @@ model AuditLog {
 }
 
 model PaymentRecipient {
-  id        String   @id @default(cuid())
-  name      String
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id              String   @id @default(cuid())
+  name            String
+  bankName        String?
+  bankCode        String?
+  branchName      String?
+  branchCode      String?
+  bankAccountNumber String?
+  paymentInfoNote String?
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   @@map("payment_recipients")
 }

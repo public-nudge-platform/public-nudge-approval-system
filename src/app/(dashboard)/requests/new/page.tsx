@@ -16,7 +16,16 @@ export default async function NewRequestPage() {
     prisma.paymentRecipient.findMany({
       where: { isActive: true },
       orderBy: { createdAt: "asc" },
-      select: { id: true, name: true },
+      select: {
+        id: true,
+        name: true,
+        bankName: true,
+        bankCode: true,
+        branchName: true,
+        branchCode: true,
+        bankAccountNumber: true,
+        paymentInfoNote: true,
+      },
     }),
     prisma.accountingSubject.findMany({
       where: { isActive: true },

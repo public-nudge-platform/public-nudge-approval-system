@@ -7,27 +7,49 @@ import type { UserRole } from "@prisma/client";
 
 const MANAGE_ROLES: UserRole[] = ["ADMIN", "PRESIDENT", "FOUNDER_AGENT", "FINANCE"];
 
-export async function createPaymentRecipient(name: string) {
+type PaymentRecipientInput = {
+  name: string;
+  bankName?: string;
+  bankCode?: string;
+  branchName?: string;
+  branchCode?: string;
+  bankAccountNumber?: string;
+  paymentInfoNote?: string;
+};
+
+function normalizeRecipientInput(input: PaymentRecipientInput) {
+  return {
+    name: input.name.trim(),
+    bankName: input.bankName?.trim() || null,
+    bankCode: input.bankCode?.trim() || null,
+    branchName: input.branchName?.trim() || null,
+    branchCode: input.branchCode?.trim() || null,
+    bankAccountNumber: input.bankAccountNumber?.trim() || null,
+    paymentInfoNote: input.paymentInfoNote?.trim() || null,
+  };
+}
+
+export async function createPaymentRecipient(input: PaymentRecipientInput) {
   const session = await auth();
   if (!session) return { error: "未登入" };
   if (!MANAGE_ROLES.includes(session.user.role as UserRole)) return { error: "無管理權限" };
 
-  const trimmed = name.trim();
-  if (!trimmed) return { error: "名稱不可空白" };
+  const data = normalizeRecipientInput(input);
+  if (!data.name) return { error: "名稱不可空白" };
 
-  await prisma.paymentRecipient.create({ data: { name: trimmed } });
+  await prisma.paymentRecipient.create({ data });
   revalidatePath("/admin/recipients");
 }
 
-export async function updatePaymentRecipient(id: string, name: string) {
+export async function updatePaymentRecipient(id: string, input: PaymentRecipientInput) {
   const session = await auth();
   if (!session) return { error: "未登入" };
   if (!MANAGE_ROLES.includes(session.user.role as UserRole)) return { error: "無管理權限" };
 
-  const trimmed = name.trim();
-  if (!trimmed) return { error: "名稱不可空白" };
+  const data = normalizeRecipientInput(input);
+  if (!data.name) return { error: "名稱不可空白" };
 
-  await prisma.paymentRecipient.update({ where: { id }, data: { name: trimmed } });
+  await prisma.paymentRecipient.update({ where: { id }, data });
   revalidatePath("/admin/recipients");
 }
 

@@ -42,7 +42,16 @@ export default async function EditRequestPage({
     prisma.paymentRecipient.findMany({
       where: { isActive: true },
       orderBy: { createdAt: "asc" },
-      select: { id: true, name: true },
+      select: {
+        id: true,
+        name: true,
+        bankName: true,
+        bankCode: true,
+        branchName: true,
+        branchCode: true,
+        bankAccountNumber: true,
+        paymentInfoNote: true,
+      },
     }),
     prisma.accountingSubject.findMany({
       where: { isActive: true },
@@ -78,6 +87,7 @@ export default async function EditRequestPage({
           bankCode: request.bankCode,
           branchName: request.branchName,
           branchCode: request.branchCode,
+          bankAccountNumber: request.bankAccountNumber,
           paymentInfoNote: request.paymentInfoNote,
           accountingSubjectId: request.accountingSubjectId,
           items: request.items.map((item) => ({

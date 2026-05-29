@@ -508,7 +508,7 @@ export default async function RequestDetailPage({
           )}
 
           {/* Payment info (if available) */}
-          {(request.recipientName || request.bankName || request.bankCode || request.branchName || request.branchCode || request.paymentInfoNote || (request.paymentMethod && !(PAID_STATUSES as readonly string[]).includes(request.status))) && (
+          {(request.recipientName || request.bankName || request.bankCode || request.branchName || request.branchCode || request.bankAccountNumber || request.paymentInfoNote || (request.paymentMethod && !(PAID_STATUSES as readonly string[]).includes(request.status))) && (
             <div className="bg-white rounded-xl border border-gray-200 p-5">
               <h2 className="text-sm font-semibold text-gray-700 mb-4">收款資訊</h2>
               <dl className="grid grid-cols-3 gap-x-6 gap-y-3 text-sm">
@@ -529,6 +529,9 @@ export default async function RequestDetailPage({
                 )}
                 {request.branchCode && (
                   <InfoRow icon={Building2} label="分行代碼" value={request.branchCode} />
+                )}
+                {request.bankAccountNumber && (
+                  <InfoRow icon={Building2} label="銀行帳號" value={request.bankAccountNumber} />
                 )}
               </dl>
               {request.paymentInfoNote && (

@@ -156,6 +156,13 @@ export async function GET(req: NextRequest) {
       付款方式: req.paymentMethod
         ? (PAYMENT_METHOD_LABEL[req.paymentMethod] ?? req.paymentMethod)
         : "",
+      申請收款人: req.recipientName ?? "",
+      申請收款銀行名稱: req.bankName ?? "",
+      申請收款銀行代碼: req.bankCode ?? "",
+      申請收款分行名稱: req.branchName ?? "",
+      申請收款分行代碼: req.branchCode ?? "",
+      申請收款銀行帳號: req.bankAccountNumber ?? "",
+      申請收款備註: req.paymentInfoNote ?? "",
       付款對象: req.paymentRecipientName ?? "",
       付款備註: req.paymentNote ?? "",
       沖銷狀態: getOffsetStatus(req.status),
