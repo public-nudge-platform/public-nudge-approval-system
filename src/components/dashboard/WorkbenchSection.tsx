@@ -62,11 +62,14 @@ function RequestRow({ req, cardType }: { req: WorkbenchRequest; cardType: "task"
   const daysStuck = Math.floor((Date.now() - new Date(req.updatedAt).getTime()) / (1000 * 60 * 60 * 24));
 
   return (
-    <div className="flex items-start gap-3 py-3 border-b border-gray-100 last:border-0 hover:bg-gray-50 -mx-4 px-4 transition-colors">
+    <Link
+      href={`/requests/${req.id}`}
+      className="flex items-start gap-3 py-3 border-b border-gray-100 last:border-0 hover:bg-gray-50 -mx-4 px-4 transition-colors group"
+    >
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-xs text-gray-400 font-mono shrink-0">{req.requestNumber ?? "—"}</span>
-          <span className="text-sm font-medium text-gray-900 truncate">{req.title}</span>
+          <span className="text-sm font-medium text-gray-900 truncate group-hover:text-blue-700 transition-colors">{req.title}</span>
         </div>
         <div className="flex items-center gap-2 mt-1.5 flex-wrap">
           <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium ${REQUEST_TYPE_COLOR[req.type]}`}>
@@ -95,14 +98,8 @@ function RequestRow({ req, cardType }: { req: WorkbenchRequest; cardType: "task"
           {new Date(req.updatedAt).toLocaleDateString("zh-TW")}
         </div>
       </div>
-      <Link
-        href={`/requests/${req.id}`}
-        className="shrink-0 mt-0.5 p-1 text-gray-300 hover:text-blue-500 transition-colors"
-        title="查看詳情"
-      >
-        <ExternalLink size={14} />
-      </Link>
-    </div>
+      <ExternalLink size={14} className="shrink-0 mt-1 text-gray-300 group-hover:text-blue-400 transition-colors" />
+    </Link>
   );
 }
 
