@@ -133,7 +133,28 @@ export const AUDIT_ACTION_LABEL: Record<AuditAction, string> = {
   PAYMENT_ADJUSTMENT_CREATED:    "新增付款調整",
   PAYMENT_ADJUSTMENT_UPDATED:    "編輯付款調整",
   PAYMENT_ADJUSTMENT_DELETED:    "刪除付款調整",
+  TRANSACTION_CREATED:           "新增帳戶交易",
+  TRANSACTION_UPDATED:           "編輯帳戶交易",
+  TRANSACTION_DELETED:           "刪除帳戶交易",
+  FINANCIAL_ACCOUNT_UPDATED:     "更新資金帳戶",
 };
+
+export const FINANCIAL_ACCOUNT_TYPE_LABEL: Record<string, string> = {
+  POST_OFFICE: "郵局帳戶",
+  BANK:        "銀行帳戶",
+};
+
+export const TRANSACTION_TYPE_LABEL: Record<string, string> = {
+  INCOME:  "入帳",
+  EXPENSE: "出帳",
+};
+
+export const TRANSACTION_TYPE_COLOR: Record<string, string> = {
+  INCOME:  "text-green-600",
+  EXPENSE: "text-red-600",
+};
+
+export const FINANCE_VIEW_ROLES: UserRole[] = ["ADMIN", "PRESIDENT", "FOUNDER_AGENT", "FINANCE"];
 
 export const AUDIT_ACTION_COLOR: Record<AuditAction, string> = {
   USER_LOGIN:            "bg-gray-100 text-gray-600",
@@ -166,4 +187,8 @@ export const AUDIT_ACTION_COLOR: Record<AuditAction, string> = {
   PAYMENT_ADJUSTMENT_CREATED:    "bg-teal-50 text-teal-700",
   PAYMENT_ADJUSTMENT_UPDATED:    "bg-sky-50 text-sky-700",
   PAYMENT_ADJUSTMENT_DELETED:    "bg-red-50 text-red-700",
+  TRANSACTION_CREATED:           "bg-emerald-50 text-emerald-700",
+  TRANSACTION_UPDATED:           "bg-teal-50 text-teal-700",
+  TRANSACTION_DELETED:           "bg-red-50 text-red-700",
+  FINANCIAL_ACCOUNT_UPDATED:     "bg-blue-50 text-blue-700",
 };

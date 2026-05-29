@@ -79,6 +79,20 @@ enum AuditAction {
   PAYMENT_ADJUSTMENT_CREATED
   PAYMENT_ADJUSTMENT_UPDATED
   PAYMENT_ADJUSTMENT_DELETED
+  TRANSACTION_CREATED
+  TRANSACTION_UPDATED
+  TRANSACTION_DELETED
+  FINANCIAL_ACCOUNT_UPDATED
+}
+
+enum FinancialAccountType {
+  POST_OFFICE
+  BANK
+}
+
+enum TransactionType {
+  INCOME
+  EXPENSE
 }
 
 enum NotificationType {
@@ -119,6 +133,7 @@ model User {
   pushSubscriptions PushSubscription[]
   createdAdjustments PaymentAdjustment[] @relation("PaymentAdjustmentCreatedBy")
   updatedAdjustments PaymentAdjustment[] @relation("PaymentAdjustmentUpdatedBy")
+  createdTransactions AccountTransaction[] @relation("TransactionCreatedBy")
 
   @@map("users")
 }
@@ -129,7 +144,8 @@ model Project {
   status    ProjectStatus @default(IN_PROGRESS)
   createdAt DateTime      @default(now())
   updatedAt DateTime      @updatedAt
-  requests  Request[]
+  requests     Request[]
+  transactions AccountTransaction[]
 
   @@map("projects")
 }
@@ -180,6 +196,7 @@ model Request {
   attachments        Attachment[]
   approvalSteps      ApprovalStep[]
   paymentAdjustments PaymentAdjustment[]
+  transactions       AccountTransaction[]
   createdAt          DateTime       @default(now())
   updatedAt          DateTime       @updatedAt
 
@@ -304,6 +321,7 @@ model AccountingSubject {
   requests           Request[]           @relation("AccountingSubject")
   finalRequests      Request[]           @relation("FinalAccountingSubject")
   paymentAdjustments PaymentAdjustment[]
+  transactions       AccountTransaction[]
 
   @@map("accounting_subjects")
 }
@@ -339,4 +357,47 @@ model PaymentAdjustment {
   updatedAt           DateTime              @updatedAt
 
   @@map("payment_adjustments")
+}
+
+model FinancialAccount {
+  id              String               @id @default(cuid())
+  name            String               @unique
+  type            FinancialAccountType
+  bankName        String?
+  accountLastFive String?
+  initialBalance  Decimal              @default(0) @db.Decimal(14, 2)
+  isActive        Boolean              @default(true)
+  note            String?
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+  transactions    AccountTransaction[]
+
+  @@map("financial_accounts")
+}
+
+model AccountTransaction {
+  id                  String             @id @default(cuid())
+  accountId           String
+  account             FinancialAccount   @relation(fields: [accountId], references: [id])
+  type                TransactionType
+  amount              Decimal            @db.Decimal(14, 2)
+  transactionDate     DateTime
+  summary             String
+  counterparty        String?
+  projectId           String?
+  project             Project?           @relation(fields: [projectId], references: [id])
+  accountingSubjectId String?
+  accountingSubject   AccountingSubject? @relation(fields: [accountingSubjectId], references: [id])
+  requestId           String?
+  request             Request?           @relation(fields: [requestId], references: [id])
+  note                String?
+  createdById         String
+  createdBy           User               @relation("TransactionCreatedBy", fields: [createdById], references: [id])
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+
+  @@index([accountId])
+  @@index([transactionDate])
+  @@index([projectId])
+  @@map("account_transactions")
 }

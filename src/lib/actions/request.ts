@@ -760,6 +760,7 @@ type MarkAsPaidInput = {
   bankLastFive?: string;
   paymentRecipientName?: string;
   finalAccountingSubjectId?: string;
+  financialAccountId?: string;
 };
 
 export async function markAsPaid(requestId: string, input: MarkAsPaidInput) {
@@ -839,6 +840,29 @@ export async function markAsPaid(requestId: string, input: MarkAsPaidInput) {
     });
   }
 
+  // Auto-create AccountTransaction if a financial account was selected
+  if (input.financialAccountId) {
+    const requestFull = await prisma.request.findUnique({
+      where: { id: requestId },
+      select: { projectId: true, finalAccountingSubjectId: true, requestNumber: true, amount: true },
+    });
+    await prisma.accountTransaction.create({
+      data: {
+        accountId: input.financialAccountId,
+        type: "EXPENSE",
+        amount: requestFull!.amount,
+        transactionDate: input.paidAt ? new Date(input.paidAt) : new Date(),
+        summary: `請款付款 ${requestFull?.requestNumber ?? request.requestNumber ?? requestId}`,
+        counterparty: input.paymentRecipientName || null,
+        projectId: requestFull?.projectId || null,
+        accountingSubjectId: input.finalAccountingSubjectId || requestFull?.finalAccountingSubjectId || null,
+        requestId,
+        note: input.paymentNote || null,
+        createdById: session.user.id,
+      },
+    });
+  }
+
   await logAuditAction({
     userId: session.user.id,
     userName: session.user.name ?? session.user.email ?? "unknown",
@@ -852,6 +876,7 @@ export async function markAsPaid(requestId: string, input: MarkAsPaidInput) {
       paymentRecipientName: input.paymentRecipientName,
       paidBy,
       newStatus,
+      financialAccountId: input.financialAccountId,
     },
   });
 
@@ -859,6 +884,7 @@ export async function markAsPaid(requestId: string, input: MarkAsPaidInput) {
   revalidatePath("/requests");
   revalidatePath("/finance");
   revalidatePath("/dashboard");
+  revalidatePath("/financial-accounts");
 }
 
 export async function submitSettlement(requestId: string, data: { actualAmount: number; reimbursementNote?: string }) {

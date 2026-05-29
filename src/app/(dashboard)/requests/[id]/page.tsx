@@ -194,6 +194,14 @@ async function getActiveAccountingSubjects() {
   });
 }
 
+async function getActiveFinancialAccounts() {
+  return prisma.financialAccount.findMany({
+    where: { isActive: true },
+    orderBy: { createdAt: "asc" },
+    select: { id: true, name: true },
+  });
+}
+
 export default async function RequestDetailPage({
   params,
 }: {
@@ -213,9 +221,10 @@ export default async function RequestDetailPage({
   const canEditFinalSubject = ["FINANCE", "ADMIN"].includes(role);
   const canWriteAdjustment = (["FINANCE", "ADMIN"] as UserRole[]).includes(role) &&
     (["PAID", "PENDING_SETTLEMENT", "OFFSET_SUBMITTED", "OFFSET_RETURNED", "CLOSED"] as readonly string[]).includes(request.status);
-  const [activeRecipients, accountingSubjects] = await Promise.all([
+  const [activeRecipients, accountingSubjects, financialAccounts] = await Promise.all([
     canMarkPaidEarly ? getActiveRecipients() : Promise.resolve([]),
     (canEditFinalSubject || canWriteAdjustment) ? getActiveAccountingSubjects() : Promise.resolve([]),
+    canMarkPaidEarly ? getActiveFinancialAccounts() : Promise.resolve([]),
   ]);
 
   const isApprover = APPROVAL_ROLES.includes(role) || role === "ADMIN";
@@ -593,6 +602,7 @@ export default async function RequestDetailPage({
                 recipients={activeRecipients}
                 accountingSubjects={accountingSubjects}
                 currentFinalSubjectId={request.finalAccountingSubjectId}
+                financialAccounts={financialAccounts}
               />
               {canFinanceReturn && (
                 <div className="border-t border-green-100 pt-4">

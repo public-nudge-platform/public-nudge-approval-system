@@ -10,6 +10,7 @@ import { PAYMENT_METHOD_OPTIONS } from "@/lib/constants";
 
 type Recipient = { id: string; name: string };
 type AccountingSubject = { id: string; code: string; name: string; direction: string };
+type FinancialAccount = { id: string; name: string };
 
 export function MarkAsPaidForm({
   requestId,
@@ -17,12 +18,14 @@ export function MarkAsPaidForm({
   recipients = [],
   accountingSubjects = [],
   currentFinalSubjectId,
+  financialAccounts = [],
 }: {
   requestId: string;
   defaultPaymentMethod?: string;
   recipients?: Recipient[];
   accountingSubjects?: AccountingSubject[];
   currentFinalSubjectId?: string | null;
+  financialAccounts?: FinancialAccount[];
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -32,6 +35,7 @@ export function MarkAsPaidForm({
   const [recipientValue, setRecipientValue] = useState("");
   const [customRecipient, setCustomRecipient] = useState("");
   const [finalSubjectId, setFinalSubjectId] = useState(currentFinalSubjectId ?? "");
+  const [financialAccountId, setFinancialAccountId] = useState("");
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -50,6 +54,7 @@ export function MarkAsPaidForm({
         bankLastFive: (data.get("bankLastFive") as string) || undefined,
         paymentRecipientName,
         finalAccountingSubjectId: finalSubjectId || undefined,
+        financialAccountId: financialAccountId || undefined,
       });
       if (result?.error) {
         setError(result.error);
@@ -152,6 +157,22 @@ export function MarkAsPaidForm({
             <option value="">請選擇（如需修正）</option>
             {accountingSubjects.map((s) => (
               <option key={s.id} value={s.id}>{s.code} {s.name}</option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      {financialAccounts.length > 0 && (
+        <div>
+          <label className="block text-xs text-gray-600 mb-1">付款帳戶（選填，選擇後自動記錄出帳）</label>
+          <select
+            value={financialAccountId}
+            onChange={(e) => setFinancialAccountId(e.target.value)}
+            className="w-full text-sm text-gray-800 border border-slate-300 rounded-lg px-3 py-2 bg-white hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          >
+            <option value="">不記錄帳戶（選填）</option>
+            {financialAccounts.map((a) => (
+              <option key={a.id} value={a.id}>{a.name}</option>
             ))}
           </select>
         </div>

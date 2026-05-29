@@ -6,12 +6,14 @@ import { StatsCard } from "@/components/ui/StatsCard";
 import {
   FileText, Clock, CheckCircle,
   AlertCircle, Banknote, Users, BadgeCheck, Receipt,
+  Landmark, TrendingUp, TrendingDown, ArrowRight,
 } from "lucide-react";
 import Link from "next/link";
-import { APPROVAL_ROLES, FINANCE_ROLES, OFFSET_REVIEW_ROLES } from "@/lib/constants";
+import { APPROVAL_ROLES, FINANCE_ROLES, OFFSET_REVIEW_ROLES, FINANCE_VIEW_ROLES } from "@/lib/constants";
 import type { UserRole } from "@prisma/client";
 import { WorkbenchSection } from "@/components/dashboard/WorkbenchSection";
 import type { WorkbenchCardConfig, WorkbenchRequest } from "@/components/dashboard/WorkbenchSection";
+import { getFinancialAccounts } from "@/lib/actions/financialAccount";
 
 // ─── helpers ───────────────────────────────────────────────────────────────
 
@@ -201,9 +203,11 @@ export default async function DashboardPage() {
   const role = session!.user.role as UserRole;
   const userId = session!.user.id;
 
-  const [stats, workbenchCards] = await Promise.all([
+  const canViewAccounts = FINANCE_VIEW_ROLES.includes(role);
+  const [stats, workbenchCards, financialAccounts] = await Promise.all([
     getDashboardStats(userId, role),
     getWorkbenchCards(userId, role),
+    canViewAccounts ? getFinancialAccounts() : Promise.resolve([]),
   ]);
 
   const isApprover = APPROVAL_ROLES.includes(role) || role === "ADMIN";
@@ -218,6 +222,75 @@ export default async function DashboardPage() {
         </h1>
         <p className="text-sm text-gray-600 mt-0.5">歡迎回來，{session!.user.name}</p>
       </div>
+
+      {/* Financial account balance cards */}
+      {canViewAccounts && financialAccounts.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {financialAccounts.map((acc) => (
+            <div key={acc.id} className="bg-white rounded-xl border border-gray-200 p-5 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center">
+                    <Landmark size={16} className="text-blue-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-gray-900">{acc.name}</p>
+                    {acc.accountLastFive && <p className="text-xs text-gray-500">後五碼：{acc.accountLastFive}</p>}
+                  </div>
+                </div>
+                <Link
+                  href={`/financial-accounts/${acc.id}`}
+                  className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 font-medium"
+                >
+                  查看明細 <ArrowRight size={12} />
+                </Link>
+              </div>
+
+              <div>
+                <p className="text-xs text-gray-500">目前餘額</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  NT$ {acc.balance.toLocaleString("zh-TW")}
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div className="bg-green-50 rounded-lg px-3 py-2">
+                  <div className="flex items-center gap-1">
+                    <TrendingUp size={11} className="text-green-600" />
+                    <p className="text-xs text-green-700">本月收入</p>
+                  </div>
+                  <p className="text-sm font-semibold text-green-700 mt-0.5">
+                    +NT$ {acc.monthIncome.toLocaleString("zh-TW")}
+                  </p>
+                </div>
+                <div className="bg-red-50 rounded-lg px-3 py-2">
+                  <div className="flex items-center gap-1">
+                    <TrendingDown size={11} className="text-red-600" />
+                    <p className="text-xs text-red-700">本月支出</p>
+                  </div>
+                  <p className="text-sm font-semibold text-red-700 mt-0.5">
+                    -NT$ {acc.monthExpense.toLocaleString("zh-TW")}
+                  </p>
+                </div>
+              </div>
+
+              {acc.lastTransaction && (
+                <div className="border-t border-gray-100 pt-2">
+                  <p className="text-xs text-gray-400">
+                    最近交易：{new Date(acc.lastTransaction.date).toLocaleDateString("zh-TW")}
+                    {" "}
+                    <span className={acc.lastTransaction.type === "INCOME" ? "text-green-600" : "text-red-600"}>
+                      {acc.lastTransaction.type === "INCOME" ? "入帳" : "出帳"}
+                    </span>
+                    {" "}{acc.lastTransaction.summary}{" "}
+                    NT$ {acc.lastTransaction.amount.toLocaleString("zh-TW")}
+                  </p>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Stats grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">

@@ -233,6 +233,42 @@ async function main() {
   });
   console.log("  ↺  assigned admin project to all unlinked requests");
 
+  console.log("\n🌱 Seeding financial accounts...");
+  const defaultAccounts = [
+    {
+      id: "seed-account-post",
+      name: "郵局帳戶",
+      type: "POST_OFFICE" as const,
+      bankName: null,
+      accountLastFive: null,
+      initialBalance: 0,
+    },
+    {
+      id: "seed-account-bank",
+      name: "兆豐銀行帳戶",
+      type: "BANK" as const,
+      bankName: "兆豐銀行",
+      accountLastFive: null,
+      initialBalance: 0,
+    },
+  ];
+  for (const acc of defaultAccounts) {
+    await prisma.financialAccount.upsert({
+      where: { id: acc.id },
+      update: { name: acc.name, bankName: acc.bankName },
+      create: {
+        id: acc.id,
+        name: acc.name,
+        type: acc.type,
+        bankName: acc.bankName,
+        accountLastFive: acc.accountLastFive,
+        initialBalance: acc.initialBalance,
+        isActive: true,
+      },
+    });
+    console.log(`  ✓ ${acc.name}`);
+  }
+
   console.log("\n✅ Seed complete!");
   console.log("\n測試帳號：");
   USERS.forEach((u) => console.log(`  ${u.role.padEnd(14)} ${u.email.padEnd(30)} 密碼: ${u.password}`));
