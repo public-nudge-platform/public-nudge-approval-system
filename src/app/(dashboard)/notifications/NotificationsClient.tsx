@@ -34,6 +34,7 @@ const TYPE_ICON: Record<NotificationType, React.ComponentType<{ size?: number; c
   SETTLEMENT_RETURNED: RotateCcw,
   SETTLEMENT_APPROVED: CheckCircle2,
   REQUEST_CLOSED: Archive,
+  PAYMENT_ADJUSTMENT_ADDED: Banknote,
 };
 
 const TYPE_COLOR: Record<NotificationType, string> = {
@@ -49,6 +50,7 @@ const TYPE_COLOR: Record<NotificationType, string> = {
   SETTLEMENT_RETURNED: "text-amber-500 bg-amber-50",
   SETTLEMENT_APPROVED: "text-purple-500 bg-purple-50",
   REQUEST_CLOSED: "text-gray-500 bg-gray-100",
+  PAYMENT_ADJUSTMENT_ADDED: "text-blue-500 bg-blue-50",
 };
 
 type PushState = "unsupported" | "default" | "granted" | "denied" | "loading";

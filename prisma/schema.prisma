@@ -76,6 +76,9 @@ enum AuditAction {
   ACCOUNTING_SUBJECT_UPDATED
   ACCOUNTING_SUBJECT_DEACTIVATED
   ACCOUNTING_SUBJECT_CHANGED
+  PAYMENT_ADJUSTMENT_CREATED
+  PAYMENT_ADJUSTMENT_UPDATED
+  PAYMENT_ADJUSTMENT_DELETED
 }
 
 enum NotificationType {
@@ -91,6 +94,14 @@ enum NotificationType {
   SETTLEMENT_RETURNED
   SETTLEMENT_APPROVED
   REQUEST_CLOSED
+  PAYMENT_ADJUSTMENT_ADDED
+}
+
+enum PaymentAdjustmentType {
+  BANK_FEE
+  TRANSFER_FEE
+  INTERBANK_FEE
+  OTHER
 }
 
 model User {
@@ -106,6 +117,8 @@ model User {
   approvals         ApprovalRecord[]
   notifications     Notification[]
   pushSubscriptions PushSubscription[]
+  createdAdjustments PaymentAdjustment[] @relation("PaymentAdjustmentCreatedBy")
+  updatedAdjustments PaymentAdjustment[] @relation("PaymentAdjustmentUpdatedBy")
 
   @@map("users")
 }
@@ -163,10 +176,11 @@ model Request {
   submitterId    String
   submitter      User           @relation(fields: [submitterId], references: [id])
   items          RequestItem[]
-  attachments    Attachment[]
-  approvalSteps  ApprovalStep[]
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
+  attachments        Attachment[]
+  approvalSteps      ApprovalStep[]
+  paymentAdjustments PaymentAdjustment[]
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
 
   @@map("requests")
 }
@@ -280,8 +294,9 @@ model AccountingSubject {
   isActive  Boolean   @default(true)
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
-  requests      Request[] @relation("AccountingSubject")
-  finalRequests Request[] @relation("FinalAccountingSubject")
+  requests           Request[]           @relation("AccountingSubject")
+  finalRequests      Request[]           @relation("FinalAccountingSubject")
+  paymentAdjustments PaymentAdjustment[]
 
   @@map("accounting_subjects")
 }
@@ -297,4 +312,24 @@ model ApprovalRecord {
   actedAt    DateTime       @default(now())
 
   @@map("approval_records")
+}
+
+model PaymentAdjustment {
+  id                  String                @id @default(cuid())
+  requestId           String
+  request             Request               @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  type                PaymentAdjustmentType
+  amount              Decimal               @db.Decimal(12, 2)
+  accountingSubjectId String?
+  accountingSubject   AccountingSubject?    @relation(fields: [accountingSubjectId], references: [id])
+  occurredAt          DateTime
+  note                String?
+  createdById         String
+  createdBy           User                  @relation("PaymentAdjustmentCreatedBy", fields: [createdById], references: [id])
+  updatedById         String?
+  updatedBy           User?                 @relation("PaymentAdjustmentUpdatedBy", fields: [updatedById], references: [id])
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+
+  @@map("payment_adjustments")
 }

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logAuditAction } from "@/lib/audit";
-import { FINANCE_ROLES, PAYMENT_METHOD_LABEL, REQUEST_STATUS_LABEL, REQUEST_TYPE_LABEL } from "@/lib/constants";
+import { FINANCE_ROLES, PAYMENT_ADJUSTMENT_TYPE_LABEL, PAYMENT_METHOD_LABEL, REQUEST_STATUS_LABEL, REQUEST_TYPE_LABEL } from "@/lib/constants";
 import * as XLSX from "xlsx";
 import type { UserRole } from "@prisma/client";
 
@@ -108,6 +108,12 @@ export async function GET(req: NextRequest) {
         project: { select: { name: true } },
         accountingSubject: { select: { code: true, name: true, direction: true } },
         finalAccountingSubject: { select: { code: true, name: true, direction: true } },
+        paymentAdjustments: {
+          orderBy: { occurredAt: "asc" },
+          include: {
+            accountingSubject: { select: { code: true, name: true } },
+          },
+        },
       },
     }),
     projectId
@@ -121,6 +127,14 @@ export async function GET(req: NextRequest) {
     const amount = Number(req.amount);
     const actual = req.actualAmount ? Number(req.actualAmount) : null;
     const diff = actual !== null ? actual - amount : null;
+
+    const adjs = req.paymentAdjustments ?? [];
+    const adjTotal = adjs.reduce((s, a) => s + Number(a.amount), 0);
+    const adjTypesSummary = adjs.map((a) => PAYMENT_ADJUSTMENT_TYPE_LABEL[a.type]).join("；");
+    const adjSubjectCodes = adjs.map((a) => a.accountingSubject?.code ?? "").filter(Boolean).join("；");
+    const adjSubjectNames = adjs.map((a) => a.accountingSubject?.name ?? "").filter(Boolean).join("；");
+    const adjNotes = adjs.map((a) => a.note ?? "").filter(Boolean).join("；");
+    const finalExpense = amount + adjTotal;
 
     return {
       流水編號: req.requestNumber ?? "",
@@ -148,6 +162,12 @@ export async function GET(req: NextRequest) {
       沖銷日期: formatDate(req.offsetReviewedAt),
       備註: req.reimbursementNote ?? "",
       最後更新時間: formatDate(req.updatedAt),
+      付款調整總額: adjTotal > 0 ? adjTotal : "",
+      付款調整類型: adjTypesSummary,
+      付款調整會計科目代號: adjSubjectCodes,
+      付款調整會計科目名稱: adjSubjectNames,
+      付款調整備註: adjNotes,
+      最終支出金額: adjTotal > 0 ? finalExpense : "",
     };
   });
 
@@ -159,6 +179,7 @@ export async function GET(req: NextRequest) {
     { wch: 6 },  { wch: 12 }, { wch: 14 }, { wch: 10 }, { wch: 10 },
     { wch: 12 }, { wch: 10 }, { wch: 14 }, { wch: 20 }, { wch: 12 },
     { wch: 12 }, { wch: 20 }, { wch: 16 },
+    { wch: 12 }, { wch: 20 }, { wch: 14 }, { wch: 24 }, { wch: 24 }, { wch: 12 },
   ];
 
   // Bold header row

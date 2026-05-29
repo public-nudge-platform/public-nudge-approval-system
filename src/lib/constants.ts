@@ -1,4 +1,4 @@
-import type { AuditAction, ProjectStatus, RequestStatus, RequestType, UserRole } from "@prisma/client";
+import type { AuditAction, PaymentAdjustmentType, ProjectStatus, RequestStatus, RequestType, UserRole } from "@prisma/client";
 
 export const REQUEST_STATUS_LABEL: Record<RequestStatus, string> = {
   DRAFT:              "草稿",
@@ -80,6 +80,20 @@ export const PAYMENT_METHOD_LABEL: Record<string, string> = {
   其他:           "其他",
 };
 
+export const PAYMENT_ADJUSTMENT_TYPE_LABEL: Record<PaymentAdjustmentType, string> = {
+  BANK_FEE:      "銀行手續費",
+  TRANSFER_FEE:  "匯費",
+  INTERBANK_FEE: "跨行費",
+  OTHER:         "其他",
+};
+
+export const PAYMENT_ADJUSTMENT_TYPE_OPTIONS = [
+  { value: "BANK_FEE",      label: "銀行手續費" },
+  { value: "TRANSFER_FEE",  label: "匯費" },
+  { value: "INTERBANK_FEE", label: "跨行費" },
+  { value: "OTHER",         label: "其他" },
+] as const;
+
 export const APPROVAL_ROLES: UserRole[] = ["PRESIDENT", "FOUNDER_AGENT"];
 export const FINANCE_ROLES: UserRole[] = ["FINANCE", "ADMIN", "PRESIDENT", "FOUNDER_AGENT"];
 export const OFFSET_REVIEW_ROLES: UserRole[] = ["FINANCE", "PRESIDENT", "FOUNDER_AGENT"];
@@ -116,6 +130,9 @@ export const AUDIT_ACTION_LABEL: Record<AuditAction, string> = {
   ACCOUNTING_SUBJECT_UPDATED:    "編輯會計科目",
   ACCOUNTING_SUBJECT_DEACTIVATED:"停用會計科目",
   ACCOUNTING_SUBJECT_CHANGED:    "修改正式會計科目",
+  PAYMENT_ADJUSTMENT_CREATED:    "新增付款調整",
+  PAYMENT_ADJUSTMENT_UPDATED:    "編輯付款調整",
+  PAYMENT_ADJUSTMENT_DELETED:    "刪除付款調整",
 };
 
 export const AUDIT_ACTION_COLOR: Record<AuditAction, string> = {
@@ -146,4 +163,7 @@ export const AUDIT_ACTION_COLOR: Record<AuditAction, string> = {
   ACCOUNTING_SUBJECT_UPDATED:    "bg-teal-50 text-teal-700",
   ACCOUNTING_SUBJECT_DEACTIVATED:"bg-slate-100 text-slate-700",
   ACCOUNTING_SUBJECT_CHANGED:    "bg-violet-50 text-violet-700",
+  PAYMENT_ADJUSTMENT_CREATED:    "bg-teal-50 text-teal-700",
+  PAYMENT_ADJUSTMENT_UPDATED:    "bg-sky-50 text-sky-700",
+  PAYMENT_ADJUSTMENT_DELETED:    "bg-red-50 text-red-700",
 };

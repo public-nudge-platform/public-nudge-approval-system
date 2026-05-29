@@ -17,6 +17,7 @@ import { APPROVAL_ROLES, FINANCE_ROLES, OFFSET_REVIEW_ROLES, PAYMENT_METHOD_LABE
 import Link from "next/link";
 import { ChevronLeft, Calendar, User, Building2, Banknote, FolderOpen, Hash, Receipt, Info, Pencil, BookOpen } from "lucide-react";
 import { FinalAccountingSubjectForm } from "@/components/forms/FinalAccountingSubjectForm";
+import { PaymentAdjustmentSection } from "@/components/forms/PaymentAdjustmentSection";
 import { UploadZone } from "@/components/ui/UploadZone";
 
 const OFFSET_STATUSES = ["PENDING_SETTLEMENT", "OFFSET_SUBMITTED", "OFFSET_RETURNED", "CLOSED"] as const;
@@ -157,6 +158,13 @@ async function getRequest(id: string) {
       attachments: true,
       accountingSubject: { select: { id: true, code: true, name: true, direction: true } },
       finalAccountingSubject: { select: { id: true, code: true, name: true, direction: true } },
+      paymentAdjustments: {
+        orderBy: { occurredAt: "asc" },
+        include: {
+          accountingSubject: { select: { id: true, code: true, name: true } },
+          createdBy: { select: { name: true } },
+        },
+      },
       approvalSteps: {
         orderBy: { stepOrder: "asc" },
         include: {
@@ -203,9 +211,11 @@ export default async function RequestDetailPage({
 
   const canMarkPaidEarly = ["FINANCE", "ADMIN"].includes(session!.user.role) && request.status === "APPROVED";
   const canEditFinalSubject = ["FINANCE", "ADMIN"].includes(role);
+  const canWriteAdjustment = (["FINANCE", "ADMIN"] as UserRole[]).includes(role) &&
+    (["PAID", "PENDING_SETTLEMENT", "OFFSET_SUBMITTED", "OFFSET_RETURNED", "CLOSED"] as readonly string[]).includes(request.status);
   const [activeRecipients, accountingSubjects] = await Promise.all([
     canMarkPaidEarly ? getActiveRecipients() : Promise.resolve([]),
-    canEditFinalSubject ? getActiveAccountingSubjects() : Promise.resolve([]),
+    (canEditFinalSubject || canWriteAdjustment) ? getActiveAccountingSubjects() : Promise.resolve([]),
   ]);
 
   const isApprover = APPROVAL_ROLES.includes(role) || role === "ADMIN";
@@ -529,6 +539,21 @@ export default async function RequestDetailPage({
               )}
             </div>
           )}
+
+          {/* Payment adjustment records */}
+          {(PAID_STATUSES as readonly string[]).includes(request.status) && (
+            <div id="payment-adjustments">
+            <PaymentAdjustmentSection
+              requestId={request.id}
+              adjustments={request.paymentAdjustments.map((a) => ({
+                ...a,
+                amount: Number(a.amount),
+              }))}
+              canWrite={canWriteAdjustment}
+              accountingSubjects={accountingSubjects}
+            />
+            </div>
+          )}
         </div>
 
         {/* Right column */}
@@ -645,6 +670,27 @@ export default async function RequestDetailPage({
                   <AttachmentGrid attachments={paymentAttachments} canDelete={false} />
                 </div>
               )}
+              {(() => {
+                const adjTotal = request.paymentAdjustments.reduce((s, a) => s + Number(a.amount), 0);
+                if (adjTotal <= 0) return null;
+                const baseAmt = Number(request.amount);
+                return (
+                  <div className="mt-3 pt-3 border-t border-blue-100 space-y-1.5 text-sm">
+                    <div className="flex justify-between text-gray-500">
+                      <span>原請款金額</span>
+                      <span className="tabular-nums">{baseAmt.toLocaleString()} 元</span>
+                    </div>
+                    <div className="flex justify-between text-gray-500">
+                      <span>付款調整總額</span>
+                      <span className="tabular-nums text-blue-600">+ {adjTotal.toLocaleString()} 元</span>
+                    </div>
+                    <div className="flex justify-between font-semibold text-gray-800 border-t border-gray-100 pt-1.5">
+                      <span>最終支出金額</span>
+                      <span className="tabular-nums">{(baseAmt + adjTotal).toLocaleString()} 元</span>
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           )}
 

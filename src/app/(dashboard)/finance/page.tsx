@@ -416,6 +416,7 @@ export default async function FinancePage({
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-600">付款人</th>
                   <th className="text-right px-5 py-3 text-xs font-semibold text-gray-600">金額</th>
                   <th className="text-right px-5 py-3 text-xs font-semibold text-gray-600">付款日期</th>
+                  <th className="px-3 py-3 text-xs font-semibold text-gray-600"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
@@ -447,6 +448,14 @@ export default async function FinancePage({
                     </td>
                     <td className="px-5 py-3 text-right text-gray-600 text-xs">
                       {req.paidAt?.toLocaleDateString("zh-TW") || "—"}
+                    </td>
+                    <td className="px-3 py-3">
+                      <Link
+                        href={`/requests/${req.id}#payment-adjustments`}
+                        className="whitespace-nowrap text-xs text-blue-600 hover:text-blue-800 border border-blue-200 rounded px-2 py-1 hover:bg-blue-50 transition-colors"
+                      >
+                        回填對帳
+                      </Link>
                     </td>
                   </tr>
                 ))}
