@@ -4,12 +4,48 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { StatsCard } from "@/components/ui/StatsCard";
 import {
-  FileText, Clock, CheckCircle, XCircle,
+  FileText, Clock, CheckCircle,
   AlertCircle, Banknote, Users, BadgeCheck, Receipt,
 } from "lucide-react";
 import Link from "next/link";
 import { APPROVAL_ROLES, FINANCE_ROLES, OFFSET_REVIEW_ROLES } from "@/lib/constants";
 import type { UserRole } from "@prisma/client";
+import { WorkbenchSection } from "@/components/dashboard/WorkbenchSection";
+import type { WorkbenchCardConfig, WorkbenchRequest } from "@/components/dashboard/WorkbenchSection";
+
+// ─── helpers ───────────────────────────────────────────────────────────────
+
+const REQ_SELECT = {
+  id: true,
+  requestNumber: true,
+  title: true,
+  type: true,
+  status: true,
+  amount: true,
+  updatedAt: true,
+  submitter: { select: { name: true } },
+  project: { select: { name: true } },
+} as const;
+
+function toItem(r: {
+  id: string; requestNumber: string | null; title: string;
+  type: string; status: string; amount: { toNumber(): number };
+  updatedAt: Date; submitter: { name: string }; project: { name: string } | null;
+}): WorkbenchRequest {
+  return {
+    id: r.id,
+    requestNumber: r.requestNumber,
+    title: r.title,
+    type: r.type as WorkbenchRequest["type"],
+    status: r.status as WorkbenchRequest["status"],
+    amount: r.amount.toNumber(),
+    updatedAt: r.updatedAt.toISOString(),
+    submitterName: r.submitter.name,
+    projectName: r.project?.name ?? null,
+  };
+}
+
+// ─── stats (existing) ──────────────────────────────────────────────────────
 
 async function getDashboardStats(userId: string, role: UserRole) {
   const isApprover = APPROVAL_ROLES.includes(role) || role === "ADMIN";
@@ -47,10 +83,129 @@ async function getDashboardStats(userId: string, role: UserRole) {
   return { myTotal, myPending, myApproved, myDraft, myPaid, myPendingOffset, pendingApprovals, awaitingPayment, awaitingOffsetReview, allPendingOffset, isOffsetReviewer };
 }
 
+// ─── workbench cards data ──────────────────────────────────────────────────
+
+async function getWorkbenchCards(userId: string, role: UserRole): Promise<WorkbenchCardConfig[]> {
+  const TAKE = 10;
+
+  // ADMIN
+  if (role === "ADMIN") {
+    const [
+      pendingList, pendingCount,
+      payList, payCount,
+      offsetList, offsetCount,
+      trackList, trackCount,
+    ] = await Promise.all([
+      prisma.request.findMany({ where: { status: "PENDING" }, select: REQ_SELECT, orderBy: { updatedAt: "desc" }, take: TAKE }),
+      prisma.request.count({ where: { status: "PENDING" } }),
+      prisma.request.findMany({ where: { status: "APPROVED" }, select: REQ_SELECT, orderBy: { updatedAt: "desc" }, take: TAKE }),
+      prisma.request.count({ where: { status: "APPROVED" } }),
+      prisma.request.findMany({ where: { status: { in: ["PENDING_SETTLEMENT", "OFFSET_SUBMITTED", "OFFSET_RETURNED"] } }, select: REQ_SELECT, orderBy: { updatedAt: "desc" }, take: TAKE }),
+      prisma.request.count({ where: { status: { in: ["PENDING_SETTLEMENT", "OFFSET_SUBMITTED", "OFFSET_RETURNED"] } } }),
+      prisma.request.findMany({ where: { status: { notIn: ["CLOSED", "REJECTED", "WITHDRAWN", "DRAFT"] } }, select: REQ_SELECT, orderBy: { updatedAt: "desc" }, take: TAKE }),
+      prisma.request.count({ where: { status: { notIn: ["CLOSED", "REJECTED", "WITHDRAWN", "DRAFT"] } } }),
+    ]);
+    return [
+      { id: "pending", title: "待簽核", count: pendingCount, description: "等待理事長/創會理事長審核的申請單", color: "amber", href: "/approvals", items: pendingList.map(toItem), cardType: "task" },
+      { id: "pay", title: "待付款", count: payCount, description: "已核准，等待行政出納付款", color: "blue", href: "/finance", items: payList.map(toItem), cardType: "task" },
+      { id: "offset", title: "待沖銷", count: offsetCount, description: "進入沖銷流程的案件", color: "purple", href: "/finance", items: offsetList.map(toItem), cardType: "task" },
+      { id: "track", title: "流程追蹤", count: trackCount, description: "全系統進行中案件", color: "slate", href: "/requests", items: trackList.map(toItem), cardType: "tracking" },
+    ];
+  }
+
+  // PRESIDENT / FOUNDER_AGENT
+  if (APPROVAL_ROLES.includes(role)) {
+    const [
+      pendingList, pendingCount,
+      offsetReviewList, offsetReviewCount,
+      trackList, trackCount,
+    ] = await Promise.all([
+      prisma.request.findMany({ where: { status: "PENDING" }, select: REQ_SELECT, orderBy: { updatedAt: "desc" }, take: TAKE }),
+      prisma.request.count({ where: { status: "PENDING" } }),
+      prisma.request.findMany({ where: { status: "OFFSET_SUBMITTED" }, select: REQ_SELECT, orderBy: { updatedAt: "desc" }, take: TAKE }),
+      prisma.request.count({ where: { status: "OFFSET_SUBMITTED" } }),
+      // Tracking: requests this approver has acted on, still active
+      prisma.request.findMany({
+        where: {
+          approvalSteps: { some: { records: { some: { approverId: userId } } } },
+          status: { notIn: ["DRAFT", "WITHDRAWN", "REJECTED"] },
+        },
+        select: REQ_SELECT,
+        orderBy: { updatedAt: "desc" },
+        take: TAKE,
+      }),
+      prisma.request.count({
+        where: {
+          approvalSteps: { some: { records: { some: { approverId: userId } } } },
+          status: { notIn: ["DRAFT", "WITHDRAWN", "REJECTED"] },
+        },
+      }),
+    ]);
+    return [
+      { id: "pending", title: "待簽核", count: pendingCount, description: "等待您審核的申請單", color: "amber", href: "/approvals", items: pendingList.map(toItem), cardType: "task" },
+      { id: "offset-review", title: "沖銷待確認", count: offsetReviewCount, description: "申請人已送出沖銷，等待您確認", color: "indigo", href: "/finance", items: offsetReviewList.map(toItem), cardType: "task" },
+      { id: "track", title: "流程追蹤", count: trackCount, description: "我審核過且仍在流程中的案件", color: "slate", href: "/requests", items: trackList.map(toItem), cardType: "tracking" },
+    ];
+  }
+
+  // FINANCE (not admin/approver)
+  if (role === "FINANCE") {
+    const [
+      payList, payCount,
+      offsetPendingList, offsetPendingCount,
+      offsetReviewList, offsetReviewCount,
+      trackList, trackCount,
+    ] = await Promise.all([
+      prisma.request.findMany({ where: { status: "APPROVED" }, select: REQ_SELECT, orderBy: { updatedAt: "desc" }, take: TAKE }),
+      prisma.request.count({ where: { status: "APPROVED" } }),
+      prisma.request.findMany({ where: { status: { in: ["PENDING_SETTLEMENT", "OFFSET_RETURNED"] } }, select: REQ_SELECT, orderBy: { updatedAt: "desc" }, take: TAKE }),
+      prisma.request.count({ where: { status: { in: ["PENDING_SETTLEMENT", "OFFSET_RETURNED"] } } }),
+      prisma.request.findMany({ where: { status: "OFFSET_SUBMITTED" }, select: REQ_SELECT, orderBy: { updatedAt: "desc" }, take: TAKE }),
+      prisma.request.count({ where: { status: "OFFSET_SUBMITTED" } }),
+      // Tracking: paid / settlement stage
+      prisma.request.findMany({ where: { status: { in: ["PAID", "PENDING_SETTLEMENT", "OFFSET_SUBMITTED", "OFFSET_RETURNED"] } }, select: REQ_SELECT, orderBy: { updatedAt: "desc" }, take: TAKE }),
+      prisma.request.count({ where: { status: { in: ["PAID", "PENDING_SETTLEMENT", "OFFSET_SUBMITTED", "OFFSET_RETURNED"] } } }),
+    ]);
+    return [
+      { id: "pay", title: "待付款", count: payCount, description: "已核准，等待標記付款", color: "blue", href: "/finance", items: payList.map(toItem), cardType: "task" },
+      { id: "offset-pending", title: "待沖銷", count: offsetPendingCount, description: "等待申請人送出沖銷資料", color: "purple", href: "/finance", items: offsetPendingList.map(toItem), cardType: "task" },
+      { id: "offset-review", title: "沖銷待確認", count: offsetReviewCount, description: "申請人已送出沖銷，等待確認", color: "indigo", href: "/finance", items: offsetReviewList.map(toItem), cardType: "task" },
+      { id: "track", title: "流程追蹤", count: trackCount, description: "財務相關進行中案件", color: "slate", href: "/finance", items: trackList.map(toItem), cardType: "tracking" },
+    ];
+  }
+
+  // Default: APPLICANT and other roles
+  const [
+    toModifyList, toModifyCount,
+    offsetList, offsetCount,
+    trackList, trackCount,
+  ] = await Promise.all([
+    prisma.request.findMany({ where: { submitterId: userId, status: { in: ["RETURNED", "DRAFT"] } }, select: REQ_SELECT, orderBy: { updatedAt: "desc" }, take: TAKE }),
+    prisma.request.count({ where: { submitterId: userId, status: { in: ["RETURNED", "DRAFT"] } } }),
+    prisma.request.findMany({ where: { submitterId: userId, status: { in: ["PENDING_SETTLEMENT", "OFFSET_RETURNED"] } }, select: REQ_SELECT, orderBy: { updatedAt: "desc" }, take: TAKE }),
+    prisma.request.count({ where: { submitterId: userId, status: { in: ["PENDING_SETTLEMENT", "OFFSET_RETURNED"] } } }),
+    prisma.request.findMany({ where: { submitterId: userId, status: { notIn: ["CLOSED", "REJECTED", "WITHDRAWN", "DRAFT"] } }, select: REQ_SELECT, orderBy: { updatedAt: "desc" }, take: TAKE }),
+    prisma.request.count({ where: { submitterId: userId, status: { notIn: ["CLOSED", "REJECTED", "WITHDRAWN", "DRAFT"] } } }),
+  ]);
+  return [
+    { id: "to-modify", title: "待修改", count: toModifyCount, description: "需要您修改或重新送出的申請單", color: "amber", href: "/requests?status=RETURNED", items: toModifyList.map(toItem), cardType: "task" },
+    { id: "offset", title: "待沖銷", count: offsetCount, description: "需要您上傳沖銷資料的案件", color: "purple", href: "/requests?status=PENDING_SETTLEMENT", items: offsetList.map(toItem), cardType: "task" },
+    { id: "track", title: "流程追蹤", count: trackCount, description: "我送出、仍在流程中的案件", color: "slate", href: "/requests", items: trackList.map(toItem), cardType: "tracking" },
+  ];
+}
+
+// ─── page ──────────────────────────────────────────────────────────────────
+
 export default async function DashboardPage() {
   const session = await auth();
   const role = session!.user.role as UserRole;
-  const stats = await getDashboardStats(session!.user.id, role);
+  const userId = session!.user.id;
+
+  const [stats, workbenchCards] = await Promise.all([
+    getDashboardStats(userId, role),
+    getWorkbenchCards(userId, role),
+  ]);
+
   const isApprover = APPROVAL_ROLES.includes(role) || role === "ADMIN";
   const isFinance = FINANCE_ROLES.includes(role);
   const isOffsetReviewer = stats.isOffsetReviewer;
@@ -59,9 +214,9 @@ export default async function DashboardPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-xl font-semibold text-gray-900">
-          歡迎回來，{session!.user.name}
+          我的工作台
         </h1>
-        <p className="text-sm text-gray-600 mt-0.5">以下是目前的案件概況</p>
+        <p className="text-sm text-gray-600 mt-0.5">歡迎回來，{session!.user.name}</p>
       </div>
 
       {/* Stats grid */}
@@ -90,8 +245,8 @@ export default async function DashboardPage() {
       {/* Pending approvals prompt */}
       {isApprover && stats.pendingApprovals > 0 && (
         <div className="bg-amber-50 border border-amber-200 rounded-xl px-5 py-4 flex items-center gap-4">
-          <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center flex-shrink-0">
-            <XCircle size={20} className="text-amber-600" />
+          <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center shrink-0">
+            <Users size={20} className="text-amber-600" />
           </div>
           <div className="flex-1">
             <p className="text-sm font-semibold text-amber-800">
@@ -101,12 +256,15 @@ export default async function DashboardPage() {
           </div>
           <Link
             href="/approvals"
-            className="flex-shrink-0 px-3 py-1.5 bg-amber-600 text-white text-xs font-medium rounded-lg hover:bg-amber-700 transition-colors"
+            className="shrink-0 px-3 py-1.5 bg-amber-600 text-white text-xs font-medium rounded-lg hover:bg-amber-700 transition-colors"
           >
             前往簽核
           </Link>
         </div>
       )}
+
+      {/* Role-based workbench */}
+      <WorkbenchSection cards={workbenchCards} />
     </div>
   );
 }
