@@ -98,10 +98,10 @@ export async function GET(req: NextRequest) {
   [
     [1, "項目代號", "center"],
     [2, "項目名稱", "left"],
-    [3, "金額",     "right"],
+    [3, "金額",     "center"],
     [5, "項目代號", "center"],
     [6, "項目名稱", "left"],
-    [7, "金額",     "right"],
+    [7, "金額",     "center"],
   ].forEach(([col, value, align]) => {
     const c = ws.getCell(r, col as number);
     c.value     = value as string;
@@ -133,7 +133,7 @@ export async function GET(req: NextRequest) {
         ws.getCell(rowNum, nameCol).alignment = { indent: 1 };
         ws.getCell(rowNum, amtCol).value      = sideRow.amount;
         ws.getCell(rowNum, amtCol).numFmt     = "#,##0";
-        ws.getCell(rowNum, amtCol).alignment  = { horizontal: "right" };
+        ws.getCell(rowNum, amtCol).alignment  = { horizontal: "center" };
         break;
 
       case "total": {
@@ -142,7 +142,7 @@ export async function GET(req: NextRequest) {
         const ac = ws.getCell(rowNum, amtCol);
         ac.value     = sideRow.amount;
         ac.numFmt    = "#,##0";
-        ac.alignment = { horizontal: "right" };
+        ac.alignment = { horizontal: "center" };
         ac.font      = { bold: true };
         if (sideRow.border) {
           ac.border = { bottom: sideRow.border === "medium" ? BORDER_MEDIUM : BORDER_THIN };

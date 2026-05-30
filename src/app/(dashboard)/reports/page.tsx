@@ -51,7 +51,7 @@ function TypeTabs({ current }: { current: string }) {
     <div className="flex gap-1 bg-gray-100 p-1 rounded-lg w-fit">
       {(
         [
-          { value: "income-expense", label: "收支表" },
+          { value: "income-expense", label: "專案收支表" },
           { value: "balance-sheet", label: "資產負債表" },
         ] as const
       ).map((t) => (
@@ -207,8 +207,8 @@ function IncomeExpensePreview({
   // shared cell styles
   const tdCode = "py-[3px] text-center font-mono text-xs text-gray-500 w-20";
   const tdName = "py-[3px] px-2";
-  const tdAmt  = "py-[3px] text-right tabular-nums pr-3 w-28";
-  const tdPct  = "py-[3px] text-right pr-3 w-16";
+  const tdAmt  = "py-[3px] text-center tabular-nums w-28";
+  const tdPct  = "py-[3px] text-center w-16";
 
   return (
     <ReportFrame exportUrl={exportUrl}>
@@ -216,7 +216,7 @@ function IncomeExpensePreview({
       <div className="relative text-center py-4 border-b border-gray-400 px-6">
         <p className="font-bold text-[15px]">公民幫推</p>
         <p className="font-bold text-[13px]">
-          {data.projectName ? `專案收支表 — ${data.projectName}` : "收支表"}
+          {data.projectName ? `專案收支表 — ${data.projectName}` : "專案收支表"}
         </p>
         <p className="text-[12px] text-gray-700">
           {formatDateDisplay(data.periodFrom)}～　{formatDateDisplay(data.periodTo)}
@@ -232,8 +232,8 @@ function IncomeExpensePreview({
           <tr style={{ borderBottom: "2px solid #555" }}>
             <th className="py-1.5 text-center font-semibold w-20">項目代號</th>
             <th className="py-1.5 text-left font-semibold px-2">項目名稱</th>
-            <th className="py-1.5 text-right font-semibold pr-3 w-28">金額</th>
-            <th className="py-1.5 text-right font-semibold pr-3 w-16">%</th>
+            <th className="py-1.5 text-center font-semibold w-28">金額</th>
+            <th className="py-1.5 text-center font-semibold w-16">%</th>
           </tr>
         </thead>
         <tbody>
@@ -363,7 +363,7 @@ function BalanceSheetPreview({
 }) {
   const tdCode = "py-[3px] text-center font-mono text-xs text-gray-500 w-16";
   const tdName = "py-[3px] px-2";
-  const tdAmt  = "py-[3px] text-right tabular-nums pr-2 w-24";
+  const tdAmt  = "py-[3px] text-center tabular-nums w-24";
 
   return (
     <ReportFrame exportUrl={exportUrl} wide>
@@ -390,7 +390,7 @@ function BalanceSheetPreview({
             <tr style={{ borderBottom: "2px solid #555" }}>
               <th className="py-1.5 text-center font-semibold w-16 text-xs">項目代號</th>
               <th className="py-1.5 text-left font-semibold px-2 text-xs">項目名稱</th>
-              <th className="py-1.5 text-right font-semibold pr-2 w-24 text-xs">金額</th>
+              <th className="py-1.5 text-center font-semibold w-24 text-xs">金額</th>
             </tr>
           </thead>
           <tbody>
@@ -448,7 +448,7 @@ function BalanceSheetPreview({
             <tr style={{ borderBottom: "2px solid #555" }}>
               <th className="py-1.5 text-center font-semibold w-16 text-xs">項目代號</th>
               <th className="py-1.5 text-left font-semibold px-2 text-xs">項目名稱</th>
-              <th className="py-1.5 text-right font-semibold pr-2 w-24 text-xs">金額</th>
+              <th className="py-1.5 text-center font-semibold w-24 text-xs">金額</th>
             </tr>
           </thead>
           <tbody>

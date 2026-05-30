@@ -45,7 +45,7 @@ export async function GET(req: NextRequest) {
   // ─── Build workbook ───────────────────────────────────────────────────────
 
   const wb = new ExcelJS.Workbook();
-  const ws = wb.addWorksheet("收支表");
+  const ws = wb.addWorksheet("專案收支表");
 
   ws.columns = [
     { width: 12 }, // A 項目代號
@@ -68,7 +68,7 @@ export async function GET(req: NextRequest) {
 
   ws.mergeCells(r, 1, r, 4);
   const titleCell = ws.getCell(r, 1);
-  titleCell.value     = data.projectName ? `專案收支表 — ${data.projectName}` : "收支表";
+  titleCell.value     = data.projectName ? `專案收支表 — ${data.projectName}` : "專案收支表";
   titleCell.font      = { bold: true, size: 12 };
   titleCell.alignment = { horizontal: "center" };
   ws.getRow(r).height = 18;
@@ -93,8 +93,8 @@ export async function GET(req: NextRequest) {
   const hCols: [number, string, ExcelJS.Alignment["horizontal"]][] = [
     [1, "項目代號", "center"],
     [2, "項目名稱", "left"],
-    [3, "金額",     "right"],
-    [4, "%",        "right"],
+    [3, "金額",     "center"],
+    [4, "%",        "center"],
   ];
   hCols.forEach(([col, value, align]) => {
     const c = ws.getCell(r, col);
@@ -119,10 +119,10 @@ export async function GET(req: NextRequest) {
     ws.getCell(r, 2).alignment = { indent: 2 };
 
     const a = ws.getCell(r, 3);
-    a.value = item.amount; a.numFmt = "#,##0"; a.alignment = { horizontal: "right" };
+    a.value = item.amount; a.numFmt = "#,##0"; a.alignment = { horizontal: "center" };
 
     const p = ws.getCell(r, 4);
-    p.value = pct(item.amount); p.numFmt = "0.00%"; p.alignment = { horizontal: "right" };
+    p.value = pct(item.amount); p.numFmt = "0.00%"; p.alignment = { horizontal: "center" };
     r++;
   }
 
@@ -130,10 +130,10 @@ export async function GET(req: NextRequest) {
   ws.getCell(r, 2).value = "收入合計";
   ws.getCell(r, 2).font  = { bold: true };
   const incA = ws.getCell(r, 3);
-  incA.value = data.incomeTotal; incA.numFmt = "#,##0"; incA.alignment = { horizontal: "right" };
+  incA.value = data.incomeTotal; incA.numFmt = "#,##0"; incA.alignment = { horizontal: "center" };
   incA.font = { bold: true }; incA.border = { bottom: BORDER_THIN };
   const incP = ws.getCell(r, 4);
-  incP.value = data.incomeTotal > 0 ? 1 : 0; incP.numFmt = "0.00%"; incP.alignment = { horizontal: "right" };
+  incP.value = data.incomeTotal > 0 ? 1 : 0; incP.numFmt = "0.00%"; incP.alignment = { horizontal: "center" };
   incP.font = { bold: true }; incP.border = { bottom: BORDER_THIN };
   r++;
 
@@ -172,10 +172,10 @@ export async function GET(req: NextRequest) {
     ws.getCell(r, 2).font      = { bold: true };
     ws.getCell(r, 2).alignment = { indent: 1 };
     const gsA = ws.getCell(r, 3);
-    gsA.value = group.subtotal; gsA.numFmt = "#,##0"; gsA.alignment = { horizontal: "right" };
+    gsA.value = group.subtotal; gsA.numFmt = "#,##0"; gsA.alignment = { horizontal: "center" };
     gsA.font = { bold: true }; gsA.border = { bottom: BORDER_THIN };
     const gsP = ws.getCell(r, 4);
-    gsP.value = pct(group.subtotal); gsP.numFmt = "0.00%"; gsP.alignment = { horizontal: "right" };
+    gsP.value = pct(group.subtotal); gsP.numFmt = "0.00%"; gsP.alignment = { horizontal: "center" };
     gsP.font = { bold: true }; gsP.border = { bottom: BORDER_THIN };
     r++;
 
@@ -186,10 +186,10 @@ export async function GET(req: NextRequest) {
   ws.getCell(r, 2).value = "支出合計";
   ws.getCell(r, 2).font  = { bold: true };
   const expA = ws.getCell(r, 3);
-  expA.value = data.expenseTotal; expA.numFmt = "#,##0"; expA.alignment = { horizontal: "right" };
+  expA.value = data.expenseTotal; expA.numFmt = "#,##0"; expA.alignment = { horizontal: "center" };
   expA.font = { bold: true }; expA.border = { bottom: BORDER_MEDIUM };
   const expP = ws.getCell(r, 4);
-  expP.value = pct(data.expenseTotal); expP.numFmt = "0.00%"; expP.alignment = { horizontal: "right" };
+  expP.value = pct(data.expenseTotal); expP.numFmt = "0.00%"; expP.alignment = { horizontal: "center" };
   expP.font = { bold: true }; expP.border = { bottom: BORDER_MEDIUM };
   r++;
 
@@ -199,16 +199,16 @@ export async function GET(req: NextRequest) {
   ws.getCell(r, 2).value = "本期餘絀";
   ws.getCell(r, 2).font  = { bold: true, size: 12 };
   const netA = ws.getCell(r, 3);
-  netA.value = data.netSurplus; netA.numFmt = "#,##0"; netA.alignment = { horizontal: "right" };
+  netA.value = data.netSurplus; netA.numFmt = "#,##0"; netA.alignment = { horizontal: "center" };
   netA.font = { bold: true, size: 12 }; netA.border = { bottom: BORDER_MEDIUM };
   const netP = ws.getCell(r, 4);
-  netP.value = pct(data.netSurplus); netP.numFmt = "0.00%"; netP.alignment = { horizontal: "right" };
+  netP.value = pct(data.netSurplus); netP.numFmt = "0.00%"; netP.alignment = { horizontal: "center" };
   netP.font = { bold: true, size: 12 }; netP.border = { bottom: BORDER_MEDIUM };
 
   // ─── Filename ─────────────────────────────────────────────────────────────
 
   const sanitize = (s: string) => s.replace(/[\\/:*?"<>|]/g, "");
-  const prefix = projectName ? `${sanitize(projectName)}_收支表` : "收支表";
+  const prefix = projectName ? `${sanitize(projectName)}_專案收支表` : "專案收支表";
   let suffix: string;
   if (startDate || endDate) {
     suffix = `${(startDate ?? "").replace(/-/g, "")}-${(endDate ?? "").replace(/-/g, "")}`;
