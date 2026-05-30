@@ -16,9 +16,8 @@ export async function GET(req: NextRequest) {
   if (!session) return NextResponse.json({ error: "未登入" }, { status: 401 });
 
   const role = session.user.role as UserRole;
-  if (!FINANCE_ROLES.includes(role)) {
+  if (!FINANCE_ROLES.includes(role))
     return NextResponse.json({ error: "無匯出權限" }, { status: 403 });
-  }
 
   const { searchParams } = new URL(req.url);
   const month = searchParams.get("month") || undefined;
@@ -27,11 +26,8 @@ export async function GET(req: NextRequest) {
   const projectId = searchParams.get("projectId") || undefined;
 
   const period = parsePeriodParams({ month, startDate, endDate });
-  if (!period) {
-    return NextResponse.json({ error: "請提供查詢期間" }, { status: 400 });
-  }
+  if (!period) return NextResponse.json({ error: "請提供查詢期間" }, { status: 400 });
 
-  // Fetch project name for filename
   let projectName: string | null = null;
   if (projectId) {
     const proj = await prisma.project.findUnique({
@@ -41,98 +37,134 @@ export async function GET(req: NextRequest) {
     projectName = proj?.name ?? null;
   }
 
-  const data = await generateIncomeExpenseStatement({
-    from: period.from,
-    to: period.to,
-    projectId,
-  });
+  const data = await generateIncomeExpenseStatement({ from: period.from, to: period.to, projectId });
 
   // ─── Build XLSX ───────────────────────────────────────────────────────────
 
   const wb = XLSX.utils.book_new();
-  const wsData: (string | number | null)[][] = [];
 
-  const fmt = formatDateDisplay;
+  // We build an array-of-arrays, then apply styles row by row.
+  // Columns: A=項目代號, B=項目名稱, C=金額, D=%
+  // A: col 0, B: col 1, C: col 2, D: col 3
 
-  // Header rows
-  wsData.push(["公民幫推"]);
-  wsData.push([data.projectName ? `專案收支表 — ${data.projectName}` : "收支表"]);
-  wsData.push([`期間：${fmt(data.periodFrom)} ～ ${fmt(data.periodTo)}`]);
-  wsData.push(["幣別：新台幣"]);
-  wsData.push([]); // blank
-  wsData.push(["項目代號", "項目名稱", "金額", "%"]);
+  type Row = (string | number | null)[];
+  const rows: Row[] = [];
+  // track which rows need bold / bottom-border treatment
+  const boldRows = new Set<number>();
+  const borderRows = new Set<number>(); // single bottom border on C,D
+  const doubleBorderRows = new Set<number>(); // double bottom border on C,D
 
-  // Income section
-  wsData.push([null, "收入", null, null]);
+  function pushRow(row: Row, options?: { bold?: boolean; border?: "single" | "double" }) {
+    const idx = rows.length;
+    rows.push(row);
+    if (options?.bold) boldRows.add(idx);
+    if (options?.border === "single") borderRows.add(idx);
+    if (options?.border === "double") doubleBorderRows.add(idx);
+  }
+
+  const pct = (n: number) =>
+    data.incomeTotal > 0 ? n / data.incomeTotal : 0;
+
+  // Title rows
+  pushRow(["公民幫推", null, null, null], { bold: true });
+  pushRow(
+    [data.projectName ? `專案收支表 — ${data.projectName}` : "收支表", null, null, null],
+    { bold: true }
+  );
+  pushRow(
+    [`${formatDateDisplay(data.periodFrom)}～　${formatDateDisplay(data.periodTo)}`, null, null, null]
+  );
+  pushRow([null, null, null, "幣別：新台幣"]);
+  pushRow([]); // blank
+  // Column headers
+  pushRow(["項目代號", "項目名稱", "金額", "%"], { bold: true, border: "single" });
+
+  // 收入 section
+  pushRow([null, "收入", null, null], { bold: true });
   for (const item of data.incomeItems) {
-    const pct = data.incomeTotal > 0 ? item.amount / data.incomeTotal : 0;
-    wsData.push([item.code, item.name, item.amount, pct]);
+    pushRow([item.code, item.name, item.amount, pct(item.amount)]);
   }
-  const incomeTotalPct = data.incomeTotal > 0 ? 1 : 0;
-  wsData.push([null, "收入合計", data.incomeTotal, incomeTotalPct]);
-  wsData.push([]); // blank
+  pushRow([null, "收入合計", data.incomeTotal, pct(data.incomeTotal)], {
+    bold: true,
+    border: "single",
+  });
+  pushRow([]); // blank
 
-  // Expense section
-  wsData.push([null, "支出", null, null]);
+  // 支出 section
+  pushRow([null, "支出", null, null], { bold: true });
   for (const group of data.expenseGroups) {
-    wsData.push([null, group.groupName, null, null]);
+    pushRow([null, group.groupName, null, null], { bold: true });
     for (const item of group.items) {
-      const pct = data.incomeTotal > 0 ? item.amount / data.incomeTotal : 0;
-      wsData.push([item.code, item.name, item.amount, pct]);
+      pushRow([item.code, item.name, item.amount, pct(item.amount)]);
     }
-    const gPct = data.incomeTotal > 0 ? group.subtotal / data.incomeTotal : 0;
-    wsData.push([null, `${group.groupName}合計`, group.subtotal, gPct]);
-    wsData.push([]);
+    pushRow([null, `${group.groupName}合計`, group.subtotal, pct(group.subtotal)], {
+      bold: true,
+      border: "single",
+    });
+    pushRow([]); // blank after each group
   }
+  pushRow([null, "支出合計", data.expenseTotal, pct(data.expenseTotal)], {
+    bold: true,
+    border: "double",
+  });
+  pushRow([]); // blank
 
-  const expenseTotalPct = data.incomeTotal > 0 ? data.expenseTotal / data.incomeTotal : 0;
-  wsData.push([null, "支出合計", data.expenseTotal, expenseTotalPct]);
-  wsData.push([]); // blank
+  // 本期餘絀
+  pushRow([null, "本期餘絀", data.netSurplus, pct(data.netSurplus)], {
+    bold: true,
+    border: "double",
+  });
+  pushRow([]); // trailing blank
 
-  // Net surplus
-  const surplusPct = data.incomeTotal > 0 ? data.netSurplus / data.incomeTotal : 0;
-  wsData.push([null, "本期餘絀", data.netSurplus, surplusPct]);
-
-  const ws = XLSX.utils.aoa_to_sheet(wsData);
+  const ws = XLSX.utils.aoa_to_sheet(rows);
 
   // Column widths
   ws["!cols"] = [
-    { wch: 10 }, // 項目代號
-    { wch: 28 }, // 項目名稱
-    { wch: 14 }, // 金額
-    { wch: 9 },  // %
+    { wch: 10 }, // A 項目代號
+    { wch: 28 }, // B 項目名稱
+    { wch: 14 }, // C 金額
+    { wch: 10 }, // D %
   ];
 
-  // Bold: rows 0 (org name), 5 (header), and totals
-  function boldCell(r: number, c: number) {
-    const ref = XLSX.utils.encode_cell({ r, c });
-    if (!ws[ref]) return;
-    ws[ref].s = { font: { bold: true } };
-  }
+  // Apply styles
+  rows.forEach((row, r) => {
+    const isBold = boldRows.has(r);
+    const isBorder = borderRows.has(r);
+    const isDouble = doubleBorderRows.has(r);
 
-  // Header rows
-  boldCell(0, 0);
-  boldCell(1, 0);
-  boldCell(5, 0); boldCell(5, 1); boldCell(5, 2); boldCell(5, 3);
+    row.forEach((val, c) => {
+      if (val === null || val === undefined) return;
+      const ref = XLSX.utils.encode_cell({ r, c });
+      if (!ws[ref]) return;
 
-  // Mark totals: walk rows and bold rows where col B ends with "合計" or is "本期餘絀"
-  const totalKeywords = ["合計", "本期餘絀"];
-  wsData.forEach((row, r) => {
-    const label = row[1];
-    if (typeof label === "string" && totalKeywords.some((k) => label.endsWith(k) || label === k)) {
-      for (let c = 0; c < 4; c++) boldCell(r, c);
+      const s: Record<string, unknown> = {};
+      if (isBold) s.font = { bold: true };
+
+      // Bottom border on amount (C=2) and % (D=3) columns
+      if ((isBorder || isDouble) && (c === 2 || c === 3)) {
+        s.border = {
+          bottom: { style: isDouble ? "medium" : "thin", color: { rgb: "000000" } },
+        };
+      }
+
+      // Format C (金額) as number with thousands separator
+      if (c === 2 && typeof val === "number") {
+        ws[ref].z = "#,##0";
+      }
+      // Format D (%) as percentage
+      if (c === 3 && typeof val === "number") {
+        ws[ref].z = "0.00%";
+      }
+
+      if (Object.keys(s).length > 0) ws[ref].s = s;
+    });
+
+    // 幣別 row: right-align D column
+    if (row[3] === "幣別：新台幣") {
+      const ref = XLSX.utils.encode_cell({ r, c: 3 });
+      if (ws[ref]) ws[ref].s = { alignment: { horizontal: "right" } };
     }
   });
-
-  // Format % column as percentage
-  const range = XLSX.utils.decode_range(ws["!ref"] ?? "A1");
-  for (let r = range.s.r; r <= range.e.r; r++) {
-    const cell = ws[XLSX.utils.encode_cell({ r, c: 3 })];
-    if (cell && typeof cell.v === "number") {
-      cell.z = "0.0%";
-      cell.t = "n";
-    }
-  }
 
   XLSX.utils.book_append_sheet(wb, ws, "收支表");
 
@@ -140,19 +172,15 @@ export async function GET(req: NextRequest) {
 
   const sanitize = (s: string) => s.replace(/[\\/:*?"<>|]/g, "");
   const prefix = projectName ? `${sanitize(projectName)}_收支表` : "收支表";
-
   let suffix: string;
   if (startDate || endDate) {
-    const s = (startDate ?? "").replace(/-/g, "");
-    const e = (endDate ?? "").replace(/-/g, "");
-    suffix = s && e ? `${s}-${e}` : s || e;
+    suffix = `${(startDate ?? "").replace(/-/g, "")}-${(endDate ?? "").replace(/-/g, "")}`;
   } else if (month) {
     suffix = month.replace(/-/g, "");
   } else {
     const d = period.from;
     suffix = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}`;
   }
-
   const filename = `${prefix}_${suffix}.xlsx`;
 
   // ─── Audit log ────────────────────────────────────────────────────────────
@@ -179,14 +207,9 @@ export async function GET(req: NextRequest) {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const buf = XLSX.write(wb, { bookType: "xlsx", type: "array" }) as ArrayBuffer;
-  const blob = new Blob([buf], {
-    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-  });
-
-  return new NextResponse(blob, {
+  return new NextResponse(new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }), {
     headers: {
-      "Content-Type":
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
       "Content-Disposition": `attachment; filename*=UTF-8''${encodeURIComponent(filename)}`,
     },
   });

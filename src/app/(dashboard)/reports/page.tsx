@@ -15,18 +15,18 @@ import {
   type BalanceSheet,
 } from "@/lib/reports";
 import type { UserRole } from "@prisma/client";
-import { BarChart3, Download, ArrowLeft } from "lucide-react";
+import { BarChart3, Download } from "lucide-react";
 
 // ─── Param types ─────────────────────────────────────────────────────────────
 
 type SearchParams = {
-  type?: string;       // "income-expense" | "balance-sheet"
-  preview?: string;    // "1"
-  month?: string;      // YYYY-MM
-  startDate?: string;  // YYYY-MM-DD
-  endDate?: string;    // YYYY-MM-DD
+  type?: string;
+  preview?: string;
+  month?: string;
+  startDate?: string;
+  endDate?: string;
   projectId?: string;
-  asOf?: string;       // YYYY-MM-DD
+  asOf?: string;
 };
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -41,16 +41,20 @@ function buildExportUrl(base: string, p: SearchParams): string {
   return `${base}?${qs.toString()}`;
 }
 
-// ─── Sub-components ──────────────────────────────────────────────────────────
+const inputCls =
+  "block text-sm border border-slate-300 rounded-lg px-2.5 py-1.5 bg-white text-gray-800 hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500";
+
+// ─── Tabs ─────────────────────────────────────────────────────────────────────
 
 function TypeTabs({ current }: { current: string }) {
-  const tabs = [
-    { value: "income-expense", label: "收支表" },
-    { value: "balance-sheet", label: "資產負債表" },
-  ];
   return (
     <div className="flex gap-1 bg-gray-100 p-1 rounded-lg w-fit">
-      {tabs.map((t) => (
+      {(
+        [
+          { value: "income-expense", label: "收支表" },
+          { value: "balance-sheet", label: "資產負債表" },
+        ] as const
+      ).map((t) => (
         <a
           key={t.value}
           href={`/reports?type=${t.value}`}
@@ -67,6 +71,8 @@ function TypeTabs({ current }: { current: string }) {
   );
 }
 
+// ─── Filter forms ─────────────────────────────────────────────────────────────
+
 function IncomeExpenseForm({
   params,
   projects,
@@ -75,51 +81,32 @@ function IncomeExpenseForm({
   projects: { id: string; name: string }[];
 }) {
   return (
-    <form method="get" action="/reports" className="bg-white border border-gray-200 rounded-xl p-5 space-y-4">
+    <form
+      method="get"
+      action="/reports"
+      className="bg-white border border-gray-200 rounded-xl p-5 space-y-4"
+    >
       <input type="hidden" name="type" value="income-expense" />
       <input type="hidden" name="preview" value="1" />
-
       <h2 className="text-sm font-semibold text-gray-700">查詢條件</h2>
-
       <div className="flex flex-wrap gap-4">
         <div className="space-y-1">
           <label className="text-xs font-medium text-gray-600">月份</label>
-          <input
-            type="month"
-            name="month"
-            defaultValue={params.month ?? ""}
-            className="block text-sm border border-slate-300 rounded-lg px-2.5 py-1.5 bg-white text-gray-800 hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          />
+          <input type="month" name="month" defaultValue={params.month ?? ""} className={inputCls} />
         </div>
-
-        <div className="flex items-end gap-2">
-          <div className="space-y-1">
-            <label className="text-xs font-medium text-gray-600">日期區間（優先於月份）</label>
-            <div className="flex items-center gap-1.5">
-              <input
-                type="date"
-                name="startDate"
-                defaultValue={params.startDate ?? ""}
-                className="text-sm border border-slate-300 rounded-lg px-2.5 py-1.5 bg-white text-gray-800 hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
-              <span className="text-xs text-gray-500">—</span>
-              <input
-                type="date"
-                name="endDate"
-                defaultValue={params.endDate ?? ""}
-                className="text-sm border border-slate-300 rounded-lg px-2.5 py-1.5 bg-white text-gray-800 hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
+        <div className="space-y-1">
+          <label className="text-xs font-medium text-gray-600">
+            日期區間（優先於月份）
+          </label>
+          <div className="flex items-center gap-1.5">
+            <input type="date" name="startDate" defaultValue={params.startDate ?? ""} className={inputCls} />
+            <span className="text-xs text-gray-500">—</span>
+            <input type="date" name="endDate" defaultValue={params.endDate ?? ""} className={inputCls} />
           </div>
         </div>
-
         <div className="space-y-1">
           <label className="text-xs font-medium text-gray-600">專案（可不選）</label>
-          <select
-            name="projectId"
-            defaultValue={params.projectId ?? ""}
-            className="block text-sm border border-slate-300 rounded-lg px-2.5 py-1.5 bg-white text-gray-800 hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          >
+          <select name="projectId" defaultValue={params.projectId ?? ""} className={inputCls}>
             <option value="">全部專案</option>
             {projects.map((p) => (
               <option key={p.id} value={p.id}>
@@ -129,10 +116,9 @@ function IncomeExpenseForm({
           </select>
         </div>
       </div>
-
       <button
         type="submit"
-        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+        className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
       >
         產生預覽
       </button>
@@ -142,12 +128,14 @@ function IncomeExpenseForm({
 
 function BalanceSheetForm({ params }: { params: SearchParams }) {
   return (
-    <form method="get" action="/reports" className="bg-white border border-gray-200 rounded-xl p-5 space-y-4">
+    <form
+      method="get"
+      action="/reports"
+      className="bg-white border border-gray-200 rounded-xl p-5 space-y-4"
+    >
       <input type="hidden" name="type" value="balance-sheet" />
       <input type="hidden" name="preview" value="1" />
-
       <h2 className="text-sm font-semibold text-gray-700">查詢條件</h2>
-
       <div className="space-y-1">
         <label className="text-xs font-medium text-gray-600">截至日期</label>
         <input
@@ -155,13 +143,12 @@ function BalanceSheetForm({ params }: { params: SearchParams }) {
           name="asOf"
           required
           defaultValue={params.asOf ?? ""}
-          className="block text-sm border border-slate-300 rounded-lg px-2.5 py-1.5 bg-white text-gray-800 hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          className={inputCls}
         />
       </div>
-
       <button
         type="submit"
-        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+        className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
       >
         產生預覽
       </button>
@@ -169,7 +156,32 @@ function BalanceSheetForm({ params }: { params: SearchParams }) {
   );
 }
 
-// ─── Preview: Income/Expense Statement ───────────────────────────────────────
+// ─── Report wrapper ───────────────────────────────────────────────────────────
+
+function ReportWrapper({
+  exportUrl,
+  children,
+}: {
+  exportUrl: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="space-y-3">
+      <div className="flex justify-end">
+        <a
+          href={exportUrl}
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 text-white text-sm font-medium rounded-lg hover:bg-emerald-700 transition-colors"
+        >
+          <Download size={14} />
+          匯出 Excel
+        </a>
+      </div>
+      <div className="bg-white border border-gray-400 text-sm">{children}</div>
+    </div>
+  );
+}
+
+// ─── Income / Expense Preview ────────────────────────────────────────────────
 
 function IncomeExpensePreview({
   data,
@@ -178,140 +190,179 @@ function IncomeExpensePreview({
   data: IncomeExpenseStatement;
   exportUrl: string;
 }) {
-  const pct = (amt: number) =>
+  const pct = (n: number) =>
     data.incomeTotal > 0
-      ? `${((amt / data.incomeTotal) * 100).toFixed(1)}%`
+      ? `${((n / data.incomeTotal) * 100).toFixed(2)}%`
       : "—";
 
   return (
-    <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-      {/* Preview header */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-gray-50">
-        <div>
-          <p className="text-xs text-gray-500 mb-0.5">預覽</p>
-          <p className="text-sm font-semibold text-gray-800">
-            {data.projectName ? `專案收支表 — ${data.projectName}` : "收支表"}
-          </p>
-          <p className="text-xs text-gray-500">
-            期間：{formatDateDisplay(data.periodFrom)} ～ {formatDateDisplay(data.periodTo)}
-          </p>
-        </div>
-        <a
-          href={exportUrl}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 text-white text-sm font-medium rounded-lg hover:bg-emerald-700 transition-colors"
-        >
-          <Download size={14} />
-          匯出 Excel
-        </a>
+    <ReportWrapper exportUrl={exportUrl}>
+      {/* Title block */}
+      <div className="relative text-center py-4 border-b border-gray-400">
+        <p className="font-bold text-base leading-snug">公民幫推</p>
+        <p className="font-bold leading-snug">
+          {data.projectName ? `專案收支表 — ${data.projectName}` : "收支表"}
+        </p>
+        <p className="leading-snug">
+          {formatDateDisplay(data.periodFrom)}～　{formatDateDisplay(data.periodTo)}
+        </p>
+        <span className="absolute right-4 bottom-3 text-xs text-gray-600">
+          幣別：新台幣
+        </span>
       </div>
 
-      {/* Report table */}
-      <div className="px-6 py-4">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-gray-200">
-              <th className="text-left pb-2 text-xs font-semibold text-gray-500 w-24">項目代號</th>
-              <th className="text-left pb-2 text-xs font-semibold text-gray-500">項目名稱</th>
-              <th className="text-right pb-2 text-xs font-semibold text-gray-500 w-32">金額（元）</th>
-              <th className="text-right pb-2 text-xs font-semibold text-gray-500 w-20">%</th>
-            </tr>
-          </thead>
-          <tbody>
-            {/* Income section */}
+      {/* Table */}
+      <table className="w-full border-collapse">
+        <thead>
+          <tr className="border-b-2 border-gray-600">
+            <th className="py-2 text-center font-semibold w-24">項目代號</th>
+            <th className="py-2 text-left font-semibold px-3">項目名稱</th>
+            <th className="py-2 text-right font-semibold w-36 pr-4">金額</th>
+            <th className="py-2 text-right font-semibold w-20 pr-3">%</th>
+          </tr>
+        </thead>
+        <tbody>
+          {/* ── 收入 ── */}
+          <tr>
+            <td />
+            <td className="pt-3 pb-0.5 px-3 font-bold">收入</td>
+            <td />
+            <td />
+          </tr>
+          {data.incomeItems.length === 0 ? (
             <tr>
-              <td colSpan={4} className="pt-4 pb-1">
-                <span className="text-xs font-bold text-gray-700 uppercase tracking-wide">收入</span>
+              <td colSpan={4} className="py-1 pl-10 text-gray-400 text-xs">
+                （本期無收入）
               </td>
             </tr>
-
-            {data.incomeItems.length === 0 ? (
-              <tr>
-                <td colSpan={4} className="py-2 text-xs text-gray-400 pl-4">（本期無收入）</td>
+          ) : (
+            data.incomeItems.map((item) => (
+              <tr key={item.code}>
+                <td className="py-0.5 text-center font-mono text-xs text-gray-500">
+                  {item.code}
+                </td>
+                <td className="py-0.5 px-3 pl-8">{item.name}</td>
+                <td className="py-0.5 text-right tabular-nums pr-4">
+                  {formatAmount(item.amount)}
+                </td>
+                <td className="py-0.5 text-right pr-3">{pct(item.amount)}</td>
               </tr>
-            ) : (
-              data.incomeItems.map((item) => (
-                <tr key={item.code} className="hover:bg-gray-50">
-                  <td className="py-1.5 pl-4 font-mono text-xs text-gray-500">{item.code}</td>
-                  <td className="py-1.5 text-gray-800">{item.name}</td>
-                  <td className="py-1.5 text-right tabular-nums text-gray-900">{formatAmount(item.amount)}</td>
-                  <td className="py-1.5 text-right text-gray-500 text-xs">{pct(item.amount)}</td>
+            ))
+          )}
+          {/* 收入合計 */}
+          <tr className="font-bold">
+            <td className="pb-1" />
+            <td className="py-1 px-3">收入合計</td>
+            <td className="py-1 text-right tabular-nums pr-4 border-b border-gray-600">
+              {formatAmount(data.incomeTotal)}
+            </td>
+            <td className="py-1 text-right pr-3 border-b border-gray-600">
+              {pct(data.incomeTotal)}
+            </td>
+          </tr>
+
+          {/* spacer */}
+          <tr>
+            <td colSpan={4} className="py-1" />
+          </tr>
+
+          {/* ── 支出 ── */}
+          <tr>
+            <td />
+            <td className="pb-0.5 px-3 font-bold">支出</td>
+            <td />
+            <td />
+          </tr>
+
+          {data.expenseGroups.length === 0 ? (
+            <tr>
+              <td colSpan={4} className="py-1 pl-10 text-gray-400 text-xs">
+                （本期無支出）
+              </td>
+            </tr>
+          ) : (
+            data.expenseGroups.map((group) => (
+              <>
+                {/* group heading */}
+                <tr key={`gh-${group.groupName}`}>
+                  <td />
+                  <td className="pt-1 pb-0.5 px-3 pl-6 font-bold">{group.groupName}</td>
+                  <td />
+                  <td />
                 </tr>
-              ))
-            )}
-
-            <tr className="border-t border-gray-200 bg-blue-50">
-              <td className="py-2 pl-4 font-mono text-xs text-gray-500"></td>
-              <td className="py-2 font-semibold text-gray-800">收入合計</td>
-              <td className="py-2 text-right tabular-nums font-bold text-blue-700">{formatAmount(data.incomeTotal)}</td>
-              <td className="py-2 text-right text-gray-500 text-xs">{data.incomeTotal > 0 ? "100.0%" : "—"}</td>
-            </tr>
-
-            {/* Expense section */}
-            <tr>
-              <td colSpan={4} className="pt-5 pb-1">
-                <span className="text-xs font-bold text-gray-700 uppercase tracking-wide">支出</span>
-              </td>
-            </tr>
-
-            {data.expenseGroups.length === 0 ? (
-              <tr>
-                <td colSpan={4} className="py-2 text-xs text-gray-400 pl-4">（本期無支出）</td>
-              </tr>
-            ) : (
-              data.expenseGroups.map((group) => (
-                <>
-                  <tr key={`g-${group.groupName}`}>
-                    <td colSpan={4} className="pt-3 pb-0.5 pl-2">
-                      <span className="text-xs font-semibold text-gray-600">{group.groupName}</span>
+                {/* group items */}
+                {group.items.map((item) => (
+                  <tr key={item.code}>
+                    <td className="py-0.5 text-center font-mono text-xs text-gray-500">
+                      {item.code}
                     </td>
+                    <td className="py-0.5 px-3 pl-10">{item.name}</td>
+                    <td className="py-0.5 text-right tabular-nums pr-4">
+                      {formatAmount(item.amount)}
+                    </td>
+                    <td className="py-0.5 text-right pr-3">{pct(item.amount)}</td>
                   </tr>
-                  {group.items.map((item) => (
-                    <tr key={item.code} className="hover:bg-gray-50">
-                      <td className="py-1.5 pl-6 font-mono text-xs text-gray-500">{item.code}</td>
-                      <td className="py-1.5 text-gray-800">{item.name}</td>
-                      <td className="py-1.5 text-right tabular-nums text-gray-900">{formatAmount(item.amount)}</td>
-                      <td className="py-1.5 text-right text-gray-500 text-xs">{pct(item.amount)}</td>
-                    </tr>
-                  ))}
-                  <tr key={`st-${group.groupName}`} className="border-t border-dashed border-gray-200">
-                    <td className="py-1 pl-4 text-xs text-gray-500"></td>
-                    <td className="py-1 text-xs font-medium text-gray-600">{group.groupName}合計</td>
-                    <td className="py-1 text-right tabular-nums text-sm font-medium text-gray-700">{formatAmount(group.subtotal)}</td>
-                    <td className="py-1 text-right text-xs text-gray-500">{pct(group.subtotal)}</td>
-                  </tr>
-                </>
-              ))
-            )}
+                ))}
+                {/* group subtotal */}
+                <tr key={`gs-${group.groupName}`} className="font-bold">
+                  <td className="pb-1" />
+                  <td className="py-1 px-3 pl-6">{group.groupName}合計</td>
+                  <td className="py-1 text-right tabular-nums pr-4 border-b border-gray-600">
+                    {formatAmount(group.subtotal)}
+                  </td>
+                  <td className="py-1 text-right pr-3 border-b border-gray-600">
+                    {pct(group.subtotal)}
+                  </td>
+                </tr>
+                <tr key={`sp-${group.groupName}`}>
+                  <td colSpan={4} className="py-1" />
+                </tr>
+              </>
+            ))
+          )}
 
-            <tr className="border-t border-gray-200 bg-red-50">
-              <td className="py-2 pl-4 font-mono text-xs text-gray-500"></td>
-              <td className="py-2 font-semibold text-gray-800">支出合計</td>
-              <td className="py-2 text-right tabular-nums font-bold text-red-700">{formatAmount(data.expenseTotal)}</td>
-              <td className="py-2 text-right text-xs text-gray-500">{pct(data.expenseTotal)}</td>
-            </tr>
+          {/* 支出合計 */}
+          <tr className="font-bold">
+            <td />
+            <td className="py-1 px-3">支出合計</td>
+            <td className="py-1 text-right tabular-nums pr-4 border-b-2 border-gray-700">
+              {formatAmount(data.expenseTotal)}
+            </td>
+            <td className="py-1 text-right pr-3 border-b-2 border-gray-700">
+              {pct(data.expenseTotal)}
+            </td>
+          </tr>
 
-            {/* Net surplus */}
-            <tr className="border-t-2 border-gray-300 bg-gray-50">
-              <td className="py-3 pl-4 font-mono text-xs text-gray-500"></td>
-              <td className="py-3 font-bold text-gray-900">本期餘絀</td>
-              <td
-                className={`py-3 text-right tabular-nums font-bold text-lg ${
-                  data.netSurplus >= 0 ? "text-green-700" : "text-red-700"
-                }`}
-              >
-                {data.netSurplus >= 0 ? "" : "−"}
-                {formatAmount(Math.abs(data.netSurplus))}
-              </td>
-              <td className="py-3 text-right text-xs text-gray-500">{pct(data.netSurplus)}</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
+          {/* spacer */}
+          <tr>
+            <td colSpan={4} className="py-1" />
+          </tr>
+
+          {/* 本期餘絀 */}
+          <tr className="font-bold">
+            <td />
+            <td className="py-2 px-3 text-base">本期餘絀</td>
+            <td
+              className={`py-2 text-right tabular-nums text-base pr-4 border-b-2 border-gray-900 ${
+                data.netSurplus < 0 ? "text-red-700" : ""
+              }`}
+            >
+              {formatAmount(data.netSurplus)}
+            </td>
+            <td className="py-2 text-right pr-3 border-b-2 border-gray-900">
+              {pct(data.netSurplus)}
+            </td>
+          </tr>
+          <tr>
+            <td colSpan={4} className="py-2" />
+          </tr>
+        </tbody>
+      </table>
+    </ReportWrapper>
   );
 }
 
-// ─── Preview: Balance Sheet ───────────────────────────────────────────────────
+// ─── Balance Sheet Preview ────────────────────────────────────────────────────
 
 function BalanceSheetPreview({
   data,
@@ -320,152 +371,178 @@ function BalanceSheetPreview({
   data: BalanceSheet;
   exportUrl: string;
 }) {
-  const Row = ({
-    code,
-    name,
-    amount,
-    bold = false,
-    indent = false,
+  // Shared cell helpers
+  const Code = ({ v }: { v?: string }) => (
+    <td className="py-0.5 text-center font-mono text-xs text-gray-500 w-16">{v ?? ""}</td>
+  );
+  const Name = ({ v, bold, indent }: { v: string; bold?: boolean; indent?: boolean }) => (
+    <td className={`py-0.5 px-2 ${bold ? "font-bold" : ""} ${indent ? "pl-6" : ""}`}>{v}</td>
+  );
+  const Amt = ({
+    v,
+    bold,
+    underline,
+    double,
+    warn,
   }: {
-    code?: string;
-    name: string;
-    amount: number | string;
+    v: number;
     bold?: boolean;
-    indent?: boolean;
+    underline?: boolean;
+    double?: boolean;
+    warn?: boolean;
   }) => (
-    <tr className={bold ? "bg-gray-50 border-t border-gray-200" : "hover:bg-gray-50"}>
-      <td className={`py-1.5 font-mono text-xs text-gray-400 ${indent ? "pl-6" : "pl-4"}`}>
-        {code ?? ""}
-      </td>
-      <td className={`py-1.5 ${bold ? "font-semibold text-gray-800" : "text-gray-700"}`}>
-        {name}
-      </td>
-      <td className={`py-1.5 text-right tabular-nums ${bold ? "font-bold text-gray-900" : "text-gray-800"}`}>
-        {typeof amount === "number" ? formatAmount(amount) : amount}
-      </td>
+    <td
+      className={`py-0.5 text-right tabular-nums pr-3 w-28 ${bold ? "font-bold" : ""} ${
+        double ? "border-b-2 border-gray-900" : underline ? "border-b border-gray-600" : ""
+      } ${warn ? "text-amber-700" : ""}`}
+    >
+      {formatAmount(v)}
+    </td>
+  );
+  const Blank = ({ cols = 3 }: { cols?: number }) => (
+    <tr>
+      <td colSpan={cols} className="py-1" />
     </tr>
   );
-
-  const SectionHeader = ({ title }: { title: string }) => (
+  const SectionHead = ({ v }: { v: string }) => (
     <tr>
-      <td colSpan={3} className="pt-4 pb-1 pl-2">
-        <span className="text-xs font-bold text-gray-700 uppercase tracking-wide">{title}</span>
-      </td>
+      <td />
+      <td className="pt-3 pb-0.5 px-2 font-bold">{v}</td>
+      <td />
     </tr>
   );
 
   return (
-    <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-      {/* Preview header */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-gray-50">
-        <div>
-          <p className="text-xs text-gray-500 mb-0.5">預覽 — 系統管理用簡化資產負債表</p>
-          <p className="text-sm font-semibold text-gray-800">資產負債表</p>
-          <p className="text-xs text-gray-500">截至：{formatDateDisplay(data.asOf)}</p>
-        </div>
-        <a
-          href={exportUrl}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 text-white text-sm font-medium rounded-lg hover:bg-emerald-700 transition-colors"
-        >
-          <Download size={14} />
-          匯出 Excel
-        </a>
+    <ReportWrapper exportUrl={exportUrl}>
+      {/* Title block */}
+      <div className="relative text-center py-4 border-b border-gray-400">
+        <p className="font-bold text-base leading-snug">公民幫推</p>
+        <p className="font-bold leading-snug">資產負債表</p>
+        <p className="leading-snug">{formatDateDisplay(data.asOf)}</p>
+        <span className="absolute right-4 bottom-3 text-xs text-gray-600">幣別：新台幣</span>
       </div>
 
+      <p className="text-center text-xs text-gray-400 py-1 border-b border-gray-200">
+        系統管理用簡化資產負債表
+      </p>
+
       {!data.balanced && (
-        <div className="px-6 py-2 bg-amber-50 border-b border-amber-200 text-xs text-amber-700">
-          ⚠ 資產總額與負債＋基金暨餘絀總額不相等，可能是系統資料尚不完整（例如尚未輸入期初帳）。
+        <div className="px-4 py-2 border-b border-amber-200 bg-amber-50 text-xs text-amber-700">
+          ⚠ 資產總額與負債＋基金暨餘絀總額不相等，可能是尚未輸入期初帳（累計餘絀）。
         </div>
       )}
 
       {/* Two-column layout */}
-      <div className="grid grid-cols-2 divide-x divide-gray-200">
-        {/* Assets column */}
-        <div className="px-4 py-4">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-gray-200">
-                <th className="text-left pb-2 text-xs font-semibold text-gray-500 w-16">代號</th>
-                <th className="text-left pb-2 text-xs font-semibold text-gray-500">項目名稱</th>
-                <th className="text-right pb-2 text-xs font-semibold text-gray-500 w-28">金額（元）</th>
+      <div className="grid grid-cols-2 divide-x divide-gray-400">
+        {/* ── Assets ── */}
+        <table className="w-full border-collapse">
+          <thead>
+            <tr className="border-b-2 border-gray-600">
+              <th className="py-2 text-center font-semibold text-xs w-16">項目代號</th>
+              <th className="py-2 text-left font-semibold text-xs px-2">項目名稱</th>
+              <th className="py-2 text-right font-semibold text-xs pr-3 w-28">金額</th>
+            </tr>
+          </thead>
+          <tbody>
+            <SectionHead v="流動資產" />
+            {data.cashAccounts.map((acc) => (
+              <tr key={acc.accountId}>
+                <Code v={acc.code} />
+                <Name v={acc.name} indent />
+                <Amt v={acc.balance} />
               </tr>
-            </thead>
-            <tbody>
-              <SectionHeader title="資產" />
-              <SectionHeader title="流動資產" />
+            ))}
+            <tr className="font-bold">
+              <Code />
+              <Name v="現金合計" bold />
+              <Amt v={data.cashTotal} bold underline />
+            </tr>
+            <tr>
+              <Code v="1230" />
+              <Name v="應收款項" indent />
+              <Amt v={data.receivables} />
+            </tr>
+            <tr>
+              <Code v="1250" />
+              <Name v="預付款項" indent />
+              <Amt v={data.prepaid} />
+            </tr>
+            <tr className="font-bold">
+              <Code />
+              <Name v="流動資產合計" bold />
+              <Amt v={data.currentAssetsTotal} bold underline />
+            </tr>
+            <Blank />
+            <Blank />
+            <tr className="font-bold">
+              <Code />
+              <Name v="資產總額" bold />
+              <Amt v={data.assetsTotal} bold double />
+            </tr>
+            <Blank />
+          </tbody>
+        </table>
 
-              {/* Cash accounts */}
-              {data.cashAccounts.map((acc) => (
-                <Row key={acc.accountId} code={acc.code} name={acc.name} amount={acc.balance} indent />
-              ))}
-              <Row name="現金及銀行存款合計" amount={data.cashTotal} bold />
-
-              {data.receivables > 0 && (
-                <Row code="1230" name="應收款項" amount={data.receivables} indent />
-              )}
-              {data.prepaid > 0 && (
-                <Row code="1250" name="預付款項" amount={data.prepaid} indent />
-              )}
-
-              <Row name="流動資產合計" amount={data.currentAssetsTotal} bold />
-              <tr className="border-t-2 border-gray-300">
-                <td className="py-2 pl-4 font-mono text-xs text-gray-400"></td>
-                <td className="py-2 font-bold text-gray-900">資產總額</td>
-                <td className="py-2 text-right tabular-nums font-bold text-lg text-gray-900">
-                  {formatAmount(data.assetsTotal)}
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        {/* Liabilities + Fund column */}
-        <div className="px-4 py-4">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-gray-200">
-                <th className="text-left pb-2 text-xs font-semibold text-gray-500 w-16">代號</th>
-                <th className="text-left pb-2 text-xs font-semibold text-gray-500">項目名稱</th>
-                <th className="text-right pb-2 text-xs font-semibold text-gray-500 w-28">金額（元）</th>
-              </tr>
-            </thead>
-            <tbody>
-              <SectionHeader title="負債" />
-              <SectionHeader title="流動負債" />
-
-              {data.payables > 0 ? (
-                <Row code="2130" name="應付款項" amount={data.payables} indent />
-              ) : (
-                <Row code="2130" name="應付款項" amount={0} indent />
-              )}
-              {data.preReceived > 0 && (
-                <Row code="2150" name="預收款項" amount={data.preReceived} indent />
-              )}
-
-              <Row name="流動負債合計" amount={data.currentLiabilitiesTotal} bold />
-              <Row name="負債總額" amount={data.liabilitiesTotal} bold />
-
-              <SectionHeader title="基金暨餘絀" />
-              <Row code="3210" name="累計餘絀" amount={data.accumulatedSurplus} indent />
-              <Row code="3440" name="本期餘絀" amount={data.currentSurplus} indent />
-              <Row name="基金暨餘絀總額" amount={data.fundTotal} bold />
-
-              <tr className="border-t-2 border-gray-300">
-                <td className="py-2 pl-4 font-mono text-xs text-gray-400"></td>
-                <td className="py-2 font-bold text-gray-900">負債、基金暨餘絀總額</td>
-                <td
-                  className={`py-2 text-right tabular-nums font-bold text-lg ${
-                    data.balanced ? "text-gray-900" : "text-amber-700"
-                  }`}
-                >
-                  {formatAmount(data.liabilitiesAndFundTotal)}
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+        {/* ── Liabilities & Fund ── */}
+        <table className="w-full border-collapse">
+          <thead>
+            <tr className="border-b-2 border-gray-600">
+              <th className="py-2 text-center font-semibold text-xs w-16">項目代號</th>
+              <th className="py-2 text-left font-semibold text-xs px-2">項目名稱</th>
+              <th className="py-2 text-right font-semibold text-xs pr-3 w-28">金額</th>
+            </tr>
+          </thead>
+          <tbody>
+            <SectionHead v="流動負債" />
+            <tr>
+              <Code v="2130" />
+              <Name v="應付款項" indent />
+              <Amt v={data.payables} />
+            </tr>
+            <tr>
+              <Code v="2150" />
+              <Name v="預收款項" indent />
+              <Amt v={data.preReceived} />
+            </tr>
+            <tr className="font-bold">
+              <Code />
+              <Name v="流動負債合計" bold />
+              <Amt v={data.currentLiabilitiesTotal} bold underline />
+            </tr>
+            <Blank />
+            <tr className="font-bold">
+              <Code />
+              <Name v="負債總額" bold />
+              <Amt v={data.liabilitiesTotal} bold underline />
+            </tr>
+            <Blank />
+            <SectionHead v="基金暨餘絀" />
+            <tr>
+              <Code v="3210" />
+              <Name v="累計餘絀" indent />
+              <Amt v={data.accumulatedSurplus} />
+            </tr>
+            <tr>
+              <Code v="3440" />
+              <Name v="本期餘絀" indent />
+              <Amt v={data.currentSurplus} />
+            </tr>
+            <tr className="font-bold">
+              <Code />
+              <Name v="基金暨餘絀總額" bold />
+              <Amt v={data.fundTotal} bold underline />
+            </tr>
+            <Blank />
+            <tr className="font-bold">
+              <Code />
+              <Name v="負債、基金暨餘絀總額" bold />
+              <Amt v={data.liabilitiesAndFundTotal} bold double warn={!data.balanced} />
+            </tr>
+            <Blank />
+          </tbody>
+        </table>
       </div>
-    </div>
+    </ReportWrapper>
   );
 }
 
@@ -497,11 +574,7 @@ export default async function ReportsPage({
 
   if (showPreview) {
     if (reportType === "income-expense") {
-      const period = parsePeriodParams({
-        month: p.month,
-        startDate: p.startDate,
-        endDate: p.endDate,
-      });
+      const period = parsePeriodParams({ month: p.month, startDate: p.startDate, endDate: p.endDate });
       if (!period) {
         previewError = "請輸入月份或日期區間";
       } else {
@@ -510,7 +583,6 @@ export default async function ReportsPage({
           to: period.to,
           projectId: p.projectId || undefined,
         });
-        // Audit log
         void logAuditAction({
           userId: session.user.id,
           userName: session.user.name ?? session.user.email ?? "unknown",
@@ -531,9 +603,7 @@ export default async function ReportsPage({
       if (!p.asOf) {
         previewError = "請選擇截至日期";
       } else {
-        balanceSheetData = await generateBalanceSheet({
-          asOf: new Date(`${p.asOf}T23:59:59`),
-        });
+        balanceSheetData = await generateBalanceSheet({ asOf: new Date(`${p.asOf}T23:59:59`) });
         void logAuditAction({
           userId: session.user.id,
           userName: session.user.name ?? session.user.email ?? "unknown",
@@ -556,55 +626,31 @@ export default async function ReportsPage({
 
   return (
     <div className="space-y-6">
-      {/* Page header */}
       <div className="flex items-center gap-2">
         <BarChart3 size={20} className="text-blue-600" />
         <h1 className="text-xl font-semibold text-gray-900">財務報表</h1>
       </div>
 
-      {/* Type tabs */}
       <TypeTabs current={reportType} />
 
-      {/* Filter form */}
       {reportType === "income-expense" ? (
         <IncomeExpenseForm params={p} projects={projects} />
       ) : (
         <BalanceSheetForm params={p} />
       )}
 
-      {/* Error */}
       {showPreview && previewError && (
         <div className="bg-red-50 border border-red-200 rounded-xl px-5 py-4 text-sm text-red-700">
           {previewError}
         </div>
       )}
 
-      {/* Preview: Income/Expense */}
       {incomeExpenseData && (
-        <div className="space-y-2">
-          <div className="flex items-center gap-1.5 text-xs text-gray-500">
-            <ArrowLeft size={12} />
-            修改條件後重新按「產生預覽」即可更新
-          </div>
-          <IncomeExpensePreview
-            data={incomeExpenseData}
-            exportUrl={incomeExportUrl}
-          />
-        </div>
+        <IncomeExpensePreview data={incomeExpenseData} exportUrl={incomeExportUrl} />
       )}
 
-      {/* Preview: Balance Sheet */}
       {balanceSheetData && (
-        <div className="space-y-2">
-          <div className="flex items-center gap-1.5 text-xs text-gray-500">
-            <ArrowLeft size={12} />
-            修改截至日期後重新按「產生預覽」即可更新
-          </div>
-          <BalanceSheetPreview
-            data={balanceSheetData}
-            exportUrl={balanceExportUrl}
-          />
-        </div>
+        <BalanceSheetPreview data={balanceSheetData} exportUrl={balanceExportUrl} />
       )}
     </div>
   );
