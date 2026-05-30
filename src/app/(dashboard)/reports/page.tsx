@@ -180,7 +180,7 @@ function ReportFrame({
       {/* document container */}
       <div
         className={`bg-white shadow border border-gray-300 text-gray-900 mx-auto ${
-          wide ? "max-w-4xl" : "max-w-2xl"
+          wide ? "max-w-3xl" : "max-w-2xl"
         }`}
         style={{ fontFamily: "sans-serif", fontSize: "13px", lineHeight: "1.4" }}
       >
@@ -375,10 +375,6 @@ function BalanceSheetPreview({
         <span className="absolute right-3 bottom-2 text-[11px] text-gray-600">幣別：新台幣</span>
       </div>
 
-      <p className="text-center text-[11px] text-gray-400 py-0.5 border-b border-gray-200">
-        系統管理用簡化資產負債表
-      </p>
-
       {!data.balanced && (
         <div className="px-4 py-1.5 border-b border-amber-300 bg-amber-50 text-[11px] text-amber-700">
           ⚠ 資產總額與負債＋基金暨餘絀總額不相等，可能是尚未輸入累計餘絀（期初帳）。
@@ -386,7 +382,7 @@ function BalanceSheetPreview({
       )}
 
       {/* Two-column table */}
-      <div className="grid grid-cols-2 divide-x divide-gray-400" style={{ fontSize: "13px" }}>
+      <div className="grid grid-cols-2 divide-x divide-gray-300" style={{ fontSize: "13px" }}>
 
         {/* ── 資產 ── */}
         <table className="w-full border-collapse">
