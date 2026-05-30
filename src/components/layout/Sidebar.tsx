@@ -19,6 +19,7 @@ import {
   BookUser,
   BookOpen,
   Landmark,
+  BarChart3,
 } from "lucide-react";
 import type { UserRole } from "@prisma/client";
 
@@ -43,6 +44,7 @@ const approverNav: NavItem[] = [
 const financeNav: NavItem[] = [
   { href: "/finance", label: "財務管理", icon: Banknote },
   { href: "/financial-accounts", label: "資金帳戶", icon: Landmark },
+  { href: "/reports", label: "財務報表", icon: BarChart3 },
 ];
 
 const adminNav: NavItem[] = [
