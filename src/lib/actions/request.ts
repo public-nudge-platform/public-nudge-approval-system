@@ -14,6 +14,14 @@ import {
 import { logAuditAction } from "@/lib/audit";
 import { USER_ROLE_LABEL } from "@/lib/constants";
 
+// Dev-only timing helper
+function devNow() { return Date.now(); }
+function devLog(label: string, startMs: number) {
+  if (process.env.NODE_ENV !== "production") {
+    console.log(`[perf] ${label}: ${Date.now() - startMs}ms`);
+  }
+}
+
 type RequestItemInput = {
   description: string;
   quantity: number;
@@ -86,6 +94,7 @@ async function generateRequestNumber(): Promise<string> {
 }
 
 export async function createRequest(data: CreateRequestInput) {
+  const t0 = devNow();
   const session = await auth();
   if (!session) return { error: "未登入" };
 
@@ -119,6 +128,7 @@ export async function createRequest(data: CreateRequestInput) {
     projectName = proj?.name ?? null;
   }
 
+  const tSave = devNow();
   const request = await prisma.request.create({
     data: {
       type: data.type,
@@ -159,15 +169,19 @@ export async function createRequest(data: CreateRequestInput) {
       }),
     },
   });
+  devLog("createRequest save", tSave);
 
   if (data.submit) {
     const info = fmtRequestInfo({ requestNumber: requestNumber ?? null, title: data.title, projectName, type: data.type, amount: totalAmount });
-    await createNotificationsForRoles(["PRESIDENT", "FOUNDER_AGENT"], {
+    // Non-blocking: notifications (do not await)
+    void createNotificationsForRoles(["PRESIDENT", "FOUNDER_AGENT"], {
       title: "新請款單待審核",
       message: `${session.user.name} 送出了${info}，請前往審核。`,
       type: "REQUEST_SUBMITTED",
       relatedRequestId: request.id,
-    });
+    }).catch(console.warn);
+    // Synchronous: audit log
+    const tAudit = devNow();
     await logAuditAction({
       userId: session.user.id,
       userName: session.user.name ?? session.user.email ?? "unknown",
@@ -177,6 +191,7 @@ export async function createRequest(data: CreateRequestInput) {
       description: `送出請款單「${data.title}」`,
       afterData: { title: data.title, type: data.type, amount: totalAmount, status: "PENDING" },
     });
+    devLog("createRequest audit", tAudit);
   } else {
     await logAuditAction({
       userId: session.user.id,
@@ -191,10 +206,12 @@ export async function createRequest(data: CreateRequestInput) {
 
   revalidatePath("/requests");
   revalidatePath("/dashboard");
+  devLog("createRequest total", t0);
   return { id: request.id };
 }
 
 export async function submitRequest(requestId: string) {
+  const t0 = devNow();
   const session = await auth();
   if (!session) return { error: "未登入" };
 
@@ -209,21 +226,22 @@ export async function submitRequest(requestId: string) {
   const info = fmtRequestInfo({ requestNumber, title: request.title, projectName: request.projectName, type: request.type, amount: request.amount });
 
   // When resubmitting a RETURNED request, route based on who originally returned it.
-  // Finance returns go back to APPROVED (skip re-approval); approver returns go back to PENDING.
   const returnSource = request.status === "RETURNED" ? await detectReturnSource(requestId) : null;
 
+  const tSave = devNow();
   if (returnSource === "FINANCE") {
     await prisma.request.update({
       where: { id: requestId },
       data: { status: "APPROVED", requestNumber, submittedAt: new Date() },
     });
+    devLog("submitRequest save (finance)", tSave);
 
-    await createNotificationsForRoles(["FINANCE"], {
+    void createNotificationsForRoles(["FINANCE"], {
       title: "請款單補正完成，請繼續付款",
       message: `${session.user.name} 已補正${info}，請前往完成付款。`,
       type: "REQUEST_SUBMITTED",
       relatedRequestId: requestId,
-    });
+    }).catch(console.warn);
 
     await logAuditAction({
       userId: session.user.id,
@@ -249,14 +267,15 @@ export async function submitRequest(requestId: string) {
         },
       },
     });
+    devLog("submitRequest save", tSave);
 
     const isResubmit = request.status !== "DRAFT";
-    await createNotificationsForRoles(["PRESIDENT", "FOUNDER_AGENT"], {
+    void createNotificationsForRoles(["PRESIDENT", "FOUNDER_AGENT"], {
       title: isResubmit ? "請款單重新送出待審核" : "新請款單待審核",
       message: `${session.user.name} ${isResubmit ? "重新送出" : "送出了"}${info}，請前往審核。`,
       type: "REQUEST_SUBMITTED",
       relatedRequestId: requestId,
-    });
+    }).catch(console.warn);
 
     await logAuditAction({
       userId: session.user.id,
@@ -273,10 +292,12 @@ export async function submitRequest(requestId: string) {
   revalidatePath(`/requests/${requestId}`);
   revalidatePath("/requests");
   revalidatePath("/dashboard");
+  devLog("submitRequest total", t0);
   redirect(`/requests/${requestId}`);
 }
 
 export async function updateRequest(requestId: string, data: UpdateRequestInput) {
+  const t0 = devNow();
   const session = await auth();
   if (!session) return { error: "未登入" };
 
@@ -294,9 +315,17 @@ export async function updateRequest(requestId: string, data: UpdateRequestInput)
     if (item.note && item.note.length > 200) return { error: "品項備註不可超過 200 字" };
   }
 
+  // Use select instead of include to avoid loading unused item rows
   const request = await prisma.request.findUnique({
     where: { id: requestId, submitterId: session.user.id },
-    include: { items: true },
+    select: {
+      id: true,
+      status: true,
+      projectId: true,
+      projectName: true,
+      amount: true,
+      requestNumber: true,
+    },
   });
   if (!request) return { error: "找不到申請單" };
   if (!EDITABLE_STATUSES.has(request.status)) return { error: "此申請單不可編輯" };
@@ -325,6 +354,7 @@ export async function updateRequest(requestId: string, data: UpdateRequestInput)
   const requestNumber = data.submit ? request.requestNumber ?? await generateRequestNumber() : request.requestNumber;
   const nextStepOrder = (data.submit && !isFinanceReturn) ? await getNextApprovalStepOrder(requestId) : null;
 
+  const tSave = devNow();
   await prisma.request.update({
     where: { id: requestId },
     data: {
@@ -370,16 +400,17 @@ export async function updateRequest(requestId: string, data: UpdateRequestInput)
       },
     },
   });
+  devLog("updateRequest save", tSave);
 
   if (data.submit) {
     const info = fmtRequestInfo({ requestNumber: requestNumber ?? null, title: data.title, projectName, type: data.type, amount: totalAmount });
     if (isFinanceReturn) {
-      await createNotificationsForRoles(["FINANCE"], {
+      void createNotificationsForRoles(["FINANCE"], {
         title: "請款單補正完成，請繼續付款",
         message: `${session.user.name} 已補正${info}，請前往完成付款。`,
         type: "REQUEST_SUBMITTED",
         relatedRequestId: requestId,
-      });
+      }).catch(console.warn);
       await logAuditAction({
         userId: session.user.id,
         userName: session.user.name ?? session.user.email ?? "unknown",
@@ -391,12 +422,12 @@ export async function updateRequest(requestId: string, data: UpdateRequestInput)
         afterData: { status: "APPROVED", amount: totalAmount, requestNumber },
       });
     } else {
-      await createNotificationsForRoles(["PRESIDENT", "FOUNDER_AGENT"], {
+      void createNotificationsForRoles(["PRESIDENT", "FOUNDER_AGENT"], {
         title: "請款單重新送出待審核",
         message: `${session.user.name} 重新送出了${info}，請前往審核。`,
         type: "REQUEST_SUBMITTED",
         relatedRequestId: requestId,
-      });
+      }).catch(console.warn);
       await logAuditAction({
         userId: session.user.id,
         userName: session.user.name ?? session.user.email ?? "unknown",
@@ -425,6 +456,7 @@ export async function updateRequest(requestId: string, data: UpdateRequestInput)
   revalidatePath("/requests");
   revalidatePath("/approvals");
   revalidatePath("/dashboard");
+  devLog("updateRequest total", t0);
   return { id: requestId };
 }
 
@@ -464,12 +496,12 @@ export async function withdrawRequest(requestId: string) {
   });
 
   const info = fmtRequestInfo(request);
-  await createNotificationsForRoles(["PRESIDENT", "FOUNDER_AGENT"], {
+  void createNotificationsForRoles(["PRESIDENT", "FOUNDER_AGENT"], {
     title: "申請已被抽回",
     message: `${session.user.name} 已抽回${info}，暫不需簽核。`,
     type: "REQUEST_WITHDRAWN",
     relatedRequestId: requestId,
-  });
+  }).catch(console.warn);
 
   await logAuditAction({
     userId: session.user.id,
@@ -489,6 +521,7 @@ export async function withdrawRequest(requestId: string) {
 }
 
 export async function approveRequest(requestId: string, stepId: string, action: "APPROVED" | "REJECTED" | "RETURNED", comment?: string) {
+  const t0 = devNow();
   const session = await auth();
   if (!session) return { error: "未登入" };
 
@@ -519,6 +552,7 @@ export async function approveRequest(requestId: string, stepId: string, action: 
     return { error: "此簽核步驟已處理" };
   }
 
+  const tSave = devNow();
   await prisma.$transaction(async (tx) => {
     await tx.approvalRecord.create({
       data: {
@@ -535,68 +569,74 @@ export async function approveRequest(requestId: string, stepId: string, action: 
       data: { status: newStatus },
     });
   });
+  devLog("approveRequest save", tSave);
 
   const actorLabel = USER_ROLE_LABEL[role] ?? role;
   const actorDisplay = `${actorLabel} ${session.user.name || session.user.email}`;
   const commentSuffix = comment ? `。備註：${comment}` : "";
   const info = fmtRequestInfo(request);
 
-  // Peer approval roles to notify (the other of PRESIDENT/FOUNDER_AGENT)
   const peerRoles: UserRole[] = role === "PRESIDENT"
     ? ["FOUNDER_AGENT"]
     : role === "FOUNDER_AGENT"
     ? ["PRESIDENT"]
     : ["PRESIDENT", "FOUNDER_AGENT"];
 
+  // Fire all notifications in parallel, non-blocking
+  const tNotif = devNow();
   if (action === "APPROVED") {
-    await createNotificationsForUsers([request.submitterId], {
-      title: "請款單已核准",
-      message: `您的${info}已由${actorDisplay}核准，財務人員將盡快處理付款。`,
-      type: "REQUEST_APPROVED",
-      relatedRequestId: requestId,
-    });
-    await createNotificationsForRoles(["FINANCE"], {
-      title: "請款單待付款",
-      message: `${info}已由${actorDisplay}核准，請前往財務管理完成付款。`,
-      type: "REQUEST_APPROVED",
-      relatedRequestId: requestId,
-    });
-    // Notify peer approver
-    await createNotificationsForRolesExcept(peerRoles, [session.user.id], {
-      title: "請款單已完成簽核",
-      message: `${info}已由${actorDisplay}核准，您不需再進行簽核。`,
-      type: "REQUEST_APPROVED",
-      relatedRequestId: requestId,
-    });
+    void Promise.allSettled([
+      createNotificationsForUsers([request.submitterId], {
+        title: "請款單已核准",
+        message: `您的${info}已由${actorDisplay}核准，財務人員將盡快處理付款。`,
+        type: "REQUEST_APPROVED",
+        relatedRequestId: requestId,
+      }),
+      createNotificationsForRoles(["FINANCE"], {
+        title: "請款單待付款",
+        message: `${info}已由${actorDisplay}核准，請前往財務管理完成付款。`,
+        type: "REQUEST_APPROVED",
+        relatedRequestId: requestId,
+      }),
+      createNotificationsForRolesExcept(peerRoles, [session.user.id], {
+        title: "請款單已完成簽核",
+        message: `${info}已由${actorDisplay}核准，您不需再進行簽核。`,
+        type: "REQUEST_APPROVED",
+        relatedRequestId: requestId,
+      }),
+    ]).catch(console.warn);
   } else if (action === "RETURNED") {
-    await createNotificationsForUsers([request.submitterId], {
-      title: "請款單已退回",
-      message: `您的${info}已由${actorDisplay}退回，請修改後重新提交${commentSuffix}。`,
-      type: "REQUEST_RETURNED",
-      relatedRequestId: requestId,
-    });
-    // Notify peer approver
-    await createNotificationsForRolesExcept(peerRoles, [session.user.id], {
-      title: "請款單已退回申請人",
-      message: `${info}已由${actorDisplay}退回修改，您不需再進行簽核${commentSuffix}。`,
-      type: "REQUEST_RETURNED",
-      relatedRequestId: requestId,
-    });
+    void Promise.allSettled([
+      createNotificationsForUsers([request.submitterId], {
+        title: "請款單已退回",
+        message: `您的${info}已由${actorDisplay}退回，請修改後重新提交${commentSuffix}。`,
+        type: "REQUEST_RETURNED",
+        relatedRequestId: requestId,
+      }),
+      createNotificationsForRolesExcept(peerRoles, [session.user.id], {
+        title: "請款單已退回申請人",
+        message: `${info}已由${actorDisplay}退回修改，您不需再進行簽核${commentSuffix}。`,
+        type: "REQUEST_RETURNED",
+        relatedRequestId: requestId,
+      }),
+    ]).catch(console.warn);
   } else if (action === "REJECTED") {
-    await createNotificationsForUsers([request.submitterId], {
-      title: "請款單已拒絕",
-      message: `您的${info}已由${actorDisplay}拒絕${commentSuffix}。`,
-      type: "REQUEST_REJECTED",
-      relatedRequestId: requestId,
-    });
-    // Notify peer approver
-    await createNotificationsForRolesExcept(peerRoles, [session.user.id], {
-      title: "請款單已拒絕",
-      message: `${info}已由${actorDisplay}拒絕${commentSuffix}。`,
-      type: "REQUEST_REJECTED",
-      relatedRequestId: requestId,
-    });
+    void Promise.allSettled([
+      createNotificationsForUsers([request.submitterId], {
+        title: "請款單已拒絕",
+        message: `您的${info}已由${actorDisplay}拒絕${commentSuffix}。`,
+        type: "REQUEST_REJECTED",
+        relatedRequestId: requestId,
+      }),
+      createNotificationsForRolesExcept(peerRoles, [session.user.id], {
+        title: "請款單已拒絕",
+        message: `${info}已由${actorDisplay}拒絕${commentSuffix}。`,
+        type: "REQUEST_REJECTED",
+        relatedRequestId: requestId,
+      }),
+    ]).catch(console.warn);
   }
+  devLog("approveRequest notifications fired", tNotif);
 
   const auditActionMap = {
     APPROVED: "REQUEST_APPROVED",
@@ -622,6 +662,7 @@ export async function approveRequest(requestId: string, stepId: string, action: 
   revalidatePath("/requests");
   revalidatePath("/approvals");
   revalidatePath("/dashboard");
+  devLog("approveRequest total", t0);
 }
 
 export async function returnApprovedRequest(requestId: string, comment?: string) {
@@ -676,19 +717,20 @@ export async function returnApprovedRequest(requestId: string, comment?: string)
   const info = fmtRequestInfo(request);
   const financeDisplay = `財務 ${session.user.name || session.user.email}`;
 
-  await createNotificationsForUsers([request.submitterId], {
-    title: "請款單退回補正",
-    message: `您的${info}已由${financeDisplay}退回，請補正資料後重新提交。備註：${returnNote}`,
-    type: "REQUEST_RETURNED",
-    relatedRequestId: requestId,
-  });
-  // Notify approval roles
-  await createNotificationsForRoles(["PRESIDENT", "FOUNDER_AGENT"], {
-    title: "請款單被財務退回修改",
-    message: `${info}已由${financeDisplay}退回申請人補正，備註：${returnNote}`,
-    type: "REQUEST_RETURNED",
-    relatedRequestId: requestId,
-  });
+  void Promise.allSettled([
+    createNotificationsForUsers([request.submitterId], {
+      title: "請款單退回補正",
+      message: `您的${info}已由${financeDisplay}退回，請補正資料後重新提交。備註：${returnNote}`,
+      type: "REQUEST_RETURNED",
+      relatedRequestId: requestId,
+    }),
+    createNotificationsForRoles(["PRESIDENT", "FOUNDER_AGENT"], {
+      title: "請款單被財務退回修改",
+      message: `${info}已由${financeDisplay}退回申請人補正，備註：${returnNote}`,
+      type: "REQUEST_RETURNED",
+      relatedRequestId: requestId,
+    }),
+  ]).catch(console.warn);
 
   await logAuditAction({
     userId: session.user.id,
@@ -764,6 +806,7 @@ type MarkAsPaidInput = {
 };
 
 export async function markAsPaid(requestId: string, input: MarkAsPaidInput) {
+  const t0 = devNow();
   const session = await auth();
   if (!session) return { error: "未登入" };
 
@@ -774,6 +817,7 @@ export async function markAsPaid(requestId: string, input: MarkAsPaidInput) {
   if (input.paymentNote && input.paymentNote.length > 500) return { error: "付款備註不可超過 500 字" };
   if (input.bankLastFive && !/^\d{1,5}$/.test(input.bankLastFive)) return { error: "帳號後五碼格式不正確" };
 
+  // Include projectId and finalAccountingSubjectId upfront to avoid a second query
   const request = await prisma.request.findUnique({
     where: { id: requestId },
     select: {
@@ -784,6 +828,8 @@ export async function markAsPaid(requestId: string, input: MarkAsPaidInput) {
       requestNumber: true,
       projectName: true,
       amount: true,
+      projectId: true,
+      finalAccountingSubjectId: true,
     },
   });
   if (!request) return { error: "找不到申請單" };
@@ -792,6 +838,7 @@ export async function markAsPaid(requestId: string, input: MarkAsPaidInput) {
   const newStatus = request.type === "PREPAID" ? "PENDING_SETTLEMENT" : "PAID";
   const paidBy = session.user.name || session.user.email;
 
+  const tSave = devNow();
   await prisma.request.update({
     where: { id: requestId },
     data: {
@@ -805,62 +852,70 @@ export async function markAsPaid(requestId: string, input: MarkAsPaidInput) {
       ...(input.finalAccountingSubjectId && { finalAccountingSubjectId: input.finalAccountingSubjectId }),
     },
   });
+  devLog("markAsPaid save", tSave);
 
   const info = fmtRequestInfo(request);
   const financeDisplay = `財務 ${paidBy}`;
 
-  await createNotificationsForUsers([request.submitterId], {
-    title: "請款已付款",
-    message: `您的${info}已由${financeDisplay}完成付款。`,
-    type: "PAYMENT_COMPLETED",
-    relatedRequestId: requestId,
-  });
-
+  // Fire notifications non-blocking
   if (request.type === "PREPAID") {
-    await createNotificationsForUsers([request.submitterId], {
-      title: "預付款待沖銷",
-      message: `您的${info}已付款，請上傳沖銷單據並填寫實際支出金額。`,
-      type: "REIMBURSEMENT_REQUIRED",
-      relatedRequestId: requestId,
-    });
-    // Notify approval roles about payment
-    await createNotificationsForRoles(["PRESIDENT", "FOUNDER_AGENT"], {
-      title: "預付請款已付款，待沖銷",
-      message: `${info}已由${financeDisplay}完成付款，等待申請人送出沖銷。`,
-      type: "PAYMENT_COMPLETED",
-      relatedRequestId: requestId,
-    });
+    void Promise.allSettled([
+      createNotificationsForUsers([request.submitterId], {
+        title: "請款已付款",
+        message: `您的${info}已由${financeDisplay}完成付款。`,
+        type: "PAYMENT_COMPLETED",
+        relatedRequestId: requestId,
+      }),
+      createNotificationsForUsers([request.submitterId], {
+        title: "預付款待沖銷",
+        message: `您的${info}已付款，請上傳沖銷單據並填寫實際支出金額。`,
+        type: "REIMBURSEMENT_REQUIRED",
+        relatedRequestId: requestId,
+      }),
+      createNotificationsForRoles(["PRESIDENT", "FOUNDER_AGENT"], {
+        title: "預付請款已付款，待沖銷",
+        message: `${info}已由${financeDisplay}完成付款，等待申請人送出沖銷。`,
+        type: "PAYMENT_COMPLETED",
+        relatedRequestId: requestId,
+      }),
+    ]).catch(console.warn);
   } else {
-    // REIMBURSEMENT type: paid = final/closed, notify all relevant roles
-    await createNotificationsForRoles(["PRESIDENT", "FOUNDER_AGENT"], {
-      title: "請款已付款結案",
-      message: `${info}已由${financeDisplay}完成付款，案件結案。`,
-      type: "REQUEST_CLOSED",
-      relatedRequestId: requestId,
-    });
+    void Promise.allSettled([
+      createNotificationsForUsers([request.submitterId], {
+        title: "請款已付款",
+        message: `您的${info}已由${financeDisplay}完成付款。`,
+        type: "PAYMENT_COMPLETED",
+        relatedRequestId: requestId,
+      }),
+      createNotificationsForRoles(["PRESIDENT", "FOUNDER_AGENT"], {
+        title: "請款已付款結案",
+        message: `${info}已由${financeDisplay}完成付款，案件結案。`,
+        type: "REQUEST_CLOSED",
+        relatedRequestId: requestId,
+      }),
+    ]).catch(console.warn);
   }
 
   // Auto-create AccountTransaction if a financial account was selected
+  // Use fields already fetched from the initial query — no second query needed
   if (input.financialAccountId) {
-    const requestFull = await prisma.request.findUnique({
-      where: { id: requestId },
-      select: { projectId: true, finalAccountingSubjectId: true, requestNumber: true, amount: true },
-    });
+    const tTxn = devNow();
     await prisma.accountTransaction.create({
       data: {
         accountId: input.financialAccountId,
         type: "EXPENSE",
-        amount: requestFull!.amount,
+        amount: request.amount,
         transactionDate: input.paidAt ? new Date(input.paidAt) : new Date(),
-        summary: `請款付款 ${requestFull?.requestNumber ?? request.requestNumber ?? requestId}`,
+        summary: `請款付款 ${request.requestNumber ?? requestId}`,
         counterparty: input.paymentRecipientName || null,
-        projectId: requestFull?.projectId || null,
-        accountingSubjectId: input.finalAccountingSubjectId || requestFull?.finalAccountingSubjectId || null,
+        projectId: request.projectId || null,
+        accountingSubjectId: input.finalAccountingSubjectId || null,
         requestId,
         note: input.paymentNote || null,
         createdById: session.user.id,
       },
     });
+    devLog("markAsPaid transaction create", tTxn);
   }
 
   await logAuditAction({
@@ -885,9 +940,11 @@ export async function markAsPaid(requestId: string, input: MarkAsPaidInput) {
   revalidatePath("/finance");
   revalidatePath("/dashboard");
   revalidatePath("/financial-accounts");
+  devLog("markAsPaid total", t0);
 }
 
 export async function submitSettlement(requestId: string, data: { actualAmount: number; reimbursementNote?: string }) {
+  const t0 = devNow();
   const session = await auth();
   if (!session) return { error: "未登入" };
 
@@ -911,6 +968,7 @@ export async function submitSettlement(requestId: string, data: { actualAmount: 
   if (!Number.isFinite(data.actualAmount)) return { error: "實際支出金額格式不正確" };
   if (data.reimbursementNote && data.reimbursementNote.length > 2000) return { error: "沖銷說明不可超過 2000 字" };
 
+  const tSave = devNow();
   await prisma.request.update({
     where: { id: requestId },
     data: {
@@ -921,14 +979,15 @@ export async function submitSettlement(requestId: string, data: { actualAmount: 
       offsetReviewNote: null,
     },
   });
+  devLog("submitSettlement save", tSave);
 
   const info = fmtRequestInfo(request);
-  await createNotificationsForRoles(["FINANCE", "PRESIDENT", "FOUNDER_AGENT"], {
+  void createNotificationsForRoles(["FINANCE", "PRESIDENT", "FOUNDER_AGENT"], {
     title: "沖銷單據待確認",
     message: `${session.user.name} 已送出${info}的沖銷單據，請前往確認。`,
     type: "SETTLEMENT_SUBMITTED",
     relatedRequestId: requestId,
-  });
+  }).catch(console.warn);
 
   await logAuditAction({
     userId: session.user.id,
@@ -944,9 +1003,11 @@ export async function submitSettlement(requestId: string, data: { actualAmount: 
   revalidatePath("/requests");
   revalidatePath("/finance");
   revalidatePath("/dashboard");
+  devLog("submitSettlement total", t0);
 }
 
 export async function reviewSettlement(requestId: string, action: "APPROVED" | "RETURNED", comment?: string) {
+  const t0 = devNow();
   const session = await auth();
   if (!session) return { error: "未登入" };
 
@@ -977,6 +1038,7 @@ export async function reviewSettlement(requestId: string, action: "APPROVED" | "
   const info = fmtRequestInfo(request);
 
   if (action === "APPROVED") {
+    const tSave = devNow();
     await prisma.request.update({
       where: { id: requestId },
       data: {
@@ -985,24 +1047,27 @@ export async function reviewSettlement(requestId: string, action: "APPROVED" | "
         offsetReviewedBy: reviewerDisplay,
       },
     });
+    devLog("reviewSettlement save (approved)", tSave);
 
-    // Notify the confirming reviewer's peers
-    await createNotificationsForRolesExcept(
-      otherOffsetRoles as UserRole[],
-      [session.user.id],
-      {
-        title: "沖銷已確認，案件結案",
-        message: `${info}的沖銷已由${reviewerDisplay}完成確認，案件結案。`,
+    void Promise.allSettled([
+      createNotificationsForRolesExcept(
+        otherOffsetRoles as UserRole[],
+        [session.user.id],
+        {
+          title: "沖銷已確認，案件結案",
+          message: `${info}的沖銷已由${reviewerDisplay}完成確認，案件結案。`,
+          type: "REQUEST_CLOSED",
+          relatedRequestId: requestId,
+        },
+      ),
+      createNotificationsForUsers([request.submitterId], {
+        title: "沖銷已確認完成，案件結案",
+        message: `您的${info}沖銷已由${reviewerDisplay}完成確認，案件結案。`,
         type: "REQUEST_CLOSED",
         relatedRequestId: requestId,
-      },
-    );
-    await createNotificationsForUsers([request.submitterId], {
-      title: "沖銷已確認完成，案件結案",
-      message: `您的${info}沖銷已由${reviewerDisplay}完成確認，案件結案。`,
-      type: "REQUEST_CLOSED",
-      relatedRequestId: requestId,
-    });
+      }),
+    ]).catch(console.warn);
+
     await logAuditAction({
       userId: session.user.id,
       userName: session.user.name ?? session.user.email ?? "unknown",
@@ -1014,6 +1079,7 @@ export async function reviewSettlement(requestId: string, action: "APPROVED" | "
     });
   } else {
     const reviewNote = comment || "請補充沖銷單據後重新送出";
+    const tSave = devNow();
     await prisma.request.update({
       where: { id: requestId },
       data: {
@@ -1022,23 +1088,27 @@ export async function reviewSettlement(requestId: string, action: "APPROVED" | "
         reimbursementSubmittedAt: null,
       },
     });
+    devLog("reviewSettlement save (returned)", tSave);
 
-    await createNotificationsForRolesExcept(
-      otherOffsetRoles as UserRole[],
-      [session.user.id],
-      {
-        title: "沖銷已退回補件",
-        message: `${info}的沖銷已由${reviewerDisplay}退回補件。`,
+    void Promise.allSettled([
+      createNotificationsForRolesExcept(
+        otherOffsetRoles as UserRole[],
+        [session.user.id],
+        {
+          title: "沖銷已退回補件",
+          message: `${info}的沖銷已由${reviewerDisplay}退回補件。`,
+          type: "SETTLEMENT_RETURNED",
+          relatedRequestId: requestId,
+        },
+      ),
+      createNotificationsForUsers([request.submitterId], {
+        title: "沖銷退回補件",
+        message: `您的${info}沖銷被${reviewerDisplay}退回，請補充單據後重新送出。備註：${reviewNote}`,
         type: "SETTLEMENT_RETURNED",
         relatedRequestId: requestId,
-      },
-    );
-    await createNotificationsForUsers([request.submitterId], {
-      title: "沖銷退回補件",
-      message: `您的${info}沖銷被${reviewerDisplay}退回，請補充單據後重新送出。備註：${reviewNote}`,
-      type: "SETTLEMENT_RETURNED",
-      relatedRequestId: requestId,
-    });
+      }),
+    ]).catch(console.warn);
+
     await logAuditAction({
       userId: session.user.id,
       userName: session.user.name ?? session.user.email ?? "unknown",
@@ -1054,4 +1124,5 @@ export async function reviewSettlement(requestId: string, action: "APPROVED" | "
   revalidatePath("/requests");
   revalidatePath("/finance");
   revalidatePath("/dashboard");
+  devLog("reviewSettlement total", t0);
 }

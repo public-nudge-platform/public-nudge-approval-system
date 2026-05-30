@@ -152,12 +152,12 @@ export function NewRequestForm({ projects = [], recipients = [], accountingSubje
 
       if (!result || "error" in result) { setError(("error" in result ? result.error : null) ?? "建立失敗"); return; }
 
-      for (const file of pendingFiles) {
+      await Promise.all(pendingFiles.map((file) => {
         const fd = new FormData();
         fd.append("file", file);
         fd.append("requestId", result.id);
-        await fetch("/api/upload", { method: "POST", body: fd });
-      }
+        return fetch("/api/upload", { method: "POST", body: fd });
+      }));
 
       router.push(`/requests/${result.id}`);
     });
