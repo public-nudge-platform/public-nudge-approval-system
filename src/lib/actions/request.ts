@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import type { RequestStatus, RequestType, UserRole } from "@prisma/client";
 import {
   createNotificationsForRoles,
@@ -174,12 +175,12 @@ export async function createRequest(data: CreateRequestInput) {
   if (data.submit) {
     const info = fmtRequestInfo({ requestNumber: requestNumber ?? null, title: data.title, projectName, type: data.type, amount: totalAmount });
     // Non-blocking: notifications (do not await)
-    void createNotificationsForRoles(["PRESIDENT", "FOUNDER_AGENT"], {
+    after(() => createNotificationsForRoles(["PRESIDENT", "FOUNDER_AGENT"], {
       title: "新請款單待審核",
       message: `${session.user.name} 送出了${info}，請前往審核。`,
       type: "REQUEST_SUBMITTED",
       relatedRequestId: request.id,
-    }).catch(console.warn);
+    }).catch(console.warn));
     // Synchronous: audit log
     const tAudit = devNow();
     await logAuditAction({
@@ -236,12 +237,12 @@ export async function submitRequest(requestId: string) {
     });
     devLog("submitRequest save (finance)", tSave);
 
-    void createNotificationsForRoles(["FINANCE"], {
+    after(() => createNotificationsForRoles(["FINANCE"], {
       title: "請款單補正完成，請繼續付款",
       message: `${session.user.name} 已補正${info}，請前往完成付款。`,
       type: "REQUEST_SUBMITTED",
       relatedRequestId: requestId,
-    }).catch(console.warn);
+    }).catch(console.warn));
 
     await logAuditAction({
       userId: session.user.id,
@@ -270,12 +271,12 @@ export async function submitRequest(requestId: string) {
     devLog("submitRequest save", tSave);
 
     const isResubmit = request.status !== "DRAFT";
-    void createNotificationsForRoles(["PRESIDENT", "FOUNDER_AGENT"], {
+    after(() => createNotificationsForRoles(["PRESIDENT", "FOUNDER_AGENT"], {
       title: isResubmit ? "請款單重新送出待審核" : "新請款單待審核",
       message: `${session.user.name} ${isResubmit ? "重新送出" : "送出了"}${info}，請前往審核。`,
       type: "REQUEST_SUBMITTED",
       relatedRequestId: requestId,
-    }).catch(console.warn);
+    }).catch(console.warn));
 
     await logAuditAction({
       userId: session.user.id,
@@ -405,12 +406,12 @@ export async function updateRequest(requestId: string, data: UpdateRequestInput)
   if (data.submit) {
     const info = fmtRequestInfo({ requestNumber: requestNumber ?? null, title: data.title, projectName, type: data.type, amount: totalAmount });
     if (isFinanceReturn) {
-      void createNotificationsForRoles(["FINANCE"], {
+      after(() => createNotificationsForRoles(["FINANCE"], {
         title: "請款單補正完成，請繼續付款",
         message: `${session.user.name} 已補正${info}，請前往完成付款。`,
         type: "REQUEST_SUBMITTED",
         relatedRequestId: requestId,
-      }).catch(console.warn);
+      }).catch(console.warn));
       await logAuditAction({
         userId: session.user.id,
         userName: session.user.name ?? session.user.email ?? "unknown",
@@ -422,12 +423,12 @@ export async function updateRequest(requestId: string, data: UpdateRequestInput)
         afterData: { status: "APPROVED", amount: totalAmount, requestNumber },
       });
     } else {
-      void createNotificationsForRoles(["PRESIDENT", "FOUNDER_AGENT"], {
+      after(() => createNotificationsForRoles(["PRESIDENT", "FOUNDER_AGENT"], {
         title: "請款單重新送出待審核",
         message: `${session.user.name} 重新送出了${info}，請前往審核。`,
         type: "REQUEST_SUBMITTED",
         relatedRequestId: requestId,
-      }).catch(console.warn);
+      }).catch(console.warn));
       await logAuditAction({
         userId: session.user.id,
         userName: session.user.name ?? session.user.email ?? "unknown",
@@ -496,12 +497,12 @@ export async function withdrawRequest(requestId: string) {
   });
 
   const info = fmtRequestInfo(request);
-  void createNotificationsForRoles(["PRESIDENT", "FOUNDER_AGENT"], {
+  after(() => createNotificationsForRoles(["PRESIDENT", "FOUNDER_AGENT"], {
     title: "申請已被抽回",
     message: `${session.user.name} 已抽回${info}，暫不需簽核。`,
     type: "REQUEST_WITHDRAWN",
     relatedRequestId: requestId,
-  }).catch(console.warn);
+  }).catch(console.warn));
 
   await logAuditAction({
     userId: session.user.id,
@@ -585,7 +586,7 @@ export async function approveRequest(requestId: string, stepId: string, action: 
   // Fire all notifications in parallel, non-blocking
   const tNotif = devNow();
   if (action === "APPROVED") {
-    void Promise.allSettled([
+    after(() => Promise.allSettled([
       createNotificationsForUsers([request.submitterId], {
         title: "請款單已核准",
         message: `您的${info}已由${actorDisplay}核准，財務人員將盡快處理付款。`,
@@ -604,9 +605,9 @@ export async function approveRequest(requestId: string, stepId: string, action: 
         type: "REQUEST_APPROVED",
         relatedRequestId: requestId,
       }),
-    ]).catch(console.warn);
+    ]).catch(console.warn));
   } else if (action === "RETURNED") {
-    void Promise.allSettled([
+    after(() => Promise.allSettled([
       createNotificationsForUsers([request.submitterId], {
         title: "請款單已退回",
         message: `您的${info}已由${actorDisplay}退回，請修改後重新提交${commentSuffix}。`,
@@ -619,9 +620,9 @@ export async function approveRequest(requestId: string, stepId: string, action: 
         type: "REQUEST_RETURNED",
         relatedRequestId: requestId,
       }),
-    ]).catch(console.warn);
+    ]).catch(console.warn));
   } else if (action === "REJECTED") {
-    void Promise.allSettled([
+    after(() => Promise.allSettled([
       createNotificationsForUsers([request.submitterId], {
         title: "請款單已拒絕",
         message: `您的${info}已由${actorDisplay}拒絕${commentSuffix}。`,
@@ -634,7 +635,7 @@ export async function approveRequest(requestId: string, stepId: string, action: 
         type: "REQUEST_REJECTED",
         relatedRequestId: requestId,
       }),
-    ]).catch(console.warn);
+    ]).catch(console.warn));
   }
   devLog("approveRequest notifications fired", tNotif);
 
@@ -717,7 +718,7 @@ export async function returnApprovedRequest(requestId: string, comment?: string)
   const info = fmtRequestInfo(request);
   const financeDisplay = `財務 ${session.user.name || session.user.email}`;
 
-  void Promise.allSettled([
+  after(() => Promise.allSettled([
     createNotificationsForUsers([request.submitterId], {
       title: "請款單退回補正",
       message: `您的${info}已由${financeDisplay}退回，請補正資料後重新提交。備註：${returnNote}`,
@@ -730,7 +731,7 @@ export async function returnApprovedRequest(requestId: string, comment?: string)
       type: "REQUEST_RETURNED",
       relatedRequestId: requestId,
     }),
-  ]).catch(console.warn);
+  ]).catch(console.warn));
 
   await logAuditAction({
     userId: session.user.id,
@@ -859,7 +860,7 @@ export async function markAsPaid(requestId: string, input: MarkAsPaidInput) {
 
   // Fire notifications non-blocking
   if (request.type === "PREPAID") {
-    void Promise.allSettled([
+    after(() => Promise.allSettled([
       createNotificationsForUsers([request.submitterId], {
         title: "請款已付款",
         message: `您的${info}已由${financeDisplay}完成付款。`,
@@ -878,9 +879,9 @@ export async function markAsPaid(requestId: string, input: MarkAsPaidInput) {
         type: "PAYMENT_COMPLETED",
         relatedRequestId: requestId,
       }),
-    ]).catch(console.warn);
+    ]).catch(console.warn));
   } else {
-    void Promise.allSettled([
+    after(() => Promise.allSettled([
       createNotificationsForUsers([request.submitterId], {
         title: "請款已付款",
         message: `您的${info}已由${financeDisplay}完成付款。`,
@@ -893,7 +894,7 @@ export async function markAsPaid(requestId: string, input: MarkAsPaidInput) {
         type: "REQUEST_CLOSED",
         relatedRequestId: requestId,
       }),
-    ]).catch(console.warn);
+    ]).catch(console.warn));
   }
 
   // Auto-create AccountTransaction if a financial account was selected
@@ -982,12 +983,12 @@ export async function submitSettlement(requestId: string, data: { actualAmount: 
   devLog("submitSettlement save", tSave);
 
   const info = fmtRequestInfo(request);
-  void createNotificationsForRoles(["FINANCE", "PRESIDENT", "FOUNDER_AGENT"], {
+  after(() => createNotificationsForRoles(["FINANCE", "PRESIDENT", "FOUNDER_AGENT"], {
     title: "沖銷單據待確認",
     message: `${session.user.name} 已送出${info}的沖銷單據，請前往確認。`,
     type: "SETTLEMENT_SUBMITTED",
     relatedRequestId: requestId,
-  }).catch(console.warn);
+  }).catch(console.warn));
 
   await logAuditAction({
     userId: session.user.id,
@@ -1049,7 +1050,7 @@ export async function reviewSettlement(requestId: string, action: "APPROVED" | "
     });
     devLog("reviewSettlement save (approved)", tSave);
 
-    void Promise.allSettled([
+    after(() => Promise.allSettled([
       createNotificationsForRolesExcept(
         otherOffsetRoles as UserRole[],
         [session.user.id],
@@ -1066,7 +1067,7 @@ export async function reviewSettlement(requestId: string, action: "APPROVED" | "
         type: "REQUEST_CLOSED",
         relatedRequestId: requestId,
       }),
-    ]).catch(console.warn);
+    ]).catch(console.warn));
 
     await logAuditAction({
       userId: session.user.id,
@@ -1090,7 +1091,7 @@ export async function reviewSettlement(requestId: string, action: "APPROVED" | "
     });
     devLog("reviewSettlement save (returned)", tSave);
 
-    void Promise.allSettled([
+    after(() => Promise.allSettled([
       createNotificationsForRolesExcept(
         otherOffsetRoles as UserRole[],
         [session.user.id],
@@ -1107,7 +1108,7 @@ export async function reviewSettlement(requestId: string, action: "APPROVED" | "
         type: "SETTLEMENT_RETURNED",
         relatedRequestId: requestId,
       }),
-    ]).catch(console.warn);
+    ]).catch(console.warn));
 
     await logAuditAction({
       userId: session.user.id,
