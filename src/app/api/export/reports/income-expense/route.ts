@@ -118,6 +118,13 @@ export async function GET(req: NextRequest) {
 
   const ws = XLSX.utils.aoa_to_sheet(rows);
 
+  // Merge title rows (0–2) across all 4 columns so text appears visually centred
+  ws["!merges"] = [
+    { s: { r: 0, c: 0 }, e: { r: 0, c: 3 } },
+    { s: { r: 1, c: 0 }, e: { r: 1, c: 3 } },
+    { s: { r: 2, c: 0 }, e: { r: 2, c: 3 } },
+  ];
+
   // Column widths
   ws["!cols"] = [
     { wch: 10 }, // A 項目代號
@@ -125,6 +132,9 @@ export async function GET(req: NextRequest) {
     { wch: 14 }, // C 金額
     { wch: 10 }, // D %
   ];
+
+  // Row heights: give title block a bit more breathing room
+  ws["!rows"] = [{ hpt: 18 }, { hpt: 16 }, { hpt: 14 }, { hpt: 12 }];
 
   // Apply styles
   rows.forEach((row, r) => {
@@ -140,7 +150,10 @@ export async function GET(req: NextRequest) {
       const s: Record<string, unknown> = {};
       if (isBold) s.font = { bold: true };
 
-      // Bottom border on amount (C=2) and % (D=3) columns
+      // Title rows: centre-align the merged cell
+      if (r <= 2 && c === 0) s.alignment = { horizontal: "center" };
+
+      // Bottom border on amount (C=2) and % (D=3) columns for subtotal rows
       if ((isBorder || isDouble) && (c === 2 || c === 3)) {
         s.border = {
           bottom: { style: isDouble ? "medium" : "thin", color: { rgb: "000000" } },
@@ -165,6 +178,17 @@ export async function GET(req: NextRequest) {
       if (ws[ref]) ws[ref].s = { alignment: { horizontal: "right" } };
     }
   });
+
+  // Header row (row 5): medium bottom border across ALL 4 columns
+  for (let c = 0; c <= 3; c++) {
+    const ref = XLSX.utils.encode_cell({ r: 5, c });
+    if (ws[ref]) {
+      ws[ref].s = {
+        ...(ws[ref].s ?? {}),
+        border: { bottom: { style: "medium", color: { rgb: "000000" } } },
+      };
+    }
+  }
 
   XLSX.utils.book_append_sheet(wb, ws, "收支表");
 

@@ -196,6 +196,16 @@ export async function GET(req: NextRequest) {
     cell(r, 0, "※ 資產總額與負債＋基金暨餘絀總額不相等，請確認期初帳資料是否完整。");
   }
 
+  // Merge title rows so text centres across the full 7-column width
+  ws["!merges"] = [
+    { s: { r: 0, c: 0 }, e: { r: 0, c: 6 } }, // 公民幫推
+    { s: { r: 1, c: 0 }, e: { r: 1, c: 6 } }, // 資產負債表
+    { s: { r: 2, c: 0 }, e: { r: 2, c: 5 } }, // date (A:F); G keeps 幣別
+  ];
+
+  // Row heights for title block
+  ws["!rows"] = [{ hpt: 18 }, { hpt: 16 }, { hpt: 14 }, { hpt: 12 }];
+
   ws["!ref"] = XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: maxRow, c: 6 } });
 
   ws["!cols"] = [
