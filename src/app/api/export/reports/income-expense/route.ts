@@ -8,8 +8,11 @@ import {
   parsePeriodParams,
   formatDateDisplay,
 } from "@/lib/reports";
-import * as XLSX from "xlsx";
+import ExcelJS from "exceljs";
 import type { UserRole } from "@prisma/client";
+
+const BORDER_MEDIUM: Partial<ExcelJS.Border> = { style: "medium", color: { argb: "FF444444" } };
+const BORDER_THIN:   Partial<ExcelJS.Border> = { style: "thin",   color: { argb: "FF666666" } };
 
 export async function GET(req: NextRequest) {
   const session = await auth();
@@ -20,9 +23,9 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "無匯出權限" }, { status: 403 });
 
   const { searchParams } = new URL(req.url);
-  const month = searchParams.get("month") || undefined;
+  const month     = searchParams.get("month")     || undefined;
   const startDate = searchParams.get("startDate") || undefined;
-  const endDate = searchParams.get("endDate") || undefined;
+  const endDate   = searchParams.get("endDate")   || undefined;
   const projectId = searchParams.get("projectId") || undefined;
 
   const period = parsePeriodParams({ month, startDate, endDate });
@@ -39,158 +42,168 @@ export async function GET(req: NextRequest) {
 
   const data = await generateIncomeExpenseStatement({ from: period.from, to: period.to, projectId });
 
-  // ─── Build XLSX ───────────────────────────────────────────────────────────
+  // ─── Build workbook ───────────────────────────────────────────────────────
 
-  const wb = XLSX.utils.book_new();
+  const wb = new ExcelJS.Workbook();
+  const ws = wb.addWorksheet("收支表");
 
-  // We build an array-of-arrays, then apply styles row by row.
-  // Columns: A=項目代號, B=項目名稱, C=金額, D=%
-  // A: col 0, B: col 1, C: col 2, D: col 3
+  ws.columns = [
+    { width: 12 }, // A 項目代號
+    { width: 32 }, // B 項目名稱
+    { width: 16 }, // C 金額
+    { width: 12 }, // D %
+  ];
 
-  type Row = (string | number | null)[];
-  const rows: Row[] = [];
-  // track which rows need bold / bottom-border treatment
-  const boldRows = new Set<number>();
-  const borderRows = new Set<number>(); // single bottom border on C,D
-  const doubleBorderRows = new Set<number>(); // double bottom border on C,D
+  const pct = (n: number) => (data.incomeTotal > 0 ? n / data.incomeTotal : 0);
+  let r = 1;
 
-  function pushRow(row: Row, options?: { bold?: boolean; border?: "single" | "double" }) {
-    const idx = rows.length;
-    rows.push(row);
-    if (options?.bold) boldRows.add(idx);
-    if (options?.border === "single") borderRows.add(idx);
-    if (options?.border === "double") doubleBorderRows.add(idx);
-  }
+  // ── Title block ──
+  ws.mergeCells(r, 1, r, 4);
+  const orgCell = ws.getCell(r, 1);
+  orgCell.value     = "公民幫推";
+  orgCell.font      = { bold: true, size: 14 };
+  orgCell.alignment = { horizontal: "center" };
+  ws.getRow(r).height = 22;
+  r++;
 
-  const pct = (n: number) =>
-    data.incomeTotal > 0 ? n / data.incomeTotal : 0;
+  ws.mergeCells(r, 1, r, 4);
+  const titleCell = ws.getCell(r, 1);
+  titleCell.value     = data.projectName ? `專案收支表 — ${data.projectName}` : "收支表";
+  titleCell.font      = { bold: true, size: 12 };
+  titleCell.alignment = { horizontal: "center" };
+  ws.getRow(r).height = 18;
+  r++;
 
-  // Title rows
-  pushRow(["公民幫推", null, null, null], { bold: true });
-  pushRow(
-    [data.projectName ? `專案收支表 — ${data.projectName}` : "收支表", null, null, null],
-    { bold: true }
-  );
-  pushRow(
-    [`${formatDateDisplay(data.periodFrom)}～　${formatDateDisplay(data.periodTo)}`, null, null, null]
-  );
-  pushRow([null, null, null, "幣別：新台幣"]);
-  pushRow([]); // blank
-  // Column headers
-  pushRow(["項目代號", "項目名稱", "金額", "%"], { bold: true, border: "single" });
+  ws.mergeCells(r, 1, r, 4);
+  const dateCell = ws.getCell(r, 1);
+  dateCell.value     = `${formatDateDisplay(data.periodFrom)}～　${formatDateDisplay(data.periodTo)}`;
+  dateCell.alignment = { horizontal: "center" };
+  ws.getRow(r).height = 14;
+  r++;
 
-  // 收入 section
-  pushRow([null, "收入", null, null], { bold: true });
+  const wCell = ws.getCell(r, 4);
+  wCell.value     = "幣別：新台幣";
+  wCell.alignment = { horizontal: "right" };
+  wCell.font      = { size: 10, color: { argb: "FF555555" } };
+  r++;
+
+  r++; // blank
+
+  // ── Column headers ──
+  const hCols: [number, string, ExcelJS.Alignment["horizontal"]][] = [
+    [1, "項目代號", "center"],
+    [2, "項目名稱", "left"],
+    [3, "金額",     "right"],
+    [4, "%",        "right"],
+  ];
+  hCols.forEach(([col, value, align]) => {
+    const c = ws.getCell(r, col);
+    c.value     = value;
+    c.font      = { bold: true };
+    c.border    = { bottom: BORDER_MEDIUM };
+    c.alignment = { horizontal: align };
+  });
+  ws.getRow(r).height = 16;
+  r++;
+
+  // ── 收入 section ──
+  ws.getCell(r, 2).value = "收入";
+  ws.getCell(r, 2).font  = { bold: true };
+  r++;
+
   for (const item of data.incomeItems) {
-    pushRow([item.code, item.name, item.amount, pct(item.amount)]);
-  }
-  pushRow([null, "收入合計", data.incomeTotal, pct(data.incomeTotal)], {
-    bold: true,
-    border: "single",
-  });
-  pushRow([]); // blank
+    ws.getCell(r, 1).value     = item.code;
+    ws.getCell(r, 1).alignment = { horizontal: "center" };
+    ws.getCell(r, 1).font      = { color: { argb: "FF888888" } };
+    ws.getCell(r, 2).value     = item.name;
+    ws.getCell(r, 2).alignment = { indent: 2 };
 
-  // 支出 section
-  pushRow([null, "支出", null, null], { bold: true });
-  for (const group of data.expenseGroups) {
-    pushRow([null, group.groupName, null, null], { bold: true });
-    for (const item of group.items) {
-      pushRow([item.code, item.name, item.amount, pct(item.amount)]);
-    }
-    pushRow([null, `${group.groupName}合計`, group.subtotal, pct(group.subtotal)], {
-      bold: true,
-      border: "single",
-    });
-    pushRow([]); // blank after each group
+    const a = ws.getCell(r, 3);
+    a.value = item.amount; a.numFmt = "#,##0"; a.alignment = { horizontal: "right" };
+
+    const p = ws.getCell(r, 4);
+    p.value = pct(item.amount); p.numFmt = "0.00%"; p.alignment = { horizontal: "right" };
+    r++;
   }
-  pushRow([null, "支出合計", data.expenseTotal, pct(data.expenseTotal)], {
-    bold: true,
-    border: "double",
-  });
-  pushRow([]); // blank
+
+  // 收入合計
+  ws.getCell(r, 2).value = "收入合計";
+  ws.getCell(r, 2).font  = { bold: true };
+  const incA = ws.getCell(r, 3);
+  incA.value = data.incomeTotal; incA.numFmt = "#,##0"; incA.alignment = { horizontal: "right" };
+  incA.font = { bold: true }; incA.border = { bottom: BORDER_THIN };
+  const incP = ws.getCell(r, 4);
+  incP.value = data.incomeTotal > 0 ? 1 : 0; incP.numFmt = "0.00%"; incP.alignment = { horizontal: "right" };
+  incP.font = { bold: true }; incP.border = { bottom: BORDER_THIN };
+  r++;
+
+  r++; // blank
+
+  // ── 支出 section ──
+  ws.getCell(r, 2).value = "支出";
+  ws.getCell(r, 2).font  = { bold: true };
+  r++;
+
+  for (const group of data.expenseGroups) {
+    // Group header
+    ws.getCell(r, 2).value     = group.groupName;
+    ws.getCell(r, 2).font      = { bold: true };
+    ws.getCell(r, 2).alignment = { indent: 1 };
+    r++;
+
+    // Items
+    for (const item of group.items) {
+      ws.getCell(r, 1).value     = item.code;
+      ws.getCell(r, 1).alignment = { horizontal: "center" };
+      ws.getCell(r, 1).font      = { color: { argb: "FF888888" } };
+      ws.getCell(r, 2).value     = item.name;
+      ws.getCell(r, 2).alignment = { indent: 3 };
+
+      const a = ws.getCell(r, 3);
+      a.value = item.amount; a.numFmt = "#,##0"; a.alignment = { horizontal: "right" };
+
+      const p = ws.getCell(r, 4);
+      p.value = pct(item.amount); p.numFmt = "0.00%"; p.alignment = { horizontal: "right" };
+      r++;
+    }
+
+    // Group subtotal
+    ws.getCell(r, 2).value     = `${group.groupName}合計`;
+    ws.getCell(r, 2).font      = { bold: true };
+    ws.getCell(r, 2).alignment = { indent: 1 };
+    const gsA = ws.getCell(r, 3);
+    gsA.value = group.subtotal; gsA.numFmt = "#,##0"; gsA.alignment = { horizontal: "right" };
+    gsA.font = { bold: true }; gsA.border = { bottom: BORDER_THIN };
+    const gsP = ws.getCell(r, 4);
+    gsP.value = pct(group.subtotal); gsP.numFmt = "0.00%"; gsP.alignment = { horizontal: "right" };
+    gsP.font = { bold: true }; gsP.border = { bottom: BORDER_THIN };
+    r++;
+
+    r++; // blank after group
+  }
+
+  // 支出合計
+  ws.getCell(r, 2).value = "支出合計";
+  ws.getCell(r, 2).font  = { bold: true };
+  const expA = ws.getCell(r, 3);
+  expA.value = data.expenseTotal; expA.numFmt = "#,##0"; expA.alignment = { horizontal: "right" };
+  expA.font = { bold: true }; expA.border = { bottom: BORDER_MEDIUM };
+  const expP = ws.getCell(r, 4);
+  expP.value = pct(data.expenseTotal); expP.numFmt = "0.00%"; expP.alignment = { horizontal: "right" };
+  expP.font = { bold: true }; expP.border = { bottom: BORDER_MEDIUM };
+  r++;
+
+  r++; // blank
 
   // 本期餘絀
-  pushRow([null, "本期餘絀", data.netSurplus, pct(data.netSurplus)], {
-    bold: true,
-    border: "double",
-  });
-  pushRow([]); // trailing blank
-
-  const ws = XLSX.utils.aoa_to_sheet(rows);
-
-  // Merge title rows (0–2) across all 4 columns so text appears visually centred
-  ws["!merges"] = [
-    { s: { r: 0, c: 0 }, e: { r: 0, c: 3 } },
-    { s: { r: 1, c: 0 }, e: { r: 1, c: 3 } },
-    { s: { r: 2, c: 0 }, e: { r: 2, c: 3 } },
-  ];
-
-  // Column widths
-  ws["!cols"] = [
-    { wch: 10 }, // A 項目代號
-    { wch: 28 }, // B 項目名稱
-    { wch: 14 }, // C 金額
-    { wch: 10 }, // D %
-  ];
-
-  // Row heights: give title block a bit more breathing room
-  ws["!rows"] = [{ hpt: 18 }, { hpt: 16 }, { hpt: 14 }, { hpt: 12 }];
-
-  // Apply styles
-  rows.forEach((row, r) => {
-    const isBold = boldRows.has(r);
-    const isBorder = borderRows.has(r);
-    const isDouble = doubleBorderRows.has(r);
-
-    row.forEach((val, c) => {
-      if (val === null || val === undefined) return;
-      const ref = XLSX.utils.encode_cell({ r, c });
-      if (!ws[ref]) return;
-
-      const s: Record<string, unknown> = {};
-      if (isBold) s.font = { bold: true };
-
-      // Title rows: centre-align the merged cell
-      if (r <= 2 && c === 0) s.alignment = { horizontal: "center" };
-
-      // Bottom border on amount (C=2) and % (D=3) columns for subtotal rows
-      if ((isBorder || isDouble) && (c === 2 || c === 3)) {
-        s.border = {
-          bottom: { style: isDouble ? "medium" : "thin", color: { rgb: "000000" } },
-        };
-      }
-
-      // Format C (金額) as number with thousands separator
-      if (c === 2 && typeof val === "number") {
-        ws[ref].z = "#,##0";
-      }
-      // Format D (%) as percentage
-      if (c === 3 && typeof val === "number") {
-        ws[ref].z = "0.00%";
-      }
-
-      if (Object.keys(s).length > 0) ws[ref].s = s;
-    });
-
-    // 幣別 row: right-align D column
-    if (row[3] === "幣別：新台幣") {
-      const ref = XLSX.utils.encode_cell({ r, c: 3 });
-      if (ws[ref]) ws[ref].s = { alignment: { horizontal: "right" } };
-    }
-  });
-
-  // Header row (row 5): medium bottom border across ALL 4 columns
-  for (let c = 0; c <= 3; c++) {
-    const ref = XLSX.utils.encode_cell({ r: 5, c });
-    if (ws[ref]) {
-      ws[ref].s = {
-        ...(ws[ref].s ?? {}),
-        border: { bottom: { style: "medium", color: { rgb: "000000" } } },
-      };
-    }
-  }
-
-  XLSX.utils.book_append_sheet(wb, ws, "收支表");
+  ws.getCell(r, 2).value = "本期餘絀";
+  ws.getCell(r, 2).font  = { bold: true, size: 12 };
+  const netA = ws.getCell(r, 3);
+  netA.value = data.netSurplus; netA.numFmt = "#,##0"; netA.alignment = { horizontal: "right" };
+  netA.font = { bold: true, size: 12 }; netA.border = { bottom: BORDER_MEDIUM };
+  const netP = ws.getCell(r, 4);
+  netP.value = pct(data.netSurplus); netP.numFmt = "0.00%"; netP.alignment = { horizontal: "right" };
+  netP.font = { bold: true, size: 12 }; netP.border = { bottom: BORDER_MEDIUM };
 
   // ─── Filename ─────────────────────────────────────────────────────────────
 
@@ -229,9 +242,8 @@ export async function GET(req: NextRequest) {
 
   // ─── Response ─────────────────────────────────────────────────────────────
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const buf = XLSX.write(wb, { bookType: "xlsx", type: "array" }) as ArrayBuffer;
-  return new NextResponse(new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }), {
+  const buf = await wb.xlsx.writeBuffer();
+  return new NextResponse(new Blob([buf]), {
     headers: {
       "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
       "Content-Disposition": `attachment; filename*=UTF-8''${encodeURIComponent(filename)}`,
