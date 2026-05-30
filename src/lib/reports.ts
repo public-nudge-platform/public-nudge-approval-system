@@ -108,9 +108,10 @@ export async function generateIncomeExpenseStatement(params: {
       if (existing) existing.amount += amt;
       else incomeMap.set(code, { code, name, amount: amt });
     } else if (tx.type === "EXPENSE" && code.startsWith("5")) {
+      const posAmt = Math.abs(amt); // always store as positive regardless of DB sign
       const existing = expenseMap.get(code);
-      if (existing) existing.amount += amt;
-      else expenseMap.set(code, { code, name, amount: amt });
+      if (existing) existing.amount += posAmt;
+      else expenseMap.set(code, { code, name, amount: posAmt });
     }
   }
 

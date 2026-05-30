@@ -17,7 +17,7 @@ import {
 import type { UserRole } from "@prisma/client";
 import { BarChart3, Download } from "lucide-react";
 
-// ─── Param types ─────────────────────────────────────────────────────────────
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 type SearchParams = {
   type?: string;
@@ -109,9 +109,7 @@ function IncomeExpenseForm({
           <select name="projectId" defaultValue={params.projectId ?? ""} className={inputCls}>
             <option value="">全部專案</option>
             {projects.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
+              <option key={p.id} value={p.id}>{p.name}</option>
             ))}
           </select>
         </div>
@@ -156,17 +154,20 @@ function BalanceSheetForm({ params }: { params: SearchParams }) {
   );
 }
 
-// ─── Report wrapper ───────────────────────────────────────────────────────────
+// ─── Report wrapper (document-like frame) ────────────────────────────────────
 
-function ReportWrapper({
+function ReportFrame({
   exportUrl,
+  wide,
   children,
 }: {
   exportUrl: string;
+  wide?: boolean;
   children: React.ReactNode;
 }) {
   return (
     <div className="space-y-3">
+      {/* action bar above the report */}
       <div className="flex justify-end">
         <a
           href={exportUrl}
@@ -176,12 +177,20 @@ function ReportWrapper({
           匯出 Excel
         </a>
       </div>
-      <div className="bg-white border border-gray-400 text-sm">{children}</div>
+      {/* document container */}
+      <div
+        className={`bg-white shadow border border-gray-300 text-gray-900 mx-auto ${
+          wide ? "max-w-4xl" : "max-w-2xl"
+        }`}
+        style={{ fontFamily: "sans-serif", fontSize: "13px", lineHeight: "1.4" }}
+      >
+        {children}
+      </div>
     </div>
   );
 }
 
-// ─── Income / Expense Preview ────────────────────────────────────────────────
+// ─── Income / Expense Statement ───────────────────────────────────────────────
 
 function IncomeExpensePreview({
   data,
@@ -192,173 +201,154 @@ function IncomeExpensePreview({
 }) {
   const pct = (n: number) =>
     data.incomeTotal > 0
-      ? `${((n / data.incomeTotal) * 100).toFixed(2)}%`
+      ? `${((Math.abs(n) / data.incomeTotal) * 100).toFixed(2)}%`
       : "—";
 
+  // shared cell styles
+  const tdCode = "py-[3px] text-center font-mono text-xs text-gray-500 w-20";
+  const tdName = "py-[3px] px-2";
+  const tdAmt  = "py-[3px] text-right tabular-nums pr-3 w-28";
+  const tdPct  = "py-[3px] text-right pr-3 w-16";
+
   return (
-    <ReportWrapper exportUrl={exportUrl}>
+    <ReportFrame exportUrl={exportUrl}>
       {/* Title block */}
-      <div className="relative text-center py-4 border-b border-gray-400">
-        <p className="font-bold text-base leading-snug">公民幫推</p>
-        <p className="font-bold leading-snug">
+      <div className="relative text-center py-4 border-b border-gray-400 px-6">
+        <p className="font-bold text-[15px]">公民幫推</p>
+        <p className="font-bold text-[13px]">
           {data.projectName ? `專案收支表 — ${data.projectName}` : "收支表"}
         </p>
-        <p className="leading-snug">
+        <p className="text-[12px] text-gray-700">
           {formatDateDisplay(data.periodFrom)}～　{formatDateDisplay(data.periodTo)}
         </p>
-        <span className="absolute right-4 bottom-3 text-xs text-gray-600">
+        <span className="absolute right-3 bottom-2 text-[11px] text-gray-600">
           幣別：新台幣
         </span>
       </div>
 
       {/* Table */}
-      <table className="w-full border-collapse">
+      <table className="w-full border-collapse" style={{ fontSize: "13px" }}>
         <thead>
-          <tr className="border-b-2 border-gray-600">
-            <th className="py-2 text-center font-semibold w-24">項目代號</th>
-            <th className="py-2 text-left font-semibold px-3">項目名稱</th>
-            <th className="py-2 text-right font-semibold w-36 pr-4">金額</th>
-            <th className="py-2 text-right font-semibold w-20 pr-3">%</th>
+          <tr style={{ borderBottom: "2px solid #555" }}>
+            <th className="py-1.5 text-center font-semibold w-20">項目代號</th>
+            <th className="py-1.5 text-left font-semibold px-2">項目名稱</th>
+            <th className="py-1.5 text-right font-semibold pr-3 w-28">金額</th>
+            <th className="py-1.5 text-right font-semibold pr-3 w-16">%</th>
           </tr>
         </thead>
         <tbody>
           {/* ── 收入 ── */}
           <tr>
-            <td />
-            <td className="pt-3 pb-0.5 px-3 font-bold">收入</td>
-            <td />
-            <td />
+            <td className={tdCode} />
+            <td className={`${tdName} font-bold pt-2`}>收入</td>
+            <td /><td />
           </tr>
+
           {data.incomeItems.length === 0 ? (
             <tr>
-              <td colSpan={4} className="py-1 pl-10 text-gray-400 text-xs">
-                （本期無收入）
-              </td>
+              <td colSpan={4} className="py-1 px-8 text-xs text-gray-400">（本期無收入）</td>
             </tr>
           ) : (
             data.incomeItems.map((item) => (
               <tr key={item.code}>
-                <td className="py-0.5 text-center font-mono text-xs text-gray-500">
-                  {item.code}
-                </td>
-                <td className="py-0.5 px-3 pl-8">{item.name}</td>
-                <td className="py-0.5 text-right tabular-nums pr-4">
-                  {formatAmount(item.amount)}
-                </td>
-                <td className="py-0.5 text-right pr-3">{pct(item.amount)}</td>
+                <td className={tdCode}>{item.code}</td>
+                <td className={`${tdName} pl-8`}>{item.name}</td>
+                <td className={tdAmt}>{formatAmount(item.amount)}</td>
+                <td className={tdPct}>{pct(item.amount)}</td>
               </tr>
             ))
           )}
+
           {/* 收入合計 */}
           <tr className="font-bold">
-            <td className="pb-1" />
-            <td className="py-1 px-3">收入合計</td>
-            <td className="py-1 text-right tabular-nums pr-4 border-b border-gray-600">
+            <td className={tdCode} />
+            <td className={tdName}>收入合計</td>
+            <td className={tdAmt} style={{ borderBottom: "1px solid #666" }}>
               {formatAmount(data.incomeTotal)}
             </td>
-            <td className="py-1 text-right pr-3 border-b border-gray-600">
-              {pct(data.incomeTotal)}
+            <td className={tdPct} style={{ borderBottom: "1px solid #666" }}>
+              {data.incomeTotal > 0 ? "100.00%" : "—"}
             </td>
           </tr>
 
           {/* spacer */}
-          <tr>
-            <td colSpan={4} className="py-1" />
-          </tr>
+          <tr><td colSpan={4} className="py-1.5" /></tr>
 
           {/* ── 支出 ── */}
           <tr>
-            <td />
-            <td className="pb-0.5 px-3 font-bold">支出</td>
-            <td />
-            <td />
+            <td className={tdCode} />
+            <td className={`${tdName} font-bold`}>支出</td>
+            <td /><td />
           </tr>
 
           {data.expenseGroups.length === 0 ? (
             <tr>
-              <td colSpan={4} className="py-1 pl-10 text-gray-400 text-xs">
-                （本期無支出）
-              </td>
+              <td colSpan={4} className="py-1 px-8 text-xs text-gray-400">（本期無支出）</td>
             </tr>
           ) : (
             data.expenseGroups.map((group) => (
               <>
-                {/* group heading */}
                 <tr key={`gh-${group.groupName}`}>
-                  <td />
-                  <td className="pt-1 pb-0.5 px-3 pl-6 font-bold">{group.groupName}</td>
-                  <td />
-                  <td />
+                  <td className={tdCode} />
+                  <td className={`${tdName} pl-5 font-bold`}>{group.groupName}</td>
+                  <td /><td />
                 </tr>
-                {/* group items */}
                 {group.items.map((item) => (
                   <tr key={item.code}>
-                    <td className="py-0.5 text-center font-mono text-xs text-gray-500">
-                      {item.code}
-                    </td>
-                    <td className="py-0.5 px-3 pl-10">{item.name}</td>
-                    <td className="py-0.5 text-right tabular-nums pr-4">
-                      {formatAmount(item.amount)}
-                    </td>
-                    <td className="py-0.5 text-right pr-3">{pct(item.amount)}</td>
+                    <td className={tdCode}>{item.code}</td>
+                    <td className={`${tdName} pl-9`}>{item.name}</td>
+                    <td className={tdAmt}>{formatAmount(item.amount)}</td>
+                    <td className={tdPct}>{pct(item.amount)}</td>
                   </tr>
                 ))}
-                {/* group subtotal */}
                 <tr key={`gs-${group.groupName}`} className="font-bold">
-                  <td className="pb-1" />
-                  <td className="py-1 px-3 pl-6">{group.groupName}合計</td>
-                  <td className="py-1 text-right tabular-nums pr-4 border-b border-gray-600">
+                  <td className={tdCode} />
+                  <td className={`${tdName} pl-5`}>{group.groupName}合計</td>
+                  <td className={tdAmt} style={{ borderBottom: "1px solid #666" }}>
                     {formatAmount(group.subtotal)}
                   </td>
-                  <td className="py-1 text-right pr-3 border-b border-gray-600">
+                  <td className={tdPct} style={{ borderBottom: "1px solid #666" }}>
                     {pct(group.subtotal)}
                   </td>
                 </tr>
-                <tr key={`sp-${group.groupName}`}>
-                  <td colSpan={4} className="py-1" />
-                </tr>
+                <tr key={`sp-${group.groupName}`}><td colSpan={4} className="py-1" /></tr>
               </>
             ))
           )}
 
           {/* 支出合計 */}
           <tr className="font-bold">
-            <td />
-            <td className="py-1 px-3">支出合計</td>
-            <td className="py-1 text-right tabular-nums pr-4 border-b-2 border-gray-700">
+            <td className={tdCode} />
+            <td className={tdName}>支出合計</td>
+            <td className={tdAmt} style={{ borderBottom: "2px solid #333" }}>
               {formatAmount(data.expenseTotal)}
             </td>
-            <td className="py-1 text-right pr-3 border-b-2 border-gray-700">
+            <td className={tdPct} style={{ borderBottom: "2px solid #333" }}>
               {pct(data.expenseTotal)}
             </td>
           </tr>
 
-          {/* spacer */}
-          <tr>
-            <td colSpan={4} className="py-1" />
-          </tr>
+          <tr><td colSpan={4} className="py-1.5" /></tr>
 
           {/* 本期餘絀 */}
           <tr className="font-bold">
-            <td />
-            <td className="py-2 px-3 text-base">本期餘絀</td>
+            <td className={tdCode} />
+            <td className={`${tdName} text-[14px]`}>本期餘絀</td>
             <td
-              className={`py-2 text-right tabular-nums text-base pr-4 border-b-2 border-gray-900 ${
-                data.netSurplus < 0 ? "text-red-700" : ""
-              }`}
+              className={`${tdAmt} text-[14px]`}
+              style={{ borderBottom: "2px solid #111" }}
             >
               {formatAmount(data.netSurplus)}
             </td>
-            <td className="py-2 text-right pr-3 border-b-2 border-gray-900">
+            <td className={tdPct} style={{ borderBottom: "2px solid #111" }}>
               {pct(data.netSurplus)}
             </td>
           </tr>
-          <tr>
-            <td colSpan={4} className="py-2" />
-          </tr>
+
+          <tr><td colSpan={4} className="py-3" /></tr>
         </tbody>
       </table>
-    </ReportWrapper>
+    </ReportFrame>
   );
 }
 
@@ -371,178 +361,169 @@ function BalanceSheetPreview({
   data: BalanceSheet;
   exportUrl: string;
 }) {
-  // Shared cell helpers
-  const Code = ({ v }: { v?: string }) => (
-    <td className="py-0.5 text-center font-mono text-xs text-gray-500 w-16">{v ?? ""}</td>
-  );
-  const Name = ({ v, bold, indent }: { v: string; bold?: boolean; indent?: boolean }) => (
-    <td className={`py-0.5 px-2 ${bold ? "font-bold" : ""} ${indent ? "pl-6" : ""}`}>{v}</td>
-  );
-  const Amt = ({
-    v,
-    bold,
-    underline,
-    double,
-    warn,
-  }: {
-    v: number;
-    bold?: boolean;
-    underline?: boolean;
-    double?: boolean;
-    warn?: boolean;
-  }) => (
-    <td
-      className={`py-0.5 text-right tabular-nums pr-3 w-28 ${bold ? "font-bold" : ""} ${
-        double ? "border-b-2 border-gray-900" : underline ? "border-b border-gray-600" : ""
-      } ${warn ? "text-amber-700" : ""}`}
-    >
-      {formatAmount(v)}
-    </td>
-  );
-  const Blank = ({ cols = 3 }: { cols?: number }) => (
-    <tr>
-      <td colSpan={cols} className="py-1" />
-    </tr>
-  );
-  const SectionHead = ({ v }: { v: string }) => (
-    <tr>
-      <td />
-      <td className="pt-3 pb-0.5 px-2 font-bold">{v}</td>
-      <td />
-    </tr>
-  );
+  const tdCode = "py-[3px] text-center font-mono text-xs text-gray-500 w-16";
+  const tdName = "py-[3px] px-2";
+  const tdAmt  = "py-[3px] text-right tabular-nums pr-2 w-24";
 
   return (
-    <ReportWrapper exportUrl={exportUrl}>
+    <ReportFrame exportUrl={exportUrl} wide>
       {/* Title block */}
-      <div className="relative text-center py-4 border-b border-gray-400">
-        <p className="font-bold text-base leading-snug">公民幫推</p>
-        <p className="font-bold leading-snug">資產負債表</p>
-        <p className="leading-snug">{formatDateDisplay(data.asOf)}</p>
-        <span className="absolute right-4 bottom-3 text-xs text-gray-600">幣別：新台幣</span>
+      <div className="relative text-center py-4 border-b border-gray-400 px-6">
+        <p className="font-bold text-[15px]">公民幫推</p>
+        <p className="font-bold text-[13px]">資產負債表</p>
+        <p className="text-[12px] text-gray-700">{formatDateDisplay(data.asOf)}</p>
+        <span className="absolute right-3 bottom-2 text-[11px] text-gray-600">幣別：新台幣</span>
       </div>
 
-      <p className="text-center text-xs text-gray-400 py-1 border-b border-gray-200">
+      <p className="text-center text-[11px] text-gray-400 py-0.5 border-b border-gray-200">
         系統管理用簡化資產負債表
       </p>
 
       {!data.balanced && (
-        <div className="px-4 py-2 border-b border-amber-200 bg-amber-50 text-xs text-amber-700">
-          ⚠ 資產總額與負債＋基金暨餘絀總額不相等，可能是尚未輸入期初帳（累計餘絀）。
+        <div className="px-4 py-1.5 border-b border-amber-300 bg-amber-50 text-[11px] text-amber-700">
+          ⚠ 資產總額與負債＋基金暨餘絀總額不相等，可能是尚未輸入累計餘絀（期初帳）。
         </div>
       )}
 
-      {/* Two-column layout */}
-      <div className="grid grid-cols-2 divide-x divide-gray-400">
-        {/* ── Assets ── */}
+      {/* Two-column table */}
+      <div className="grid grid-cols-2 divide-x divide-gray-400" style={{ fontSize: "13px" }}>
+
+        {/* ── 資產 ── */}
         <table className="w-full border-collapse">
           <thead>
-            <tr className="border-b-2 border-gray-600">
-              <th className="py-2 text-center font-semibold text-xs w-16">項目代號</th>
-              <th className="py-2 text-left font-semibold text-xs px-2">項目名稱</th>
-              <th className="py-2 text-right font-semibold text-xs pr-3 w-28">金額</th>
+            <tr style={{ borderBottom: "2px solid #555" }}>
+              <th className="py-1.5 text-center font-semibold w-16 text-xs">項目代號</th>
+              <th className="py-1.5 text-left font-semibold px-2 text-xs">項目名稱</th>
+              <th className="py-1.5 text-right font-semibold pr-2 w-24 text-xs">金額</th>
             </tr>
           </thead>
           <tbody>
-            <SectionHead v="流動資產" />
+            {/* 流動資產 */}
+            <tr>
+              <td /><td className={`${tdName} font-bold pt-2`}>流動資產</td><td />
+            </tr>
             {data.cashAccounts.map((acc) => (
               <tr key={acc.accountId}>
-                <Code v={acc.code} />
-                <Name v={acc.name} indent />
-                <Amt v={acc.balance} />
+                <td className={tdCode}>{acc.code}</td>
+                <td className={`${tdName} pl-5`}>{acc.name}</td>
+                <td className={tdAmt}>{formatAmount(acc.balance)}</td>
               </tr>
             ))}
             <tr className="font-bold">
-              <Code />
-              <Name v="現金合計" bold />
-              <Amt v={data.cashTotal} bold underline />
+              <td />
+              <td className={tdName}>現金合計</td>
+              <td className={tdAmt} style={{ borderBottom: "1px solid #555" }}>
+                {formatAmount(data.cashTotal)}
+              </td>
             </tr>
             <tr>
-              <Code v="1230" />
-              <Name v="應收款項" indent />
-              <Amt v={data.receivables} />
+              <td className={tdCode}>1230</td>
+              <td className={`${tdName} pl-5`}>應收款項</td>
+              <td className={tdAmt}>{formatAmount(data.receivables)}</td>
             </tr>
             <tr>
-              <Code v="1250" />
-              <Name v="預付款項" indent />
-              <Amt v={data.prepaid} />
+              <td className={tdCode}>1250</td>
+              <td className={`${tdName} pl-5`}>預付款項</td>
+              <td className={tdAmt}>{formatAmount(data.prepaid)}</td>
             </tr>
             <tr className="font-bold">
-              <Code />
-              <Name v="流動資產合計" bold />
-              <Amt v={data.currentAssetsTotal} bold underline />
+              <td />
+              <td className={tdName}>流動資產合計</td>
+              <td className={tdAmt} style={{ borderBottom: "1px solid #555" }}>
+                {formatAmount(data.currentAssetsTotal)}
+              </td>
             </tr>
-            <Blank />
-            <Blank />
+            <tr><td colSpan={3} className="py-2" /></tr>
+            <tr><td colSpan={3} className="py-1" /></tr>
             <tr className="font-bold">
-              <Code />
-              <Name v="資產總額" bold />
-              <Amt v={data.assetsTotal} bold double />
+              <td />
+              <td className={`${tdName} text-[14px]`}>資產總額</td>
+              <td className={`${tdAmt} text-[14px]`} style={{ borderBottom: "2px solid #111" }}>
+                {formatAmount(data.assetsTotal)}
+              </td>
             </tr>
-            <Blank />
+            <tr><td colSpan={3} className="py-2" /></tr>
           </tbody>
         </table>
 
-        {/* ── Liabilities & Fund ── */}
+        {/* ── 負債及基金 ── */}
         <table className="w-full border-collapse">
           <thead>
-            <tr className="border-b-2 border-gray-600">
-              <th className="py-2 text-center font-semibold text-xs w-16">項目代號</th>
-              <th className="py-2 text-left font-semibold text-xs px-2">項目名稱</th>
-              <th className="py-2 text-right font-semibold text-xs pr-3 w-28">金額</th>
+            <tr style={{ borderBottom: "2px solid #555" }}>
+              <th className="py-1.5 text-center font-semibold w-16 text-xs">項目代號</th>
+              <th className="py-1.5 text-left font-semibold px-2 text-xs">項目名稱</th>
+              <th className="py-1.5 text-right font-semibold pr-2 w-24 text-xs">金額</th>
             </tr>
           </thead>
           <tbody>
-            <SectionHead v="流動負債" />
+            {/* 流動負債 */}
             <tr>
-              <Code v="2130" />
-              <Name v="應付款項" indent />
-              <Amt v={data.payables} />
+              <td /><td className={`${tdName} font-bold pt-2`}>流動負債</td><td />
             </tr>
             <tr>
-              <Code v="2150" />
-              <Name v="預收款項" indent />
-              <Amt v={data.preReceived} />
-            </tr>
-            <tr className="font-bold">
-              <Code />
-              <Name v="流動負債合計" bold />
-              <Amt v={data.currentLiabilitiesTotal} bold underline />
-            </tr>
-            <Blank />
-            <tr className="font-bold">
-              <Code />
-              <Name v="負債總額" bold />
-              <Amt v={data.liabilitiesTotal} bold underline />
-            </tr>
-            <Blank />
-            <SectionHead v="基金暨餘絀" />
-            <tr>
-              <Code v="3210" />
-              <Name v="累計餘絀" indent />
-              <Amt v={data.accumulatedSurplus} />
+              <td className={tdCode}>2130</td>
+              <td className={`${tdName} pl-5`}>應付款項</td>
+              <td className={tdAmt}>{formatAmount(data.payables)}</td>
             </tr>
             <tr>
-              <Code v="3440" />
-              <Name v="本期餘絀" indent />
-              <Amt v={data.currentSurplus} />
+              <td className={tdCode}>2150</td>
+              <td className={`${tdName} pl-5`}>預收款項</td>
+              <td className={tdAmt}>{formatAmount(data.preReceived)}</td>
             </tr>
             <tr className="font-bold">
-              <Code />
-              <Name v="基金暨餘絀總額" bold />
-              <Amt v={data.fundTotal} bold underline />
+              <td />
+              <td className={tdName}>流動負債合計</td>
+              <td className={tdAmt} style={{ borderBottom: "1px solid #555" }}>
+                {formatAmount(data.currentLiabilitiesTotal)}
+              </td>
             </tr>
-            <Blank />
+            <tr><td colSpan={3} className="py-0.5" /></tr>
             <tr className="font-bold">
-              <Code />
-              <Name v="負債、基金暨餘絀總額" bold />
-              <Amt v={data.liabilitiesAndFundTotal} bold double warn={!data.balanced} />
+              <td />
+              <td className={tdName}>負債總額</td>
+              <td className={tdAmt} style={{ borderBottom: "1px solid #555" }}>
+                {formatAmount(data.liabilitiesTotal)}
+              </td>
             </tr>
-            <Blank />
+            <tr><td colSpan={3} className="py-1" /></tr>
+
+            {/* 基金暨餘絀 */}
+            <tr>
+              <td /><td className={`${tdName} font-bold`}>基金暨餘絀</td><td />
+            </tr>
+            <tr>
+              <td className={tdCode}>3210</td>
+              <td className={`${tdName} pl-5`}>累計餘絀</td>
+              <td className={tdAmt}>{formatAmount(data.accumulatedSurplus)}</td>
+            </tr>
+            <tr>
+              <td className={tdCode}>3440</td>
+              <td className={`${tdName} pl-5`}>本期餘絀</td>
+              <td className={tdAmt}>{formatAmount(data.currentSurplus)}</td>
+            </tr>
+            <tr className="font-bold">
+              <td />
+              <td className={tdName}>基金暨餘絀總額</td>
+              <td className={tdAmt} style={{ borderBottom: "1px solid #555" }}>
+                {formatAmount(data.fundTotal)}
+              </td>
+            </tr>
+            <tr><td colSpan={3} className="py-0.5" /></tr>
+            <tr className="font-bold">
+              <td />
+              <td className={`${tdName} text-[14px]`}>負債、基金暨餘絀總額</td>
+              <td
+                className={`${tdAmt} text-[14px] ${!data.balanced ? "text-amber-700" : ""}`}
+                style={{ borderBottom: "2px solid #111" }}
+              >
+                {formatAmount(data.liabilitiesAndFundTotal)}
+              </td>
+            </tr>
+            <tr><td colSpan={3} className="py-2" /></tr>
           </tbody>
         </table>
       </div>
-    </ReportWrapper>
+    </ReportFrame>
   );
 }
 
