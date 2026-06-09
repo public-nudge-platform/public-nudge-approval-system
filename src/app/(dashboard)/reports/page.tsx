@@ -17,6 +17,7 @@ import {
 } from "@/lib/reports";
 import type { UserRole } from "@prisma/client";
 import { BarChart3, Download } from "lucide-react";
+import { DateRangePicker } from "@/components/ui/DateRangePicker";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -134,11 +135,12 @@ function IncomeExpenseForm({
           <label className="text-xs font-medium text-gray-600">
             日期區間（優先於月份）
           </label>
-          <div className="flex items-center gap-1.5">
-            <input type="date" name="startDate" defaultValue={params.startDate ?? ""} className={inputCls} />
-            <span className="text-xs text-gray-500">—</span>
-            <input type="date" name="endDate" defaultValue={params.endDate ?? ""} className={inputCls} />
-          </div>
+          <DateRangePicker
+            startName="startDate"
+            endName="endDate"
+            defaultStart={params.startDate}
+            defaultEnd={params.endDate}
+          />
         </div>
         <div className="space-y-1">
           <label className="text-xs font-medium text-gray-600">專案（可不選）</label>
