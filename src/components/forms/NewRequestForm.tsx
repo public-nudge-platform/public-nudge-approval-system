@@ -27,6 +27,7 @@ type Item = {
   quantity: number;
   unitPrice: number;
   note: string;
+  voucherDate: string;
 };
 
 type InitialRequest = {
@@ -51,11 +52,12 @@ type InitialRequest = {
     quantity: number;
     unitPrice: number | { toString(): string };
     note: string | null;
+    voucherDate: string | null;
   }[];
 };
 
 function newItem(): Item {
-  return { id: crypto.randomUUID(), description: "", quantity: 1, unitPrice: 0, note: "" };
+  return { id: crypto.randomUUID(), description: "", quantity: 1, unitPrice: 0, note: "", voucherDate: "" };
 }
 
 function formatNumber(n: number) {
@@ -85,6 +87,7 @@ export function NewRequestForm({ projects = [], recipients = [], accountingSubje
       quantity: item.quantity,
       unitPrice: Number(item.unitPrice),
       note: item.note ?? "",
+      voucherDate: item.voucherDate ?? "",
     })) ?? [newItem()]
   );
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
@@ -142,6 +145,7 @@ export function NewRequestForm({ projects = [], recipients = [], accountingSubje
           quantity: Number(i.quantity),
           unitPrice: Number(i.unitPrice),
           note: i.note.trim() || undefined,
+          voucherDate: i.voucherDate || undefined,
         })),
         submit,
       };
@@ -311,6 +315,16 @@ export function NewRequestForm({ projects = [], recipients = [], accountingSubje
               >
                 <Trash2 size={14} />
               </button>
+
+              <div className="col-span-12 flex items-center gap-2 pl-1">
+                <span className="text-xs text-gray-400 whitespace-nowrap">憑證日期（發票/收據日期）</span>
+                <input
+                  type="date"
+                  value={item.voucherDate}
+                  onChange={(e) => updateItem(item.id, "voucherDate", e.target.value)}
+                  className="px-2.5 py-1 text-sm text-gray-800 border border-slate-300 rounded-lg hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
             </div>
           ))}
         </div>

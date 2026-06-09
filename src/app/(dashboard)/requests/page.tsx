@@ -11,6 +11,7 @@ import { FilterSelect } from "@/components/ui/FilterSelect";
 import { FilterInput } from "@/components/ui/FilterInput";
 import { AdvancedFiltersPanel } from "@/components/ui/AdvancedFiltersPanel";
 import { ExportButton } from "@/components/ui/ExportButton";
+import { RequestTemplateExportButton } from "@/components/ui/RequestTemplateExportButton";
 import { FINANCE_ROLES } from "@/lib/constants";
 import { Suspense } from "react";
 
@@ -156,7 +157,10 @@ export default async function RequestsPage({
         <h1 className="text-xl font-semibold text-gray-900">請款單管理</h1>
         <div className="flex items-center gap-2">
           {FINANCE_ROLES.includes(role) && (
-            <ExportButton projects={projects} />
+            <>
+              <ExportButton projects={projects} label="匯出明細" />
+              <RequestTemplateExportButton projects={projects} />
+            </>
           )}
           <Link
             href="/requests/new"

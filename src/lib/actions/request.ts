@@ -28,6 +28,7 @@ type RequestItemInput = {
   quantity: number;
   unitPrice: number;
   note?: string;
+  voucherDate?: string;
 };
 
 type CreateRequestInput = {
@@ -111,6 +112,7 @@ export async function createRequest(data: CreateRequestInput) {
     if (!Number.isFinite(item.quantity) || item.quantity <= 0 || !Number.isInteger(item.quantity)) return { error: "數量須為正整數" };
     if (!Number.isFinite(item.unitPrice) || item.unitPrice <= 0) return { error: "單價須大於 0" };
     if (item.note && item.note.length > 200) return { error: "品項備註不可超過 200 字" };
+    if (item.voucherDate && isNaN(Date.parse(item.voucherDate))) return { error: "憑證日期格式不正確" };
   }
 
   const totalAmount = data.items.reduce(
@@ -161,6 +163,7 @@ export async function createRequest(data: CreateRequestInput) {
           unitPrice: item.unitPrice,
           amount: item.quantity * item.unitPrice,
           note: item.note || null,
+          voucherDate: item.voucherDate ? new Date(item.voucherDate) : null,
         })),
       },
       ...(data.submit && {
@@ -314,6 +317,7 @@ export async function updateRequest(requestId: string, data: UpdateRequestInput)
     if (!Number.isFinite(item.quantity) || item.quantity <= 0 || !Number.isInteger(item.quantity)) return { error: "數量須為正整數" };
     if (!Number.isFinite(item.unitPrice) || item.unitPrice <= 0) return { error: "單價須大於 0" };
     if (item.note && item.note.length > 200) return { error: "品項備註不可超過 200 字" };
+    if (item.voucherDate && isNaN(Date.parse(item.voucherDate))) return { error: "憑證日期格式不正確" };
   }
 
   // Use select instead of include to avoid loading unused item rows
@@ -397,6 +401,7 @@ export async function updateRequest(requestId: string, data: UpdateRequestInput)
           unitPrice: item.unitPrice,
           amount: item.quantity * item.unitPrice,
           note: item.note || null,
+          voucherDate: item.voucherDate ? new Date(item.voucherDate) : null,
         })),
       },
     },

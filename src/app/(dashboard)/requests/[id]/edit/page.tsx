@@ -96,6 +96,7 @@ export default async function EditRequestPage({
             quantity: item.quantity,
             unitPrice: Number(item.unitPrice),
             note: item.note,
+            voucherDate: item.voucherDate ? item.voucherDate.toISOString().slice(0, 10) : null,
           })),
         }}
       />

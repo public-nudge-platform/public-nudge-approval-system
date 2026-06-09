@@ -15,7 +15,7 @@ import type { TimelineStep } from "@/components/ui/Timeline";
 import type { UserRole } from "@prisma/client";
 import { APPROVAL_ROLES, FINANCE_ROLES, OFFSET_REVIEW_ROLES, PAYMENT_METHOD_LABEL } from "@/lib/constants";
 import Link from "next/link";
-import { ChevronLeft, Calendar, User, Building2, Banknote, FolderOpen, Hash, Receipt, Info, Pencil, BookOpen } from "lucide-react";
+import { ChevronLeft, Calendar, User, Building2, Banknote, FolderOpen, Hash, Receipt, Info, Pencil, BookOpen, Download } from "lucide-react";
 import { FinalAccountingSubjectForm } from "@/components/forms/FinalAccountingSubjectForm";
 import { PaymentAdjustmentSection } from "@/components/forms/PaymentAdjustmentSection";
 import { UploadZone } from "@/components/ui/UploadZone";
@@ -295,6 +295,14 @@ export default async function RequestDetailPage({
               {Number(request.amount).toLocaleString()}
               <span className="text-base font-normal text-gray-500 ml-1">元</span>
             </p>
+            {isFinance && (request.status === "PAID" || request.status === "CLOSED") && (
+              <a
+                href={`/api/export/requests/${request.id}`}
+                className="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline mt-1"
+              >
+                <Download size={12} />匯出請款單 Excel
+              </a>
+            )}
           </div>
         </div>
       </div>
@@ -385,6 +393,7 @@ export default async function RequestDetailPage({
               <thead>
                 <tr className="border-b border-gray-100 text-xs text-gray-500">
                   <th className="text-left pb-2 font-medium">品項</th>
+                  <th className="text-center pb-2 font-medium w-28">憑證日期</th>
                   <th className="text-center pb-2 font-medium w-16">數量</th>
                   <th className="text-right pb-2 font-medium w-24">單價</th>
                   <th className="text-right pb-2 font-medium w-24">小計</th>
@@ -397,6 +406,11 @@ export default async function RequestDetailPage({
                       <p className="text-gray-900">{item.description}</p>
                       {item.note && <p className="text-xs text-gray-500 mt-0.5">{item.note}</p>}
                     </td>
+                    <td className="py-2.5 text-center text-gray-600 tabular-nums">
+                      {item.voucherDate
+                        ? `${item.voucherDate.getFullYear()}/${item.voucherDate.getMonth() + 1}/${item.voucherDate.getDate()}`
+                        : <span className="text-gray-300">未填寫</span>}
+                    </td>
                     <td className="py-2.5 text-center text-gray-600 tabular-nums">{item.quantity}</td>
                     <td className="py-2.5 text-right text-gray-600 tabular-nums">{Number(item.unitPrice).toLocaleString()}</td>
                     <td className="py-2.5 text-right font-medium text-gray-900 tabular-nums">{Number(item.amount).toLocaleString()}</td>
@@ -405,7 +419,7 @@ export default async function RequestDetailPage({
               </tbody>
               <tfoot className="border-t border-gray-200">
                 <tr>
-                  <td colSpan={3} className="pt-3 text-right text-sm font-semibold text-gray-700">合計</td>
+                  <td colSpan={4} className="pt-3 text-right text-sm font-semibold text-gray-700">合計</td>
                   <td className="pt-3 text-right text-base font-bold text-gray-900 tabular-nums">
                     {Number(request.amount).toLocaleString()}
                   </td>

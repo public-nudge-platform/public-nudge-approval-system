@@ -204,13 +204,14 @@ model Request {
 }
 
 model RequestItem {
-  id          String  @id @default(cuid())
+  id          String    @id @default(cuid())
   requestId   String
-  request     Request @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  request     Request   @relation(fields: [requestId], references: [id], onDelete: Cascade)
   description String
-  quantity    Int     @default(1)
-  unitPrice   Decimal @db.Decimal(12, 2)
-  amount      Decimal @db.Decimal(12, 2)
+  quantity    Int       @default(1)
+  unitPrice   Decimal   @db.Decimal(12, 2)
+  amount      Decimal   @db.Decimal(12, 2)
+  voucherDate DateTime?
   note        String?
 
   @@map("request_items")

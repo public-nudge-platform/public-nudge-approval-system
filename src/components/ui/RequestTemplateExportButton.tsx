@@ -6,12 +6,11 @@ import { Button } from "@/components/ui/Button";
 
 type Project = { id: string; name: string };
 
-interface ExportButtonProps {
+interface Props {
   projects: Project[];
-  label?: string;
 }
 
-export function ExportButton({ projects, label = "匯出 Excel" }: ExportButtonProps) {
+export function RequestTemplateExportButton({ projects }: Props) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [projectId, setProjectId] = useState("");
@@ -31,7 +30,7 @@ export function ExportButton({ projects, label = "匯出 Excel" }: ExportButtonP
         params.set("month", month);
       }
 
-      const res = await fetch(`/api/export/requests?${params}`);
+      const res = await fetch(`/api/export/requests/template?${params}`);
       if (!res.ok) {
         const err = await res.json().catch(() => ({ error: "匯出失敗" }));
         alert(err.error ?? "匯出失敗");
@@ -62,7 +61,7 @@ export function ExportButton({ projects, label = "匯出 Excel" }: ExportButtonP
     <>
       <Button variant="secondary" size="sm" onClick={() => setOpen(true)}>
         <Download size={14} />
-        {label}
+        批次匯出請款單
       </Button>
 
       {open && (
@@ -72,7 +71,7 @@ export function ExportButton({ projects, label = "匯出 Excel" }: ExportButtonP
         >
           <div className="bg-white rounded-xl shadow-xl w-full max-w-md mx-4 p-6 space-y-5">
             <div className="flex items-center justify-between">
-              <h2 className="text-base font-semibold text-gray-900">{label}</h2>
+              <h2 className="text-base font-semibold text-gray-900">批次匯出請款單</h2>
               <button
                 onClick={() => setOpen(false)}
                 className="text-gray-400 hover:text-gray-600 transition-colors"
@@ -80,6 +79,10 @@ export function ExportButton({ projects, label = "匯出 Excel" }: ExportButtonP
                 <X size={18} />
               </button>
             </div>
+
+            <p className="text-xs text-gray-500">
+              僅匯出狀態為「已付款」或「已沖銷完成」的請款單，每筆各自產生一份完全比照範本格式的 Excel 檔，並打包成 ZIP 下載。
+            </p>
 
             <div className="space-y-4">
               <div>
