@@ -11,6 +11,7 @@ import { ArrowLeft, Landmark, TrendingUp, TrendingDown } from "lucide-react";
 import { AddTransactionButton } from "./TransactionClient";
 import { FilterSelect } from "@/components/ui/FilterSelect";
 import { FilterInput } from "@/components/ui/FilterInput";
+import { DateRangeFilter } from "@/components/ui/DateRangeFilter";
 
 type SearchParams = {
   dateFrom?: string;
@@ -121,8 +122,7 @@ export default async function AccountDetailPage({
         <div className="flex flex-wrap gap-3">
           <FilterSelect name="type" options={typeOptions} value={sp.type ?? "ALL"} label="類型" />
           <FilterSelect name="projectId" options={projectOptions} value={sp.projectId ?? ""} label="全部專案" />
-          <FilterInput name="dateFrom" type="date" value={sp.dateFrom ?? ""} placeholder="開始日期" />
-          <FilterInput name="dateTo" type="date" value={sp.dateTo ?? ""} placeholder="結束日期" />
+          <DateRangeFilter fromName="dateFrom" toName="dateTo" defaultFrom={sp.dateFrom} defaultTo={sp.dateTo} />
           <FilterInput name="keyword" value={sp.keyword ?? ""} placeholder="搜尋摘要／交易對象" />
         </div>
       </div>
