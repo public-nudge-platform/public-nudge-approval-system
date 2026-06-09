@@ -2,7 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   outputFileTracingIncludes: {
-    "/api/export/requests/**": ["./src/lib/templates/**"],
+    "/api/export/requests/**": ["./src/lib/templates/**/*"],
   },
 };
 
