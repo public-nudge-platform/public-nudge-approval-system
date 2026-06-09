@@ -8,7 +8,7 @@ import { FINANCE_VIEW_ROLES, TRANSACTION_TYPE_LABEL, TRANSACTION_TYPE_COLOR } fr
 import type { UserRole } from "@prisma/client";
 import Link from "next/link";
 import { ArrowLeft, Landmark, TrendingUp, TrendingDown } from "lucide-react";
-import { AddTransactionButton } from "./TransactionClient";
+import { AddTransactionButton, EditInitialBalanceButton } from "./TransactionClient";
 import { FilterSelect } from "@/components/ui/FilterSelect";
 import { FilterInput } from "@/components/ui/FilterInput";
 import { DateRangeFilter } from "@/components/ui/DateRangeFilter";
@@ -81,12 +81,20 @@ export default async function AccountDetailPage({
             </p>
           )}
         </div>
-        <AddTransactionButton
-          accountId={id}
-          canWrite={canWrite}
-          projects={projects}
-          accountingSubjects={accountingSubjects}
-        />
+        <div className="flex items-center gap-2">
+          {role === "ADMIN" && (
+            <EditInitialBalanceButton
+              accountId={id}
+              currentInitialBalance={account.initialBalance}
+            />
+          )}
+          <AddTransactionButton
+            accountId={id}
+            canWrite={canWrite}
+            projects={projects}
+            accountingSubjects={accountingSubjects}
+          />
+        </div>
       </div>
 
       {/* Summary cards */}
