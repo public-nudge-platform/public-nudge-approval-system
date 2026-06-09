@@ -24,8 +24,8 @@ type ActiveAccountingSubject = { id: string; code: string; name: string; directi
 type Item = {
   id: string;
   description: string;
-  quantity: number;
-  unitPrice: number;
+  quantity: number | "";
+  unitPrice: number | "";
   note: string;
   voucherDate: string;
 };
@@ -57,7 +57,7 @@ type InitialRequest = {
 };
 
 function newItem(): Item {
-  return { id: crypto.randomUUID(), description: "", quantity: 1, unitPrice: 0, note: "", voucherDate: "" };
+  return { id: crypto.randomUUID(), description: "", quantity: "", unitPrice: "", note: "", voucherDate: "" };
 }
 
 function formatNumber(n: number) {
@@ -95,7 +95,7 @@ export function NewRequestForm({ projects = [], recipients = [], accountingSubje
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
 
-  const total = items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
+  const total = items.reduce((sum, item) => sum + (item.quantity || 0) * (item.unitPrice || 0), 0);
 
   function updateItem(id: string, field: keyof Item, value: string | number) {
     setItems((prev) => prev.map((item) => item.id === id ? { ...item, [field]: value } : item));
@@ -122,7 +122,7 @@ export function NewRequestForm({ projects = [], recipients = [], accountingSubje
     if (!title.trim()) { setError("請填寫標題"); return; }
     if (!projectId) { setError("請選擇專案"); return; }
     if (items.some((i) => !i.description.trim())) { setError("請填寫所有品項說明"); return; }
-    if (items.some((i) => i.quantity <= 0 || i.unitPrice <= 0)) { setError("品項數量與單價必須大於 0"); return; }
+    if (items.some((i) => !i.quantity || i.quantity <= 0 || i.unitPrice === "" || i.unitPrice < 0)) { setError("請填寫所有品項的數量與單價"); return; }
 
     startTransition(async () => {
       const payload = {
@@ -291,20 +291,22 @@ export function NewRequestForm({ projects = [], recipients = [], accountingSubje
                 type="number"
                 min="1"
                 value={item.quantity}
-                onChange={(e) => updateItem(item.id, "quantity", Number(e.target.value))}
-                className="col-span-2 px-2.5 py-1.5 text-sm text-gray-800 border border-slate-300 rounded-lg hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-center"
+                placeholder="數量"
+                onChange={(e) => updateItem(item.id, "quantity", e.target.value === "" ? "" : Number(e.target.value))}
+                className="col-span-2 px-2.5 py-1.5 text-sm text-gray-800 border border-slate-300 rounded-lg placeholder:text-slate-400 hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-center"
               />
               <input
                 type="number"
                 min="0"
                 step="1"
                 value={item.unitPrice}
-                onChange={(e) => updateItem(item.id, "unitPrice", Number(e.target.value))}
-                className="col-span-2 px-2.5 py-1.5 text-sm text-gray-800 border border-slate-300 rounded-lg hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-right"
+                placeholder="單價"
+                onChange={(e) => updateItem(item.id, "unitPrice", e.target.value === "" ? "" : Number(e.target.value))}
+                className="col-span-2 px-2.5 py-1.5 text-sm text-gray-800 border border-slate-300 rounded-lg placeholder:text-slate-400 hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-right"
               />
               <div className="col-span-2 text-right">
                 <span className="text-sm font-medium text-gray-700 tabular-nums">
-                  {formatNumber(item.quantity * item.unitPrice)}
+                  {formatNumber((item.quantity || 0) * (item.unitPrice || 0))}
                 </span>
               </div>
               <button
