@@ -64,7 +64,7 @@ function formatNumber(n: number) {
   return n.toLocaleString("zh-TW");
 }
 
-export function NewRequestForm({ projects = [], recipients = [], accountingSubjects = [], initialRequest }: { projects?: ActiveProject[]; recipients?: ActiveRecipient[]; accountingSubjects?: ActiveAccountingSubject[]; initialRequest?: InitialRequest }) {
+export function NewRequestForm({ projects = [], recipients = [], accountingSubjects = [], initialRequest, returnTo }: { projects?: ActiveProject[]; recipients?: ActiveRecipient[]; accountingSubjects?: ActiveAccountingSubject[]; initialRequest?: InitialRequest; returnTo?: string }) {
   const isEdit = !!initialRequest;
   const [type, setType] = useState<RequestType>(initialRequest?.type ?? "REIMBURSEMENT");
   const [title, setTitle] = useState(initialRequest?.title ?? "");
@@ -163,7 +163,7 @@ export function NewRequestForm({ projects = [], recipients = [], accountingSubje
         return fetch("/api/upload", { method: "POST", body: fd });
       }));
 
-      router.push(`/requests/${result.id}`);
+      router.push(isEdit && returnTo ? returnTo : `/requests/${result.id}`);
     });
   }
 

@@ -11,10 +11,13 @@ const EDITABLE_STATUSES = ["DRAFT", "WITHDRAWN", "RETURNED"] as const;
 
 export default async function EditRequestPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ from?: string }>;
 }) {
-  const { id } = await params;
+  const [{ id }, { from }] = await Promise.all([params, searchParams]);
+  const returnTo = from && from.startsWith("/") ? from : "/requests";
   const session = await auth();
 
   const request = await prisma.request.findUnique({
@@ -63,7 +66,7 @@ export default async function EditRequestPage({
   return (
     <div>
       <div className="flex items-center gap-2 mb-6">
-        <Link href={`/requests/${id}`} className="flex items-center gap-1 text-sm text-gray-400 hover:text-gray-600 transition-colors">
+        <Link href={`/requests/${id}?from=${encodeURIComponent(returnTo)}`} className="flex items-center gap-1 text-sm text-gray-400 hover:text-gray-600 transition-colors">
           <ChevronLeft size={14} />
           返回申請單
         </Link>
@@ -74,6 +77,7 @@ export default async function EditRequestPage({
         projects={projects}
         recipients={recipients}
         accountingSubjects={accountingSubjects}
+        returnTo={`/requests/${id}?from=${encodeURIComponent(returnTo)}`}
         initialRequest={{
           id: request.id,
           type: request.type,

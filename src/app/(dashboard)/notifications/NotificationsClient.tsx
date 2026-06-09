@@ -208,7 +208,7 @@ function NotificationItem({ notification, onRead }: { notification: Notification
   if (notification.relatedRequestId) {
     return (
       <li className="border-b border-gray-50 last:border-0">
-        <Link href={`/requests/${notification.relatedRequestId}`} onClick={() => onRead(notification.id)}>
+        <Link href={`/requests/${notification.relatedRequestId}?from=/notifications`} onClick={() => onRead(notification.id)}>
           {inner}
         </Link>
       </li>

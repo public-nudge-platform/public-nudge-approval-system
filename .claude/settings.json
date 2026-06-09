@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node -e ' *)",
+      "Bash(ENABLE_DEMO_RESET=true npx tsx prisma/seed-production-reset.ts)",
+      "Bash(git commit -m ' *)",
+      "Bash(git -C /Users/wells/Documents/public-nudge-approval-system add src/components/forms/NewRequestForm.tsx src/lib/actions/request.ts)",
+      "Bash(git -C /Users/wells/Documents/public-nudge-approval-system commit -m ' *)",
+      "Bash(git -C /Users/wells/Documents/public-nudge-approval-system add src/lib/actions/request.ts)",
+      "Bash(python3 -c ' *)",
+      "Bash(pip3 install *)",
+      "Bash(xargs ls -1)",
+      "Bash(git -C /Users/wells/Documents/public-nudge-approval-system add src/components/layout/Sidebar.tsx 'src/app/\\(dashboard\\)/reports/' src/app/api/export/reports/ src/lib/reports.ts)",
+      "Bash(git -C /Users/wells/Documents/public-nudge-approval-system add src/lib/reports.ts 'src/app/\\(dashboard\\)/reports/page.tsx' src/app/api/export/reports/income-expense/route.ts src/app/api/export/reports/balance-sheet/route.ts)",
+      "Bash(git -C /Users/wells/Documents/public-nudge-approval-system add src/lib/reports.ts src/app/\\\\\\(dashboard\\\\\\)/reports/page.tsx)",
+      "Bash(node -e \"const ExcelJS = require\\('exceljs'\\); console.log\\('exceljs version:', require\\('./node_modules/exceljs/package.json'\\).version\\)\")"
+    ]
+  }
+}

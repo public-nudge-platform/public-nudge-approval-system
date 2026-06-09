@@ -204,10 +204,13 @@ async function getActiveFinancialAccounts() {
 
 export default async function RequestDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ from?: string }>;
 }) {
-  const { id } = await params;
+  const [{ id }, { from }] = await Promise.all([params, searchParams]);
+  const returnTo = from && from.startsWith("/") ? from : "/requests";
   const [request, session] = await Promise.all([getRequest(id), auth()]);
 
   if (!request) notFound();
@@ -272,7 +275,7 @@ export default async function RequestDetailPage({
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <Link href="/requests" className="flex items-center gap-1 text-sm text-gray-400 hover:text-gray-600 mb-3">
+        <Link href={returnTo} className="flex items-center gap-1 text-sm text-gray-400 hover:text-gray-600 mb-3">
           <ChevronLeft size={14} />返回列表
         </Link>
         <div className="flex items-start justify-between flex-wrap gap-3">
@@ -589,7 +592,7 @@ export default async function RequestDetailPage({
             <div className="bg-white rounded-xl border border-slate-200 p-5 ring-1 ring-slate-100 space-y-3">
               {canEdit && (
                 <Link
-                  href={`/requests/${request.id}/edit`}
+                  href={`/requests/${request.id}/edit?from=${encodeURIComponent(returnTo)}`}
                   className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700"
                 >
                   <Pencil size={13} />

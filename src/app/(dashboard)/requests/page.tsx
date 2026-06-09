@@ -316,7 +316,7 @@ export default async function RequestsPage({
                 {requests.map((req) => (
                   <tr key={req.id} className="hover:bg-gray-50/80 transition-colors cursor-pointer">
                     <td className="p-0">
-                      <Link href={`/requests/${req.id}`} className="block px-4 py-3">
+                      <Link href={`/requests/${req.id}?from=/requests`} className="block px-4 py-3">
                         {req.project ? (
                           <span className="text-sm text-gray-700">{req.project.name}</span>
                         ) : (
@@ -325,7 +325,7 @@ export default async function RequestsPage({
                       </Link>
                     </td>
                     <td className="p-0">
-                      <Link href={`/requests/${req.id}`} className="block px-4 py-3">
+                      <Link href={`/requests/${req.id}?from=/requests`} className="block px-4 py-3">
                         <span className="font-medium text-gray-900">{req.title}</span>
                         {req.requestNumber && (
                           <p className="text-xs text-gray-500 mt-0.5 font-mono">{req.requestNumber}</p>
@@ -333,17 +333,17 @@ export default async function RequestsPage({
                       </Link>
                     </td>
                     <td className="p-0">
-                      <Link href={`/requests/${req.id}`} className="block px-4 py-3">
+                      <Link href={`/requests/${req.id}?from=/requests`} className="block px-4 py-3">
                         <TypeBadge type={req.type} />
                       </Link>
                     </td>
                     <td className="p-0">
-                      <Link href={`/requests/${req.id}`} className="block px-4 py-3">
+                      <Link href={`/requests/${req.id}?from=/requests`} className="block px-4 py-3">
                         <span className="text-gray-700">{req.submitter.name}</span>
                       </Link>
                     </td>
                     <td className="p-0 text-right">
-                      <Link href={`/requests/${req.id}`} className="block px-4 py-3">
+                      <Link href={`/requests/${req.id}?from=/requests`} className="block px-4 py-3">
                         <span className="font-medium text-gray-900 tabular-nums">
                           {Number(req.amount).toLocaleString()}
                         </span>
@@ -351,12 +351,12 @@ export default async function RequestsPage({
                       </Link>
                     </td>
                     <td className="p-0">
-                      <Link href={`/requests/${req.id}`} className="block px-4 py-3">
+                      <Link href={`/requests/${req.id}?from=/requests`} className="block px-4 py-3">
                         <StatusBadge status={req.status} />
                       </Link>
                     </td>
                     <td className="p-0">
-                      <Link href={`/requests/${req.id}`} className="block px-4 py-3 text-gray-500 text-xs tabular-nums">
+                      <Link href={`/requests/${req.id}?from=/requests`} className="block px-4 py-3 text-gray-500 text-xs tabular-nums">
                         {req.createdAt.toLocaleDateString("zh-TW")}
                       </Link>
                     </td>

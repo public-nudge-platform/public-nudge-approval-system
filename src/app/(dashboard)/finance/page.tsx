@@ -186,7 +186,7 @@ export default async function FinancePage({
             {pendingPayment.map((req) => (
               <Link
                 key={req.id}
-                href={`/requests/${req.id}`}
+                href={`/requests/${req.id}?from=/finance`}
                 className="flex flex-col gap-3 bg-white rounded-xl border border-amber-200 px-5 py-4 hover:border-amber-400 hover:shadow-sm transition-all sm:flex-row sm:items-center sm:gap-4"
               >
                 <div className="flex-1 min-w-0">
@@ -267,7 +267,7 @@ export default async function FinancePage({
                         return (
                           <tr key={req.id} className="hover:bg-indigo-50/40 transition-colors">
                             <td className="px-4 py-3">
-                              <Link href={`/requests/${req.id}`} className="hover:text-indigo-600">
+                              <Link href={`/requests/${req.id}?from=/finance`} className="hover:text-indigo-600">
                                 <p className="font-medium text-gray-900 truncate max-w-[160px]">
                                   {req.title}
                                 </p>
@@ -324,7 +324,7 @@ export default async function FinancePage({
                 {pendingSettlement.map((req) => (
                   <Link
                     key={req.id}
-                    href={`/requests/${req.id}`}
+                    href={`/requests/${req.id}?from=/finance`}
                     className="flex flex-col gap-3 bg-white rounded-xl border border-gray-200 px-5 py-4 hover:border-gray-400 hover:shadow-sm transition-all opacity-75 sm:flex-row sm:items-center sm:gap-4"
                   >
                     <div className="flex-1 min-w-0">
@@ -358,7 +358,7 @@ export default async function FinancePage({
                 {offsetReturned.map((req) => (
                   <Link
                     key={req.id}
-                    href={`/requests/${req.id}`}
+                    href={`/requests/${req.id}?from=/finance`}
                     className="flex flex-col gap-3 bg-white rounded-xl border border-orange-200 px-5 py-4 hover:border-orange-400 hover:shadow-sm transition-all sm:flex-row sm:items-center sm:gap-4"
                   >
                     <div className="flex-1 min-w-0">
@@ -423,7 +423,7 @@ export default async function FinancePage({
                 {paidRequests.map((req) => (
                   <tr key={req.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-5 py-3">
-                      <Link href={`/requests/${req.id}`} className="hover:text-blue-600 transition-colors">
+                      <Link href={`/requests/${req.id}?from=/finance`} className="hover:text-blue-600 transition-colors">
                         <p className="font-medium text-gray-900">{req.title}</p>
                         {req.requestNumber && (
                           <p className="font-mono text-xs text-gray-500">{req.requestNumber}</p>
@@ -451,7 +451,7 @@ export default async function FinancePage({
                     </td>
                     <td className="px-3 py-3">
                       <Link
-                        href={`/requests/${req.id}#payment-adjustments`}
+                        href={`/requests/${req.id}?from=/finance#payment-adjustments`}
                         className="whitespace-nowrap text-xs text-blue-600 hover:text-blue-800 border border-blue-200 rounded px-2 py-1 hover:bg-blue-50 transition-colors"
                       >
                         回填對帳

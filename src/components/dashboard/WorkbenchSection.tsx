@@ -63,7 +63,7 @@ function RequestRow({ req, cardType }: { req: WorkbenchRequest; cardType: "task"
 
   return (
     <Link
-      href={`/requests/${req.id}`}
+      href={`/requests/${req.id}?from=/dashboard`}
       className="flex items-start gap-3 py-3 border-b border-gray-100 last:border-0 hover:bg-gray-50 -mx-4 px-4 transition-colors group"
     >
       <div className="flex-1 min-w-0">

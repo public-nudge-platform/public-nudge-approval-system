@@ -58,7 +58,7 @@ export default async function ApprovalsPage() {
             {pendingRequests.map((req) => (
               <Link
                 key={req.id}
-                href={`/requests/${req.id}`}
+                href={`/requests/${req.id}?from=/approvals`}
                 className="flex flex-col gap-3 bg-white rounded-xl border border-blue-200 px-5 py-4 hover:border-blue-400 hover:shadow-sm transition-all sm:flex-row sm:items-center sm:gap-4"
               >
                 <div className="flex-1 min-w-0">
