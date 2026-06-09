@@ -18,6 +18,7 @@ import {
 import type { UserRole } from "@prisma/client";
 import { BarChart3, Download } from "lucide-react";
 import { DateRangePicker } from "@/components/ui/DateRangePicker";
+import { CollapsibleFilterPanel } from "@/components/ui/CollapsibleFilterPanel";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -596,8 +597,27 @@ export default async function ReportsPage({
   const incomeExportUrl = buildExportUrl("/api/export/reports/income-expense", p);
   const balanceExportUrl = buildExportUrl("/api/export/reports/balance-sheet", p);
 
+  const hasResults = !!(incomeExpenseData || balanceSheetData);
+
+  // Summary bar text
+  function fmtDate(s?: string) {
+    if (!s) return "";
+    const d = new Date(s);
+    return `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()}`;
+  }
+  const filterSummary = reportType === "income-expense"
+    ? [
+        p.startDate && p.endDate
+          ? `${fmtDate(p.startDate)} — ${fmtDate(p.endDate)}`
+          : "全部期間",
+        incomeExpenseData?.projectName ?? "全部專案",
+      ].join("・")
+    : p.asOf
+    ? `截至 ${fmtDate(p.asOf)}`
+    : "資產負債表";
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="flex items-center gap-2">
         <BarChart3 size={20} className="text-blue-600" />
         <h1 className="text-xl font-semibold text-gray-900">財務報表</h1>
@@ -605,11 +625,14 @@ export default async function ReportsPage({
 
       <TypeTabs current={reportType} />
 
-      {reportType === "income-expense" ? (
-        <IncomeExpenseForm params={p} projects={projects} />
-      ) : (
-        <BalanceSheetForm params={p} />
-      )}
+      <CollapsibleFilterPanel summary={filterSummary} defaultCollapsed={hasResults}>
+        {reportType === "income-expense" ? (
+          <IncomeExpenseForm params={p} projects={projects} />
+        ) : (
+          <BalanceSheetForm params={p} />
+        )}
+      </CollapsibleFilterPanel>
+
 
       {showPreview && previewError && (
         <div className="bg-red-50 border border-red-200 rounded-xl px-5 py-4 text-sm text-red-700">
