@@ -65,6 +65,7 @@ function generateFilename(
 }
 
 export async function GET(req: NextRequest) {
+  try {
   const session = await auth();
   if (!session) return NextResponse.json({ error: "未登入" }, { status: 401 });
 
@@ -232,4 +233,9 @@ export async function GET(req: NextRequest) {
       "Content-Disposition": `attachment; filename*=UTF-8''${encodeURIComponent(filename)}`,
     },
   });
+  } catch (err) {
+    console.error("[export/requests] error:", err);
+    const msg = err instanceof Error ? err.message : String(err);
+    return NextResponse.json({ error: `匯出失敗：${msg}` }, { status: 500 });
+  }
 }
