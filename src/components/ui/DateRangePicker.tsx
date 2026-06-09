@@ -161,7 +161,8 @@ export function DateRangePicker({
               selected={range}
               onSelect={(r) => {
                 setRange(r);
-                if (r?.from && r?.to) setOpen(false);
+                // Only close when a real range is selected (from ≠ to)
+                if (r?.from && r?.to && r.from.getTime() !== r.to.getTime()) setOpen(false);
               }}
               weekStartsOn={0}
               classNames={dpClassNames}
