@@ -11,11 +11,23 @@ interface ExportButtonProps {
   label?: string;
 }
 
+const CURRENT_YEAR = new Date().getFullYear();
+const YEARS = Array.from({ length: 4 }, (_, i) => CURRENT_YEAR - 1 + i);
+const MONTHS = [
+  { value: "01", label: "1 月" }, { value: "02", label: "2 月" },
+  { value: "03", label: "3 月" }, { value: "04", label: "4 月" },
+  { value: "05", label: "5 月" }, { value: "06", label: "6 月" },
+  { value: "07", label: "7 月" }, { value: "08", label: "8 月" },
+  { value: "09", label: "9 月" }, { value: "10", label: "10 月" },
+  { value: "11", label: "11 月" }, { value: "12", label: "12 月" },
+];
+
 export function ExportButton({ projects, label = "匯出 Excel" }: ExportButtonProps) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [projectId, setProjectId] = useState("");
-  const [month, setMonth] = useState("");
+  const [year, setYear] = useState(String(CURRENT_YEAR));
+  const [monthNum, setMonthNum] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
 
@@ -27,8 +39,8 @@ export function ExportButton({ projects, label = "匯出 Excel" }: ExportButtonP
       if (startDate || endDate) {
         if (startDate) params.set("startDate", startDate);
         if (endDate) params.set("endDate", endDate);
-      } else if (month) {
-        params.set("month", month);
+      } else if (year && monthNum) {
+        params.set("month", `${year}-${monthNum}`);
       }
 
       const res = await fetch(`/api/export/requests?${params}`);
@@ -98,12 +110,27 @@ export function ExportButton({ projects, label = "匯出 Excel" }: ExportButtonP
 
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">月份</label>
-                <input
-                  type="month"
-                  value={month}
-                  onChange={(e) => setMonth(e.target.value)}
-                  className="w-full text-sm text-gray-800 border border-slate-300 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                />
+                <div className="flex gap-2">
+                  <select
+                    value={year}
+                    onChange={(e) => setYear(e.target.value)}
+                    className="flex-1 text-sm text-gray-800 border border-slate-300 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    {YEARS.map((y) => (
+                      <option key={y} value={String(y)}>{y} 年</option>
+                    ))}
+                  </select>
+                  <select
+                    value={monthNum}
+                    onChange={(e) => setMonthNum(e.target.value)}
+                    className="flex-1 text-sm text-gray-800 border border-slate-300 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="">全部月份</option>
+                    {MONTHS.map((m) => (
+                      <option key={m.value} value={m.value}>{m.label}</option>
+                    ))}
+                  </select>
+                </div>
                 <p className="text-xs text-gray-500 mt-1">若同時設定日期區間，以日期區間優先</p>
               </div>
 
@@ -128,20 +155,10 @@ export function ExportButton({ projects, label = "匯出 Excel" }: ExportButtonP
             </div>
 
             <div className="flex justify-end gap-2 pt-1">
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => setOpen(false)}
-                disabled={loading}
-              >
+              <Button variant="secondary" size="sm" onClick={() => setOpen(false)} disabled={loading}>
                 取消
               </Button>
-              <Button
-                variant="primary"
-                size="sm"
-                loading={loading}
-                onClick={handleExport}
-              >
+              <Button variant="primary" size="sm" loading={loading} onClick={handleExport}>
                 {!loading && <Download size={14} />}
                 匯出
               </Button>
