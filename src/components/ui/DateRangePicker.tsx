@@ -25,6 +25,49 @@ function display(d: Date): string {
   return `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()}`;
 }
 
+// ─── Shortcut helpers ─────────────────────────────────────────────────────────
+
+function thisMonth(): DateRange {
+  const now = new Date();
+  return {
+    from: new Date(now.getFullYear(), now.getMonth(), 1),
+    to:   new Date(now.getFullYear(), now.getMonth() + 1, 0),
+  };
+}
+
+function lastMonth(): DateRange {
+  const now = new Date();
+  return {
+    from: new Date(now.getFullYear(), now.getMonth() - 1, 1),
+    to:   new Date(now.getFullYear(), now.getMonth(), 0),
+  };
+}
+
+function lastThreeMonths(): DateRange {
+  const now = new Date();
+  return {
+    from: new Date(now.getFullYear(), now.getMonth() - 2, 1),
+    to:   new Date(now.getFullYear(), now.getMonth() + 1, 0),
+  };
+}
+
+function thisYear(): DateRange {
+  const y = new Date().getFullYear();
+  return {
+    from: new Date(y, 0, 1),
+    to:   new Date(y, 11, 31),
+  };
+}
+
+const SHORTCUTS: { label: string; range: () => DateRange }[] = [
+  { label: "本月",   range: thisMonth },
+  { label: "上個月", range: lastMonth },
+  { label: "近三個月", range: lastThreeMonths },
+  { label: "今年",   range: thisYear },
+];
+
+// ─── Component ────────────────────────────────────────────────────────────────
+
 export function DateRangePicker({
   startName = "startDate",
   endName = "endDate",
@@ -54,6 +97,11 @@ export function DateRangePicker({
   function clear(e: React.MouseEvent) {
     e.stopPropagation();
     setRange(undefined);
+  }
+
+  function applyShortcut(r: DateRange) {
+    setRange(r);
+    setOpen(false);
   }
 
   const label =
@@ -90,18 +138,35 @@ export function DateRangePicker({
 
       {/* Popover */}
       {open && (
-        <div className="absolute z-50 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg p-2">
-          <DayPicker
-            mode="range"
-            locale={zhTW}
-            selected={range}
-            onSelect={(r) => {
-              setRange(r);
-              // Close when both ends are picked
-              if (r?.from && r?.to) setOpen(false);
-            }}
-            weekStartsOn={0}
-          />
+        <div className="absolute z-50 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden">
+          {/* Shortcut chips */}
+          <div className="flex gap-1.5 px-3 pt-3 pb-2 border-b border-gray-100">
+            {SHORTCUTS.map((s) => (
+              <button
+                key={s.label}
+                type="button"
+                onClick={() => applyShortcut(s.range())}
+                className="text-xs px-2.5 py-1 rounded-full border border-slate-200 text-gray-600 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition-colors"
+              >
+                {s.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Calendar */}
+          <div className="p-2">
+            <DayPicker
+              mode="range"
+              locale={zhTW}
+              selected={range}
+              onSelect={(r) => {
+                setRange(r);
+                // Close when both ends are picked
+                if (r?.from && r?.to) setOpen(false);
+              }}
+              weekStartsOn={0}
+            />
+          </div>
         </div>
       )}
     </div>
