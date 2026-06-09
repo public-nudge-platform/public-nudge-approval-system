@@ -22,7 +22,9 @@ import { BarChart3, Download } from "lucide-react";
 type SearchParams = {
   type?: string;
   preview?: string;
-  month?: string;
+  month?: string;   // legacy: kept for backward compat
+  year?: string;    // new: from year select
+  monthNum?: string; // new: from month select (zero-padded, e.g. "05")
   startDate?: string;
   endDate?: string;
   projectId?: string;
@@ -31,9 +33,10 @@ type SearchParams = {
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function buildExportUrl(base: string, p: SearchParams): string {
+function buildExportUrl(base: string, p: SearchParams, effectiveMonth?: string): string {
   const qs = new URLSearchParams();
-  if (p.month) qs.set("month", p.month);
+  const month = effectiveMonth ?? p.month;
+  if (month) qs.set("month", month);
   if (p.startDate) qs.set("startDate", p.startDate);
   if (p.endDate) qs.set("endDate", p.endDate);
   if (p.projectId) qs.set("projectId", p.projectId);
@@ -92,7 +95,39 @@ function IncomeExpenseForm({
       <div className="flex flex-wrap gap-4">
         <div className="space-y-1">
           <label className="text-xs font-medium text-gray-600">月份</label>
-          <input type="month" name="month" defaultValue={params.month ?? ""} className={inputCls} />
+          <div className="flex gap-1.5">
+            {(() => {
+              const currentYear = new Date().getFullYear();
+              const years = Array.from({ length: 4 }, (_, i) => currentYear - 1 + i);
+              const months = [
+                { value: "01", label: "1 月" }, { value: "02", label: "2 月" },
+                { value: "03", label: "3 月" }, { value: "04", label: "4 月" },
+                { value: "05", label: "5 月" }, { value: "06", label: "6 月" },
+                { value: "07", label: "7 月" }, { value: "08", label: "8 月" },
+                { value: "09", label: "9 月" }, { value: "10", label: "10 月" },
+                { value: "11", label: "11 月" }, { value: "12", label: "12 月" },
+              ];
+              // Derive default values from params.month (legacy "YYYY-MM") or new year/monthNum
+              const defaultYear = params.year ?? params.month?.split("-")[0] ?? "";
+              const defaultMonthNum = params.monthNum ?? params.month?.split("-")[1] ?? "";
+              return (
+                <>
+                  <select name="year" defaultValue={defaultYear} className={inputCls}>
+                    <option value="">年份</option>
+                    {years.map((y) => (
+                      <option key={y} value={String(y)}>{y} 年</option>
+                    ))}
+                  </select>
+                  <select name="monthNum" defaultValue={defaultMonthNum} className={inputCls}>
+                    <option value="">月份</option>
+                    {months.map((m) => (
+                      <option key={m.value} value={m.value}>{m.label}</option>
+                    ))}
+                  </select>
+                </>
+              );
+            })()}
+          </div>
         </div>
         <div className="space-y-1">
           <label className="text-xs font-medium text-gray-600">
@@ -549,9 +584,14 @@ export default async function ReportsPage({
   let balanceSheetData: BalanceSheet | null = null;
   let previewError: string | null = null;
 
+  // Build effective month from year+monthNum selects, falling back to legacy month param
+  const effectiveMonth = (p.year && p.monthNum)
+    ? `${p.year}-${p.monthNum}`
+    : p.month;
+
   if (showPreview) {
     if (reportType === "income-expense") {
-      const period = parsePeriodParams({ month: p.month, startDate: p.startDate, endDate: p.endDate });
+      const period = parsePeriodParams({ month: effectiveMonth, startDate: p.startDate, endDate: p.endDate });
       if (!period) {
         previewError = "請輸入月份或日期區間";
       } else {
@@ -598,8 +638,8 @@ export default async function ReportsPage({
     }
   }
 
-  const incomeExportUrl = buildExportUrl("/api/export/reports/income-expense", p);
-  const balanceExportUrl = buildExportUrl("/api/export/reports/balance-sheet", p);
+  const incomeExportUrl = buildExportUrl("/api/export/reports/income-expense", p, effectiveMonth);
+  const balanceExportUrl = buildExportUrl("/api/export/reports/balance-sheet", p, effectiveMonth);
 
   return (
     <div className="space-y-6">
