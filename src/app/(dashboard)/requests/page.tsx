@@ -268,7 +268,7 @@ export default async function RequestsPage({
                       { value: "PENDING_SETTLEMENT", label: "待沖銷" },
                       { value: "OFFSET_SUBMITTED", label: "沖銷待確認" },
                       { value: "OFFSET_RETURNED", label: "沖銷退回" },
-                      { value: "CLOSED", label: "已結案" },
+                      { value: "CLOSED", label: "已沖銷" },
                     ]}
                   />
                 </div>

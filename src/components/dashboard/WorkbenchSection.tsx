@@ -43,7 +43,7 @@ const NEXT_STEP: Record<RequestStatus, string> = {
   PENDING_SETTLEMENT: "申請人需送出沖銷",
   OFFSET_SUBMITTED:   "等待確認沖銷",
   OFFSET_RETURNED:    "申請人需補件重送",
-  CLOSED:             "已結案",
+  CLOSED:             "已沖銷",
   REJECTED:           "已拒絕",
   WITHDRAWN:          "已抽回",
 };

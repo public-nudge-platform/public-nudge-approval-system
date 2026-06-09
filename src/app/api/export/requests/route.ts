@@ -19,7 +19,7 @@ function getOffsetStatus(status: string): string {
     PENDING_SETTLEMENT: "待沖銷",
     OFFSET_SUBMITTED: "沖銷待確認",
     OFFSET_RETURNED: "沖銷退回補件",
-    CLOSED: "已結案（沖銷完成）",
+    CLOSED: "已沖銷",
   };
   return map[status] ?? "";
 }

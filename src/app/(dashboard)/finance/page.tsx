@@ -389,7 +389,7 @@ export default async function FinancePage({
       {showPaid && <section className="space-y-3">
         <div className="flex items-center gap-2">
           <CheckCircle2 size={15} className="text-green-500" />
-          <h2 className="text-sm font-semibold text-gray-700">已付款／已結案紀錄</h2>
+          <h2 className="text-sm font-semibold text-gray-700">已付款／已沖銷紀錄</h2>
           {paidRequests.length > 0 && (
             <span className="bg-gray-100 text-gray-600 text-xs font-semibold px-2 py-0.5 rounded-full">
               {paidRequests.length}

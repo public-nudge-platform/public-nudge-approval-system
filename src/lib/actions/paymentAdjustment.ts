@@ -70,7 +70,7 @@ export async function createPaymentAdjustment(requestId: string, input: Adjustme
     action: "PAYMENT_ADJUSTMENT_CREATED",
     entityType: "PaymentAdjustment",
     entityId: adjustment.id,
-    description: `在請款單 ${reqNum} 新增付款調整：${typeLabel} ${Number(input.amount).toLocaleString()} 元${isClosed ? "（案件已結案）" : ""}`,
+    description: `在請款單 ${reqNum} 新增付款調整：${typeLabel} ${Number(input.amount).toLocaleString()} 元${isClosed ? "（案件已沖銷）" : ""}`,
     afterData: {
       requestId,
       requestNumber: request.requestNumber,
