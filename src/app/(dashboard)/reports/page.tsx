@@ -1,5 +1,6 @@
 export const dynamic = "force-dynamic";
 
+import { Fragment } from "react";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
@@ -322,8 +323,8 @@ function IncomeExpensePreview({
             </tr>
           ) : (
             data.expenseGroups.map((group) => (
-              <>
-                <tr key={`gh-${group.groupName}`}>
+              <Fragment key={group.groupName}>
+                <tr>
                   <td className={tdCode} />
                   <td className={`${tdName} pl-5 font-bold`}>{group.groupName}</td>
                   <td /><td />
@@ -346,8 +347,8 @@ function IncomeExpensePreview({
                     {pct(group.subtotal)}
                   </td>
                 </tr>
-                <tr key={`sp-${group.groupName}`}><td colSpan={4} className="py-1" /></tr>
-              </>
+                <tr><td colSpan={4} className="py-1" /></tr>
+              </Fragment>
             ))
           )}
 
