@@ -4,6 +4,9 @@ import { useState, useMemo } from "react";
 import { AUDIT_ACTION_LABEL, AUDIT_ACTION_COLOR } from "@/lib/constants";
 import type { AuditAction } from "@prisma/client";
 import { X, ChevronDown, ChevronUp } from "lucide-react";
+import { ClientSortableHeader } from "@/components/ui/ClientSortableHeader";
+import { useSortToggle } from "@/hooks/useSortToggle";
+import { compareStrings, compareDates } from "@/lib/sort";
 
 type AuditLog = {
   id: string;
@@ -126,6 +129,27 @@ export function AuditLogsClient({ logs, users }: Props) {
     });
   }, [logs, filterAction, filterUserId, filterEntityType, filterFrom, filterTo]);
 
+  const { sortBy, sortDir, toggle } = useSortToggle("createdAt", "desc");
+
+  const sorted = useMemo(() => {
+    const arr = [...filtered];
+    arr.sort((a, b) => {
+      switch (sortBy) {
+        case "userName":
+          return compareStrings(a.userName, b.userName, sortDir);
+        case "action":
+          return compareStrings(AUDIT_ACTION_LABEL[a.action], AUDIT_ACTION_LABEL[b.action], sortDir);
+        case "entityType":
+          return compareStrings(a.entityType, b.entityType, sortDir);
+        case "createdAt":
+          return compareDates(a.createdAt, b.createdAt, sortDir);
+        default:
+          return 0;
+      }
+    });
+    return arr;
+  }, [filtered, sortBy, sortDir]);
+
   const activeFilterCount = [filterAction, filterUserId, filterEntityType, filterFrom, filterTo].filter(Boolean).length;
 
   function clearFilters() {
@@ -242,7 +266,7 @@ export function AuditLogsClient({ logs, users }: Props) {
             無紀錄
           </li>
         )}
-        {filtered.map((log) => (
+        {sorted.map((log) => (
           <li
             key={log.id}
             className="bg-white rounded-xl border border-gray-200 px-4 py-3 cursor-pointer hover:bg-gray-50 transition-colors"
@@ -273,11 +297,40 @@ export function AuditLogsClient({ logs, users }: Props) {
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-gray-50 border-b border-gray-200">
-              <th className="px-5 py-3 text-left text-xs font-semibold text-gray-600">操作者</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">操作類型</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">操作對象</th>
+              <ClientSortableHeader
+                label="操作者"
+                field="userName"
+                currentSortBy={sortBy}
+                currentSortDir={sortDir}
+                onSort={toggle}
+                thClassName="px-5 py-3 text-left text-xs font-semibold text-gray-600"
+              />
+              <ClientSortableHeader
+                label="操作類型"
+                field="action"
+                currentSortBy={sortBy}
+                currentSortDir={sortDir}
+                onSort={toggle}
+                thClassName="px-4 py-3 text-left text-xs font-semibold text-gray-600"
+              />
+              <ClientSortableHeader
+                label="操作對象"
+                field="entityType"
+                currentSortBy={sortBy}
+                currentSortDir={sortDir}
+                onSort={toggle}
+                thClassName="px-4 py-3 text-left text-xs font-semibold text-gray-600"
+              />
               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">描述</th>
-              <th className="px-5 py-3 text-right text-xs font-semibold text-gray-600">時間</th>
+              <ClientSortableHeader
+                label="時間"
+                field="createdAt"
+                currentSortBy={sortBy}
+                currentSortDir={sortDir}
+                onSort={toggle}
+                align="right"
+                thClassName="px-5 py-3 text-right text-xs font-semibold text-gray-600"
+              />
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
@@ -288,7 +341,7 @@ export function AuditLogsClient({ logs, users }: Props) {
                 </td>
               </tr>
             )}
-            {filtered.map((log) => (
+            {sorted.map((log) => (
               <tr
                 key={log.id}
                 className="hover:bg-gray-50/80 transition-colors cursor-pointer"

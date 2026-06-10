@@ -1,12 +1,15 @@
 "use client";
 
-import { useState, type CSSProperties } from "react";
+import { useMemo, useState, type CSSProperties } from "react";
 import { Button } from "@/components/ui/Button";
 import { EditUserModal, ResetPasswordModal, CreateUserModal } from "@/components/forms/UserForms";
 import { USER_ROLE_LABEL } from "@/lib/constants";
 import { UserPlus, Pencil, KeyRound, ShieldOff } from "lucide-react";
 import type { UserRole } from "@prisma/client";
 import { clsx } from "clsx";
+import { ClientSortableHeader } from "@/components/ui/ClientSortableHeader";
+import { useSortToggle } from "@/hooks/useSortToggle";
+import { compareStrings, compareNumbers, compareDates } from "@/lib/sort";
 
 type User = {
   id: string;
@@ -41,6 +44,30 @@ export function UserTable({ users, actorRole, actorId }: { users: User[]; actorR
   const [editUser, setEditUser] = useState<User | null>(null);
   const [resetUser, setResetUser] = useState<User | null>(null);
 
+  const { sortBy, sortDir, toggle } = useSortToggle("", "desc");
+
+  const sortedUsers = useMemo(() => {
+    if (!sortBy) return users;
+    const arr = [...users];
+    arr.sort((a, b) => {
+      switch (sortBy) {
+        case "name":
+          return compareStrings(a.name, b.name, sortDir);
+        case "email":
+          return compareStrings(a.email, b.email, sortDir);
+        case "role":
+          return compareStrings(USER_ROLE_LABEL[a.role], USER_ROLE_LABEL[b.role], sortDir);
+        case "isActive":
+          return compareNumbers(Number(a.isActive), Number(b.isActive), sortDir);
+        case "createdAt":
+          return compareDates(a.createdAt, b.createdAt, sortDir);
+        default:
+          return 0;
+      }
+    });
+    return arr;
+  }, [users, sortBy, sortDir]);
+
   return (
     <>
       <div className="flex items-center justify-between mb-4">
@@ -55,16 +82,51 @@ export function UserTable({ users, actorRole, actorId }: { users: User[]; actorR
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-gray-50 border-b border-gray-200">
-              <th className="px-5 py-3 text-left text-xs font-semibold text-gray-600">姓名</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Email</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">角色</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">狀態</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">建立日期</th>
+              <ClientSortableHeader
+                label="姓名"
+                field="name"
+                currentSortBy={sortBy}
+                currentSortDir={sortDir}
+                onSort={toggle}
+                thClassName="px-5 py-3 text-left text-xs font-semibold text-gray-600"
+              />
+              <ClientSortableHeader
+                label="Email"
+                field="email"
+                currentSortBy={sortBy}
+                currentSortDir={sortDir}
+                onSort={toggle}
+                thClassName="px-4 py-3 text-left text-xs font-semibold text-gray-600"
+              />
+              <ClientSortableHeader
+                label="角色"
+                field="role"
+                currentSortBy={sortBy}
+                currentSortDir={sortDir}
+                onSort={toggle}
+                thClassName="px-4 py-3 text-left text-xs font-semibold text-gray-600"
+              />
+              <ClientSortableHeader
+                label="狀態"
+                field="isActive"
+                currentSortBy={sortBy}
+                currentSortDir={sortDir}
+                onSort={toggle}
+                thClassName="px-4 py-3 text-left text-xs font-semibold text-gray-600"
+              />
+              <ClientSortableHeader
+                label="建立日期"
+                field="createdAt"
+                currentSortBy={sortBy}
+                currentSortDir={sortDir}
+                onSort={toggle}
+                thClassName="px-4 py-3 text-left text-xs font-semibold text-gray-600"
+              />
               <th className="px-5 py-3 text-right text-xs font-semibold text-gray-600">操作</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
-            {users.map((user) => {
+            {sortedUsers.map((user) => {
               const editable = canEdit(actorRole, user.role);
               return (
                 <tr key={user.id} className={clsx("transition-colors", user.isActive ? "hover:bg-gray-50/80" : "bg-gray-50/50 opacity-60")}>

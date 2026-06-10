@@ -2,6 +2,7 @@
 
 import { FileText, ImageIcon, File, Download, Trash2, X } from "lucide-react";
 import { useTransition, useState } from "react";
+import { toast } from "sonner";
 import { deleteAttachment } from "@/lib/actions/attachment";
 
 type Attachment = {
@@ -60,7 +61,11 @@ function AttachmentCard({ attachment, canDelete }: { attachment: Attachment; can
     if (!confirm(`確定要刪除「${attachment.filename}」嗎？`)) return;
     startTransition(async () => {
       const result = await deleteAttachment(attachment.id);
-      if (result?.error) alert(result.error);
+      if (result?.error) {
+        toast.error(result.error);
+      } else {
+        toast.success("附件已刪除");
+      }
     });
   }
 

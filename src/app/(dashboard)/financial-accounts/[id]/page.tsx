@@ -12,6 +12,8 @@ import { AddTransactionButton, EditInitialBalanceButton } from "./TransactionCli
 import { FilterSelect } from "@/components/ui/FilterSelect";
 import { FilterInput } from "@/components/ui/FilterInput";
 import { DateRangeFilter } from "@/components/ui/DateRangeFilter";
+import { Breadcrumb } from "@/components/ui/Breadcrumb";
+import { SortableHeader } from "@/components/ui/SortableHeader";
 
 type SearchParams = {
   dateFrom?: string;
@@ -19,6 +21,8 @@ type SearchParams = {
   type?: string;
   projectId?: string;
   keyword?: string;
+  sortBy?: string;
+  sortDir?: string;
 };
 
 function fmt(n: number) {
@@ -38,6 +42,10 @@ export default async function AccountDetailPage({
 
   const { id } = await params;
   const sp = await searchParams;
+
+  const SORT_FIELDS = ["transactionDate", "type", "amount", "summary", "counterparty", "project", "accountingSubject"];
+  const sortBy = SORT_FIELDS.includes(sp.sortBy ?? "") ? (sp.sortBy as string) : "transactionDate";
+  const sortDir = sp.sortDir === "asc" ? "asc" : "desc";
 
   const [detail, projects, accountingSubjects] = await Promise.all([
     getAccountDetail(id, sp),
@@ -65,35 +73,44 @@ export default async function AccountDetailPage({
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-start gap-3">
-        <Link href="/financial-accounts" className="mt-0.5 text-gray-400 hover:text-gray-600">
-          <ArrowLeft size={18} />
-        </Link>
-        <div className="flex-1">
-          <div className="flex items-center gap-2">
-            <Landmark size={18} className="text-blue-600" />
-            <h1 className="text-xl font-semibold text-gray-900">{account.name}</h1>
+      <div>
+        <Breadcrumb
+          items={[
+            { label: "首頁", href: "/dashboard" },
+            { label: "資金帳戶", href: "/financial-accounts" },
+            { label: account.name },
+          ]}
+        />
+        <div className="flex items-start gap-3">
+          <Link href="/financial-accounts" className="mt-0.5 text-gray-400 hover:text-gray-600">
+            <ArrowLeft size={18} />
+          </Link>
+          <div className="flex-1">
+            <div className="flex items-center gap-2">
+              <Landmark size={18} className="text-blue-600" />
+              <h1 className="text-xl font-semibold text-gray-900">{account.name}</h1>
+            </div>
+            {(account.accountLastFive || account.bankName) && (
+              <p className="text-sm text-gray-500 mt-0.5 ml-6.5">
+                {account.bankName && `${account.bankName}　`}
+                {account.accountLastFive && `帳號後五碼：${account.accountLastFive}`}
+              </p>
+            )}
           </div>
-          {(account.accountLastFive || account.bankName) && (
-            <p className="text-sm text-gray-500 mt-0.5 ml-6.5">
-              {account.bankName && `${account.bankName}　`}
-              {account.accountLastFive && `帳號後五碼：${account.accountLastFive}`}
-            </p>
-          )}
-        </div>
-        <div className="flex items-center gap-2">
-          {role === "ADMIN" && (
-            <EditInitialBalanceButton
+          <div className="flex items-center gap-2">
+            {role === "ADMIN" && (
+              <EditInitialBalanceButton
+                accountId={id}
+                currentInitialBalance={account.initialBalance}
+              />
+            )}
+            <AddTransactionButton
               accountId={id}
-              currentInitialBalance={account.initialBalance}
+              canWrite={canWrite}
+              projects={projects}
+              accountingSubjects={accountingSubjects}
             />
-          )}
-          <AddTransactionButton
-            accountId={id}
-            canWrite={canWrite}
-            projects={projects}
-            accountingSubjects={accountingSubjects}
-          />
+          </div>
         </div>
       </div>
 
@@ -149,13 +166,70 @@ export default async function AccountDetailPage({
             <table className="w-full text-sm">
               <thead className="bg-gray-50 text-xs text-gray-500 border-b border-gray-100">
                 <tr>
-                  <th className="px-4 py-2.5 text-left font-medium">日期</th>
-                  <th className="px-4 py-2.5 text-left font-medium">類型</th>
-                  <th className="px-4 py-2.5 text-right font-medium">金額</th>
-                  <th className="px-4 py-2.5 text-left font-medium">摘要</th>
-                  <th className="px-4 py-2.5 text-left font-medium hidden md:table-cell">交易對象</th>
-                  <th className="px-4 py-2.5 text-left font-medium hidden lg:table-cell">專案</th>
-                  <th className="px-4 py-2.5 text-left font-medium hidden lg:table-cell">會計科目</th>
+                  <SortableHeader
+                    label="日期"
+                    field="transactionDate"
+                    currentSortBy={sortBy}
+                    currentSortDir={sortDir}
+                    basePath={`/financial-accounts/${id}`}
+                    searchParams={sp}
+                    thClassName="px-4 py-2.5 text-left font-medium"
+                  />
+                  <SortableHeader
+                    label="類型"
+                    field="type"
+                    currentSortBy={sortBy}
+                    currentSortDir={sortDir}
+                    basePath={`/financial-accounts/${id}`}
+                    searchParams={sp}
+                    thClassName="px-4 py-2.5 text-left font-medium"
+                  />
+                  <SortableHeader
+                    label="金額"
+                    field="amount"
+                    currentSortBy={sortBy}
+                    currentSortDir={sortDir}
+                    basePath={`/financial-accounts/${id}`}
+                    searchParams={sp}
+                    align="right"
+                    thClassName="px-4 py-2.5 text-right font-medium"
+                  />
+                  <SortableHeader
+                    label="摘要"
+                    field="summary"
+                    currentSortBy={sortBy}
+                    currentSortDir={sortDir}
+                    basePath={`/financial-accounts/${id}`}
+                    searchParams={sp}
+                    thClassName="px-4 py-2.5 text-left font-medium"
+                  />
+                  <SortableHeader
+                    label="交易對象"
+                    field="counterparty"
+                    currentSortBy={sortBy}
+                    currentSortDir={sortDir}
+                    basePath={`/financial-accounts/${id}`}
+                    searchParams={sp}
+                    thClassName="px-4 py-2.5 text-left font-medium hidden md:table-cell"
+                  />
+                  <SortableHeader
+                    label="專案"
+                    field="project"
+                    currentSortBy={sortBy}
+                    currentSortDir={sortDir}
+                    basePath={`/financial-accounts/${id}`}
+                    searchParams={sp}
+                    thClassName="px-4 py-2.5 text-left font-medium hidden lg:table-cell"
+                  />
+                  <SortableHeader
+                    label="會計科目"
+                    field="accountingSubject"
+                    currentSortBy={sortBy}
+                    currentSortDir={sortDir}
+                    basePath={`/financial-accounts/${id}`}
+                    searchParams={sp}
+                    thClassName="px-4 py-2.5 text-left font-medium hidden lg:table-cell"
+                  />
                   <th className="px-4 py-2.5 text-left font-medium hidden xl:table-cell">關聯請款</th>
                 </tr>
               </thead>

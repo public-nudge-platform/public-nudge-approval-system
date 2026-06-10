@@ -1,7 +1,11 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
+import { toast } from "sonner";
 import { BookOpen, Plus, Search, Pencil, X, Check, Power } from "lucide-react";
+import { ClientSortableHeader } from "@/components/ui/ClientSortableHeader";
+import { useSortToggle } from "@/hooks/useSortToggle";
+import { compareStrings, compareNullableStrings } from "@/lib/sort";
 
 type Subject = {
   id: string;
@@ -29,6 +33,25 @@ export function AccountingSubjectsClient({ subjects: initial }: { subjects: Subj
       filterActive === "" ? true : filterActive === "true" ? s.isActive : !s.isActive;
     return matchQ && matchActive;
   });
+
+  const { sortBy, sortDir, toggle } = useSortToggle("code", "asc");
+
+  const sorted = useMemo(() => {
+    const arr = [...filtered];
+    arr.sort((a, b) => {
+      switch (sortBy) {
+        case "code":
+          return compareStrings(a.code, b.code, sortDir);
+        case "name":
+          return compareStrings(a.name, b.name, sortDir);
+        case "direction":
+          return compareNullableStrings(a.direction || null, b.direction || null, sortDir);
+        default:
+          return 0;
+      }
+    });
+    return arr;
+  }, [filtered, sortBy, sortDir]);
 
   function openNew() {
     setForm({ code: "", name: "", direction: "借", isActive: true });
@@ -58,8 +81,9 @@ export function AccountingSubjectsClient({ subjects: initial }: { subjects: Subj
             body: JSON.stringify(form),
           });
           const data = await res.json();
-          if (!res.ok) { setError(data.error ?? "建立失敗"); return; }
+          if (!res.ok) { setError(data.error ?? "建立失敗"); toast.error(data.error ?? "建立失敗"); return; }
           setSubjects((prev) => [...prev, data].sort((a, b) => a.code.localeCompare(b.code)));
+          toast.success("會計科目已新增");
         } else if (mode === "edit" && editing) {
           const res = await fetch(`/api/accounting-subjects/${editing.id}`, {
             method: "PATCH",
@@ -67,12 +91,14 @@ export function AccountingSubjectsClient({ subjects: initial }: { subjects: Subj
             body: JSON.stringify(form),
           });
           const data = await res.json();
-          if (!res.ok) { setError(data.error ?? "更新失敗"); return; }
+          if (!res.ok) { setError(data.error ?? "更新失敗"); toast.error(data.error ?? "更新失敗"); return; }
           setSubjects((prev) => prev.map((s) => s.id === editing.id ? data : s).sort((a, b) => a.code.localeCompare(b.code)));
+          toast.success("會計科目已更新");
         }
         setMode("list");
       } catch {
         setError("網路錯誤");
+        toast.error("網路錯誤");
       }
     });
   }
@@ -87,6 +113,9 @@ export function AccountingSubjectsClient({ subjects: initial }: { subjects: Subj
       if (res.ok) {
         const data = await res.json();
         setSubjects((prev) => prev.map((x) => x.id === s.id ? data : x));
+        toast.success(data.isActive ? "已啟用此科目" : "已停用此科目");
+      } else {
+        toast.error("操作失敗");
       }
     });
   }
@@ -219,15 +248,36 @@ export function AccountingSubjectsClient({ subjects: initial }: { subjects: Subj
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-gray-50 border-b border-gray-200">
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">代號</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">名稱</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">借/貸</th>
+                    <ClientSortableHeader
+                      label="代號"
+                      field="code"
+                      currentSortBy={sortBy}
+                      currentSortDir={sortDir}
+                      onSort={toggle}
+                      thClassName="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide"
+                    />
+                    <ClientSortableHeader
+                      label="名稱"
+                      field="name"
+                      currentSortBy={sortBy}
+                      currentSortDir={sortDir}
+                      onSort={toggle}
+                      thClassName="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide"
+                    />
+                    <ClientSortableHeader
+                      label="借/貸"
+                      field="direction"
+                      currentSortBy={sortBy}
+                      currentSortDir={sortDir}
+                      onSort={toggle}
+                      thClassName="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide"
+                    />
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">啟用</th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">操作</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  {filtered.map((s) => (
+                  {sorted.map((s) => (
                     <tr key={s.id} className={`hover:bg-gray-50/80 transition-colors ${!s.isActive ? "opacity-50" : ""}`}>
                       <td className="px-4 py-3 font-mono text-gray-700">{s.code}</td>
                       <td className="px-4 py-3 text-gray-900">{s.name}</td>

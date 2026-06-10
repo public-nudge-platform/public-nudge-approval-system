@@ -71,15 +71,39 @@ function calcBalance(acc: {
   }, base);
 }
 
+function buildTransactionOrderBy(sortBy: string | undefined, sortDir: "asc" | "desc") {
+  switch (sortBy) {
+    case "type":
+      return { type: sortDir };
+    case "amount":
+      return { amount: sortDir };
+    case "summary":
+      return { summary: sortDir };
+    case "counterparty":
+      return { counterparty: { sort: sortDir, nulls: "last" as const } };
+    case "project":
+      return { project: { name: sortDir } };
+    case "accountingSubject":
+      return { accountingSubject: { code: sortDir } };
+    case "transactionDate":
+    default:
+      return { transactionDate: sortDir };
+  }
+}
+
 export async function getAccountDetail(accountId: string, params?: {
   dateFrom?: string;
   dateTo?: string;
   type?: string;
   projectId?: string;
   keyword?: string;
+  sortBy?: string;
+  sortDir?: string;
 }) {
   const session = await auth();
   if (!session || !canView(session.user.role)) return null;
+
+  const sortDir: "asc" | "desc" = params?.sortDir === "asc" ? "asc" : "desc";
 
   const account = await prisma.financialAccount.findUnique({
     where: { id: accountId },
@@ -108,7 +132,7 @@ export async function getAccountDetail(accountId: string, params?: {
           request: { select: { id: true, requestNumber: true, title: true } },
           createdBy: { select: { name: true } },
         },
-        orderBy: { transactionDate: "desc" },
+        orderBy: buildTransactionOrderBy(params?.sortBy, sortDir),
       },
     },
   });

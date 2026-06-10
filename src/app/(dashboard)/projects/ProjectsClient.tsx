@@ -1,12 +1,15 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import {
   PlusCircle, Pencil, Trash2,
   X, AlertCircle, ChevronRight, ExternalLink,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { StatusBadge, TypeBadge } from "@/components/ui/Badge";
+import { ClientSortableHeader } from "@/components/ui/ClientSortableHeader";
+import { useSortToggle } from "@/hooks/useSortToggle";
+import { compareStrings, compareNumbers, compareDates, compareNullableStrings } from "@/lib/sort";
 import { PROJECT_STATUS_LABEL, PROJECT_STATUS_COLOR } from "@/lib/constants";
 import { createProject, updateProject, setProjectStatus, deleteProject } from "@/lib/actions/project";
 import type { ProjectStatus, RequestStatus, RequestType } from "@prisma/client";
@@ -59,6 +62,38 @@ function RequestsTable({ requests, projectId, totalCount }: {
   projectId: string;
   totalCount: number;
 }) {
+  const { sortBy, sortDir, toggle } = useSortToggle("", "desc");
+
+  const sortedRequests = useMemo(() => {
+    if (!sortBy) return requests;
+    const arr = [...requests];
+    arr.sort((a, b) => {
+      switch (sortBy) {
+        case "requestNumber":
+          return compareNullableStrings(a.requestNumber, b.requestNumber, sortDir);
+        case "type":
+          return compareStrings(a.type, b.type, sortDir);
+        case "title":
+          return compareStrings(a.title, b.title, sortDir);
+        case "submitter":
+          return compareStrings(a.submitter.name, b.submitter.name, sortDir);
+        case "amount":
+          return compareNumbers(Number(a.amount), Number(b.amount), sortDir);
+        case "status":
+          return compareStrings(a.status, b.status, sortDir);
+        case "requestDate":
+          return compareDates(a.requestDate, b.requestDate, sortDir);
+        case "accountingSubject":
+          return compareNullableStrings(a.accountingSubject?.code ?? null, b.accountingSubject?.code ?? null, sortDir);
+        case "finalAccountingSubject":
+          return compareNullableStrings(a.finalAccountingSubject?.code ?? null, b.finalAccountingSubject?.code ?? null, sortDir);
+        default:
+          return 0;
+      }
+    });
+    return arr;
+  }, [requests, sortBy, sortDir]);
+
   if (requests.length === 0) {
     return <p className="text-xs text-gray-400 px-5 py-4">此專案尚無請款單</p>;
   }
@@ -69,20 +104,84 @@ function RequestsTable({ requests, projectId, totalCount }: {
         <table className="w-full text-xs min-w-[680px]">
           <thead>
             <tr className="bg-gray-50/80 border-b border-gray-100">
-              <th className="px-4 py-2 text-left font-semibold text-gray-500">流水編號</th>
-              <th className="px-3 py-2 text-left font-semibold text-gray-500">類型</th>
-              <th className="px-3 py-2 text-left font-semibold text-gray-500">標題</th>
-              <th className="px-3 py-2 text-left font-semibold text-gray-500">申請人</th>
-              <th className="px-3 py-2 text-right font-semibold text-gray-500">金額</th>
-              <th className="px-3 py-2 text-left font-semibold text-gray-500">狀態</th>
-              <th className="px-3 py-2 text-left font-semibold text-gray-500">申請日期</th>
-              <th className="px-3 py-2 text-left font-semibold text-gray-500">申請科目</th>
-              <th className="px-3 py-2 text-left font-semibold text-gray-500">正式科目</th>
+              <ClientSortableHeader
+                label="流水編號"
+                field="requestNumber"
+                currentSortBy={sortBy}
+                currentSortDir={sortDir}
+                onSort={toggle}
+                thClassName="px-4 py-2 text-left font-semibold text-gray-500"
+              />
+              <ClientSortableHeader
+                label="類型"
+                field="type"
+                currentSortBy={sortBy}
+                currentSortDir={sortDir}
+                onSort={toggle}
+                thClassName="px-3 py-2 text-left font-semibold text-gray-500"
+              />
+              <ClientSortableHeader
+                label="標題"
+                field="title"
+                currentSortBy={sortBy}
+                currentSortDir={sortDir}
+                onSort={toggle}
+                thClassName="px-3 py-2 text-left font-semibold text-gray-500"
+              />
+              <ClientSortableHeader
+                label="申請人"
+                field="submitter"
+                currentSortBy={sortBy}
+                currentSortDir={sortDir}
+                onSort={toggle}
+                thClassName="px-3 py-2 text-left font-semibold text-gray-500"
+              />
+              <ClientSortableHeader
+                label="金額"
+                field="amount"
+                currentSortBy={sortBy}
+                currentSortDir={sortDir}
+                onSort={toggle}
+                align="right"
+                thClassName="px-3 py-2 text-right font-semibold text-gray-500"
+              />
+              <ClientSortableHeader
+                label="狀態"
+                field="status"
+                currentSortBy={sortBy}
+                currentSortDir={sortDir}
+                onSort={toggle}
+                thClassName="px-3 py-2 text-left font-semibold text-gray-500"
+              />
+              <ClientSortableHeader
+                label="申請日期"
+                field="requestDate"
+                currentSortBy={sortBy}
+                currentSortDir={sortDir}
+                onSort={toggle}
+                thClassName="px-3 py-2 text-left font-semibold text-gray-500"
+              />
+              <ClientSortableHeader
+                label="申請科目"
+                field="accountingSubject"
+                currentSortBy={sortBy}
+                currentSortDir={sortDir}
+                onSort={toggle}
+                thClassName="px-3 py-2 text-left font-semibold text-gray-500"
+              />
+              <ClientSortableHeader
+                label="正式科目"
+                field="finalAccountingSubject"
+                currentSortBy={sortBy}
+                currentSortDir={sortDir}
+                onSort={toggle}
+                thClassName="px-3 py-2 text-left font-semibold text-gray-500"
+              />
               <th className="px-4 py-2 text-right font-semibold text-gray-500" />
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
-            {requests.map((req) => (
+            {sortedRequests.map((req) => (
               <tr key={req.id} className="hover:bg-gray-50/60 transition-colors">
                 <td className="px-4 py-2 font-mono text-gray-500">{req.requestNumber ?? "—"}</td>
                 <td className="px-3 py-2"><TypeBadge type={req.type} /></td>

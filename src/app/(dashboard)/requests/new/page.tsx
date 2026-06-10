@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { NewRequestForm } from "@/components/forms/NewRequestForm";
 import { ChevronLeft } from "lucide-react";
 import Link from "next/link";
+import { Breadcrumb } from "@/components/ui/Breadcrumb";
 
 export default async function NewRequestPage() {
   await auth();
@@ -36,6 +37,13 @@ export default async function NewRequestPage() {
 
   return (
     <div>
+      <Breadcrumb
+        items={[
+          { label: "首頁", href: "/dashboard" },
+          { label: "請款單管理", href: "/requests" },
+          { label: "新增申請單" },
+        ]}
+      />
       <div className="flex items-center gap-2 mb-6">
         <Link href="/requests" className="flex items-center gap-1 text-sm text-gray-400 hover:text-gray-600 transition-colors">
           <ChevronLeft size={14} />

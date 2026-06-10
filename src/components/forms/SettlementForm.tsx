@@ -2,6 +2,7 @@
 
 import { useTransition, useState } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { submitSettlement } from "@/lib/actions/request";
 import { Button } from "@/components/ui/Button";
 import { UploadZone } from "@/components/ui/UploadZone";
@@ -41,8 +42,10 @@ export function SettlementForm({ requestId, prepaidAmount, settlementAttachments
       const result = await submitSettlement(requestId, { actualAmount: amount, reimbursementNote: note });
       if (result?.error) {
         setError(result.error);
+        toast.error(result.error);
       } else {
         setSuccess(true);
+        toast.success("沖銷已送出，等待財務確認");
         router.refresh();
       }
     });

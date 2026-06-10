@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { toast } from "sonner";
 import { Download, X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 
@@ -32,6 +33,7 @@ export function RequestTemplateExportButton({ projects }: Props) {
 
   async function handleExport() {
     setLoading(true);
+    const toastId = toast.loading("匯出中…");
     try {
       const params = new URLSearchParams();
       if (projectId) params.set("project", projectId);
@@ -45,7 +47,7 @@ export function RequestTemplateExportButton({ projects }: Props) {
       const res = await fetch(`/api/export/requests/template?${params}`);
       if (!res.ok) {
         const err = await res.json().catch(() => ({ error: "匯出失敗" }));
-        alert(err.error ?? "匯出失敗");
+        toast.error(err.error ?? "匯出失敗", { id: toastId });
         return;
       }
 
@@ -63,7 +65,10 @@ export function RequestTemplateExportButton({ projects }: Props) {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
+      toast.success("匯出完成", { id: toastId });
       setOpen(false);
+    } catch {
+      toast.error("匯出失敗，請稍後再試", { id: toastId });
     } finally {
       setLoading(false);
     }

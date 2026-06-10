@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { Plus, Pencil, Trash2, ChevronsUpDown, ChevronUp } from "lucide-react";
 import {
   createPaymentAdjustment,
@@ -180,8 +181,8 @@ export function PaymentAdjustmentSection({ requestId, adjustments, canWrite, acc
         occurredAt: form.occurredAt,
         note: form.note || undefined,
       });
-      if (res?.error) { setError(res.error); }
-      else { setShowAdd(false); router.refresh(); }
+      if (res?.error) { setError(res.error); toast.error(res.error); }
+      else { setShowAdd(false); toast.success("已新增付款調整"); router.refresh(); }
     });
   }
 
@@ -197,8 +198,8 @@ export function PaymentAdjustmentSection({ requestId, adjustments, canWrite, acc
         occurredAt: form.occurredAt,
         note: form.note || undefined,
       });
-      if (res?.error) { setError(res.error); }
-      else { setEditingId(null); router.refresh(); }
+      if (res?.error) { setError(res.error); toast.error(res.error); }
+      else { setEditingId(null); toast.success("付款調整已更新"); router.refresh(); }
     });
   }
 
@@ -207,7 +208,12 @@ export function PaymentAdjustmentSection({ requestId, adjustments, canWrite, acc
     setDeletingId(id);
     startTransition(async () => {
       const res = await deletePaymentAdjustment(id);
-      if (res?.error) { setError(res.error); }
+      if (res?.error) {
+        setError(res.error);
+        toast.error(res.error);
+      } else {
+        toast.success("已刪除付款調整");
+      }
       setDeletingId(null);
       router.refresh();
     });

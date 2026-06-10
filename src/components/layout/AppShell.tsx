@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { clsx } from "clsx";
+import { Toaster } from "sonner";
 import { Sidebar } from "./Sidebar";
 import { Header } from "./Header";
 import type { UserRole } from "@prisma/client";
@@ -14,11 +15,28 @@ type Props = {
   children: React.ReactNode;
 };
 
+const SIDEBAR_COLLAPSED_KEY = "sidebar-collapsed";
+
 export function AppShell({ role, user, unreadCount, children }: Props) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
+
+  useEffect(() => {
+    const stored = window.localStorage.getItem(SIDEBAR_COLLAPSED_KEY);
+    if (stored === "true") setCollapsed(true);
+  }, []);
+
+  const toggleCollapsed = () => {
+    setCollapsed((prev) => {
+      const next = !prev;
+      window.localStorage.setItem(SIDEBAR_COLLAPSED_KEY, String(next));
+      return next;
+    });
+  };
 
   return (
     <div className="flex h-dvh bg-gray-50 overflow-hidden">
+      <Toaster position="top-center" richColors closeButton />
       {/* Mobile backdrop */}
       {sidebarOpen && (
         <div
@@ -35,7 +53,12 @@ export function AppShell({ role, user, unreadCount, children }: Props) {
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
-        <Sidebar role={role} onClose={() => setSidebarOpen(false)} />
+        <Sidebar
+          role={role}
+          onClose={() => setSidebarOpen(false)}
+          collapsed={collapsed}
+          onToggleCollapse={toggleCollapsed}
+        />
       </div>
 
       {/* Main content */}

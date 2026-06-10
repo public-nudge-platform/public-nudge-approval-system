@@ -2,6 +2,7 @@
 
 import { useTransition, useState } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/Button";
 import { createUser, updateUser, resetPassword } from "@/lib/actions/user";
 import { USER_ROLE_LABEL } from "@/lib/constants";
@@ -48,7 +49,8 @@ export function CreateUserModal({ actorRole, onClose }: { actorRole: UserRole; o
         password: fd.get("password") as string,
         role: fd.get("role") as UserRole,
       });
-      if (result?.error) { setError(result.error); return; }
+      if (result?.error) { setError(result.error); toast.error(result.error); return; }
+      toast.success("使用者已建立");
       router.refresh();
       onClose();
     });
@@ -123,7 +125,8 @@ export function EditUserModal({
         role: fd.get("role") as UserRole,
         isActive,
       });
-      if (result?.error) { setError(result.error); return; }
+      if (result?.error) { setError(result.error); toast.error(result.error); return; }
+      toast.success("使用者資料已更新");
       router.refresh();
       onClose();
     });
@@ -190,7 +193,8 @@ export function ResetPasswordModal({ userId, userName, onClose }: { userId: stri
     if (pw !== confirm) { setError("兩次密碼不一致"); return; }
     start(async () => {
       const result = await resetPassword(userId, pw);
-      if (result?.error) { setError(result.error); return; }
+      if (result?.error) { setError(result.error); toast.error(result.error); return; }
+      toast.success("密碼已重設");
       router.refresh();
       onClose();
     });

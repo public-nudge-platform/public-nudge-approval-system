@@ -12,7 +12,9 @@ import { FilterInput } from "@/components/ui/FilterInput";
 import { AdvancedFiltersPanel } from "@/components/ui/AdvancedFiltersPanel";
 import { ExportButton } from "@/components/ui/ExportButton";
 import { RequestTemplateExportButton } from "@/components/ui/RequestTemplateExportButton";
+import { SortableHeader } from "@/components/ui/SortableHeader";
 import { FINANCE_ROLES } from "@/lib/constants";
+import { STROKE_COLLATOR } from "@/lib/sort";
 import { Suspense } from "react";
 
 type SearchParams = {
@@ -39,31 +41,50 @@ const SORT_OPTIONS = [
   { value: "createdAt", label: "建立時間" },
   { value: "requestDate", label: "申請日期" },
   { value: "amount", label: "金額" },
+  { value: "title", label: "標題" },
+  { value: "project", label: "專案" },
+  { value: "type", label: "類型" },
+  { value: "submitter", label: "申請人" },
+  { value: "status", label: "狀態" },
 ];
 
-const SORT_DIR_OPTIONS = [
-  { value: "desc", label: "降冪" },
-  { value: "asc", label: "升冪" },
-];
-
-type SortField = "updatedAt" | "createdAt" | "requestDate" | "amount";
+type SortField =
+  | "updatedAt"
+  | "createdAt"
+  | "requestDate"
+  | "amount"
+  | "title"
+  | "project"
+  | "type"
+  | "submitter"
+  | "status";
 const VALID_SORT_FIELDS: string[] = SORT_OPTIONS.map((o) => o.value);
+
+function resolveSort(params: SearchParams): { sortBy: SortField; sortDir: "asc" | "desc" } {
+  const sortBy: SortField = VALID_SORT_FIELDS.includes(params.sortBy ?? "")
+    ? (params.sortBy as SortField)
+    : "updatedAt";
+  const sortDir = params.sortDir === "asc" ? "asc" : "desc";
+  return { sortBy, sortDir };
+}
 
 async function getRequests(userId: string, role: UserRole, params: SearchParams) {
   const isAdmin = role === "ADMIN";
   const isApprover = ["PRESIDENT", "FOUNDER_AGENT"].includes(role);
   const isFinance = role === "FINANCE";
 
-  const sortBy: SortField = VALID_SORT_FIELDS.includes(params.sortBy ?? "")
-    ? (params.sortBy as SortField)
-    : "updatedAt";
-  const sortDir = params.sortDir === "asc" ? "asc" : "desc";
+  const { sortBy, sortDir } = resolveSort(params);
 
-  const orderByMap: Record<SortField, object> = {
+  // 申請人（submitter）改於查詢後於程式中依筆畫排序，故不在此處映射
+  const orderByMap: Partial<Record<SortField, object>> = {
     updatedAt: { updatedAt: sortDir },
     createdAt: { createdAt: sortDir },
     requestDate: { requestDate: sortDir },
     amount: { amount: sortDir },
+    title: { title: sortDir },
+    project: { project: { name: sortDir } },
+    type: { type: sortDir },
+    status: { status: sortDir },
   };
 
   const PAY_STATUSES: RequestStatus[] = ["APPROVED", "PAID"];
@@ -119,9 +140,9 @@ async function getRequests(userId: string, role: UserRole, params: SearchParams)
     }),
   };
 
-  return prisma.request.findMany({
+  const requests = await prisma.request.findMany({
     where,
-    orderBy: orderByMap[sortBy],
+    orderBy: orderByMap[sortBy] ?? { updatedAt: "desc" },
     include: {
       submitter: { select: { name: true } },
       project: { select: { id: true, name: true } },
@@ -129,6 +150,15 @@ async function getRequests(userId: string, role: UserRole, params: SearchParams)
       finalAccountingSubject: { select: { code: true, name: true } },
     },
   });
+
+  if (sortBy === "submitter") {
+    requests.sort((a, b) => {
+      const cmp = STROKE_COLLATOR.compare(a.submitter.name, b.submitter.name);
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+  }
+
+  return requests;
 }
 
 export default async function RequestsPage({
@@ -149,6 +179,7 @@ export default async function RequestsPage({
   const hasAdvancedFilters = !!(params.dateFrom || params.dateTo || params.amountMin || params.amountMax || params.payStatus || params.offsetStatus);
   const hasSortOverride = !!(params.sortBy || (params.sortDir && params.sortDir !== "desc"));
   const hasFilters = hasBasicFilters || hasAdvancedFilters || hasSortOverride;
+  const { sortBy, sortDir } = resolveSort(params);
 
   return (
     <div className="space-y-4">
@@ -208,18 +239,6 @@ export default async function RequestsPage({
               value={params.accountingSubject}
               label="全部科目"
               options={accountingSubjects.map((s) => ({ value: s.id, label: `${s.code} ${s.name}` }))}
-            />
-            <FilterSelect
-              name="sortBy"
-              value={params.sortBy}
-              label="排序依據"
-              options={SORT_OPTIONS}
-            />
-            <FilterSelect
-              name="sortDir"
-              value={params.sortDir}
-              label="降冪"
-              options={SORT_DIR_OPTIONS}
             />
           </div>
 
@@ -343,13 +362,63 @@ export default async function RequestsPage({
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-200">
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">專案</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">標題</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">類型</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">申請人</th>
-                  <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wide">金額</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">狀態</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">日期</th>
+                  <SortableHeader
+                    label="專案"
+                    field="project"
+                    currentSortBy={sortBy}
+                    currentSortDir={sortDir}
+                    basePath="/requests"
+                    searchParams={params}
+                  />
+                  <SortableHeader
+                    label="標題"
+                    field="title"
+                    currentSortBy={sortBy}
+                    currentSortDir={sortDir}
+                    basePath="/requests"
+                    searchParams={params}
+                  />
+                  <SortableHeader
+                    label="類型"
+                    field="type"
+                    currentSortBy={sortBy}
+                    currentSortDir={sortDir}
+                    basePath="/requests"
+                    searchParams={params}
+                  />
+                  <SortableHeader
+                    label="申請人"
+                    field="submitter"
+                    currentSortBy={sortBy}
+                    currentSortDir={sortDir}
+                    basePath="/requests"
+                    searchParams={params}
+                  />
+                  <SortableHeader
+                    label="金額"
+                    field="amount"
+                    currentSortBy={sortBy}
+                    currentSortDir={sortDir}
+                    basePath="/requests"
+                    searchParams={params}
+                    align="right"
+                  />
+                  <SortableHeader
+                    label="狀態"
+                    field="status"
+                    currentSortBy={sortBy}
+                    currentSortDir={sortDir}
+                    basePath="/requests"
+                    searchParams={params}
+                  />
+                  <SortableHeader
+                    label="日期"
+                    field="createdAt"
+                    currentSortBy={sortBy}
+                    currentSortDir={sortDir}
+                    basePath="/requests"
+                    searchParams={params}
+                  />
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">

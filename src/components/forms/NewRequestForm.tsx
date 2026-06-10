@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { toast } from "sonner";
 import { clsx } from "clsx";
 import { PlusCircle, Trash2, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/Button";
@@ -178,7 +179,10 @@ export function NewRequestForm({ projects = [], recipients = [], accountingSubje
     setSavingRecipient(false);
     if (!result?.error) {
       setSavedRecipient(true);
+      toast.success("已加入常用收款人");
       setTimeout(() => setSavedRecipient(false), 2500);
+    } else {
+      toast.error(result.error);
     }
   }
 
@@ -238,7 +242,12 @@ export function NewRequestForm({ projects = [], recipients = [], accountingSubje
         ? await updateRequest(initialRequest!.id, payload)
         : await createRequest(payload);
 
-      if (!result || "error" in result) { setError(("error" in result ? result.error : null) ?? "建立失敗"); return; }
+      if (!result || "error" in result) {
+        const message = ("error" in result ? result.error : null) ?? "建立失敗";
+        setError(message);
+        toast.error(message);
+        return;
+      }
 
       setFieldErrors({});
 
@@ -249,6 +258,7 @@ export function NewRequestForm({ projects = [], recipients = [], accountingSubje
         return fetch("/api/upload", { method: "POST", body: fd });
       }));
 
+      toast.success(submit ? "申請單已送出" : "草稿已儲存");
       router.push(isEdit && returnTo ? returnTo : `/requests/${result.id}`);
     });
   }

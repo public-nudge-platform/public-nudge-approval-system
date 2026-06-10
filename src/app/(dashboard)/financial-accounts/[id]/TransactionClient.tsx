@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { createTransaction, updateAccountInfo } from "@/lib/actions/financialAccount";
 import { Button } from "@/components/ui/Button";
 import { PlusCircle, X, Pencil } from "lucide-react";
@@ -33,8 +34,10 @@ export function EditInitialBalanceButton({
       const result = await updateAccountInfo(accountId, { initialBalance: num });
       if (result?.error) {
         setError(result.error);
+        toast.error(result.error);
       } else {
         setOpen(false);
+        toast.success("期初餘額已更新");
         router.refresh();
       }
     });
@@ -127,8 +130,10 @@ export function AddTransactionButton({ accountId, canWrite, projects, accounting
       });
       if (result.error) {
         setError(result.error);
+        toast.error(result.error);
       } else {
         setOpen(false);
+        toast.success(txType === "INCOME" ? "已新增入帳紀錄" : "已新增出帳紀錄");
         router.refresh();
       }
     });

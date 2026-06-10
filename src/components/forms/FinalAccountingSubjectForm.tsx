@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { toast } from "sonner";
 import { updateFinalAccountingSubject } from "@/lib/actions/request";
 import { Check } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -28,8 +29,9 @@ export function FinalAccountingSubjectForm({
     setError(null);
     startTransition(async () => {
       const result = await updateFinalAccountingSubject(requestId, selected);
-      if (result?.error) { setError(result.error); return; }
+      if (result?.error) { setError(result.error); toast.error(result.error); return; }
       setSaved(true);
+      toast.success("正式會計科目已更新");
       router.refresh();
     });
   }

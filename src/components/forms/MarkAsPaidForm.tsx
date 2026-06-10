@@ -2,6 +2,7 @@
 
 import { useTransition, useState } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { markAsPaid } from "@/lib/actions/request";
 import { Button } from "@/components/ui/Button";
 import { UploadZone } from "@/components/ui/UploadZone";
@@ -58,8 +59,10 @@ export function MarkAsPaidForm({
       });
       if (result?.error) {
         setError(result.error);
+        toast.error(result.error);
       } else {
         setSuccess(true);
+        toast.success("付款已記錄完成");
         router.refresh();
       }
     });

@@ -19,6 +19,7 @@ import { ChevronLeft, Calendar, User, Building2, Banknote, FolderOpen, Hash, Rec
 import { FinalAccountingSubjectForm } from "@/components/forms/FinalAccountingSubjectForm";
 import { PaymentAdjustmentSection } from "@/components/forms/PaymentAdjustmentSection";
 import { UploadZone } from "@/components/ui/UploadZone";
+import { Breadcrumb } from "@/components/ui/Breadcrumb";
 
 const OFFSET_STATUSES = ["PENDING_SETTLEMENT", "OFFSET_SUBMITTED", "OFFSET_RETURNED", "CLOSED"] as const;
 const PAID_STATUSES = ["PAID", "PENDING_SETTLEMENT", "OFFSET_SUBMITTED", "OFFSET_RETURNED", "CLOSED"] as const;
@@ -261,10 +262,25 @@ export default async function RequestDetailPage({
 
   const timeline = buildTimeline(request);
 
+  const listLabel = returnTo.startsWith("/projects/")
+    ? request.project?.name ?? "專案請款列表"
+    : returnTo === "/finance"
+    ? "財務管理"
+    : returnTo === "/approvals"
+    ? "待我簽核"
+    : "請款單管理";
+
   return (
     <div className="space-y-6">
       {/* Header */}
       <div>
+        <Breadcrumb
+          items={[
+            { label: "首頁", href: "/dashboard" },
+            { label: listLabel, href: returnTo },
+            { label: request.requestNumber ?? request.title },
+          ]}
+        />
         <Link href={returnTo} className="flex items-center gap-1 text-sm text-gray-400 hover:text-gray-600 mb-3">
           <ChevronLeft size={14} />返回列表
         </Link>

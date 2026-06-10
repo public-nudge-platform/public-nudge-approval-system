@@ -2,6 +2,7 @@
 
 import { useTransition, useState } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { reviewSettlement } from "@/lib/actions/request";
 import { Button } from "@/components/ui/Button";
 import { CheckCircle2, RotateCcw } from "lucide-react";
@@ -23,8 +24,11 @@ export function SettlementReviewForm({ requestId }: Props) {
       const result = await reviewSettlement(requestId, action, comment || undefined);
       if (result?.error) {
         setError(result.error);
+        toast.error(result.error);
       } else {
-        setSuccess(action === "APPROVED" ? "沖銷已確認完成" : "已退回補件");
+        const message = action === "APPROVED" ? "沖銷已確認完成" : "已退回補件";
+        setSuccess(message);
+        toast.success(message);
         router.refresh();
       }
     });

@@ -16,6 +16,9 @@ import { ChevronLeft, Search } from "lucide-react";
 import { clsx } from "clsx";
 import { FilterSelect } from "@/components/ui/FilterSelect";
 import { FilterInput } from "@/components/ui/FilterInput";
+import { Breadcrumb } from "@/components/ui/Breadcrumb";
+import { SortableHeader } from "@/components/ui/SortableHeader";
+import { STROKE_COLLATOR } from "@/lib/sort";
 import { Suspense } from "react";
 
 type SearchParams = {
@@ -34,14 +37,21 @@ const SORT_OPTIONS = [
   { value: "requestDate", label: "申請日期" },
   { value: "amount", label: "金額" },
   { value: "updatedAt", label: "更新時間" },
+  { value: "title", label: "標題" },
+  { value: "type", label: "類型" },
+  { value: "submitter", label: "申請人" },
+  { value: "status", label: "狀態" },
 ];
 
-const SORT_DIR_OPTIONS = [
-  { value: "desc", label: "降冪" },
-  { value: "asc", label: "升冪" },
-];
-
-type SortField = "createdAt" | "requestDate" | "amount" | "updatedAt";
+type SortField =
+  | "createdAt"
+  | "requestDate"
+  | "amount"
+  | "updatedAt"
+  | "title"
+  | "type"
+  | "submitter"
+  | "status";
 const VALID_SORT_FIELDS: string[] = SORT_OPTIONS.map((o) => o.value);
 
 export default async function ProjectRequestsPage({
@@ -65,11 +75,15 @@ export default async function ProjectRequestsPage({
     : "createdAt";
   const sortDir = filters.sortDir === "asc" ? "asc" : "desc";
 
-  const orderByMap: Record<SortField, object> = {
+  // 申請人（submitter）改於查詢後於程式中依筆畫排序，故不在此處映射
+  const orderByMap: Partial<Record<SortField, object>> = {
     createdAt: { createdAt: sortDir },
     requestDate: { requestDate: sortDir },
     amount: { amount: sortDir },
     updatedAt: { updatedAt: sortDir },
+    title: { title: sortDir },
+    type: { type: sortDir },
+    status: { status: sortDir },
   };
 
   const requestWhere = {
@@ -98,7 +112,7 @@ export default async function ProjectRequestsPage({
     include: {
       requests: {
         where: requestWhere,
-        orderBy: orderByMap[sortBy],
+        orderBy: orderByMap[sortBy] ?? { createdAt: "desc" },
         select: {
           id: true,
           requestNumber: true,
@@ -118,10 +132,24 @@ export default async function ProjectRequestsPage({
 
   if (!project) notFound();
 
+  if (sortBy === "submitter") {
+    project.requests.sort((a, b) => {
+      const cmp = STROKE_COLLATOR.compare(a.submitter.name, b.submitter.name);
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+  }
+
   return (
     <div className="space-y-4">
       {/* Header */}
       <div>
+        <Breadcrumb
+          items={[
+            { label: "首頁", href: "/dashboard" },
+            { label: "專案管理", href: "/projects" },
+            { label: project.name },
+          ]}
+        />
         <Link
           href="/projects"
           className="flex items-center gap-1 text-sm text-gray-400 hover:text-gray-600 mb-3 transition-colors"
@@ -167,8 +195,6 @@ export default async function ProjectRequestsPage({
           <FilterInput name="dateFrom" type="date" value={filters.dateFrom} />
           <span className="text-xs text-gray-500">—</span>
           <FilterInput name="dateTo" type="date" value={filters.dateTo} />
-          <FilterSelect name="sortBy" value={filters.sortBy} label="排序依據" options={SORT_OPTIONS} />
-          <FilterSelect name="sortDir" value={filters.sortDir} label="降冪" options={SORT_DIR_OPTIONS} />
           {hasFilters && (
             <Link
               href={`/projects/${id}/requests`}
@@ -194,12 +220,61 @@ export default async function ProjectRequestsPage({
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-200">
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500">流水編號</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500">類型</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500">標題</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500">申請人</th>
-                  <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500">金額</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500">狀態</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500">申請日期</th>
+                  <SortableHeader
+                    label="類型"
+                    field="type"
+                    currentSortBy={sortBy}
+                    currentSortDir={sortDir}
+                    basePath={`/projects/${id}/requests`}
+                    searchParams={filters}
+                    thClassName="px-4 py-3 text-left text-xs font-semibold text-gray-500"
+                  />
+                  <SortableHeader
+                    label="標題"
+                    field="title"
+                    currentSortBy={sortBy}
+                    currentSortDir={sortDir}
+                    basePath={`/projects/${id}/requests`}
+                    searchParams={filters}
+                    thClassName="px-4 py-3 text-left text-xs font-semibold text-gray-500"
+                  />
+                  <SortableHeader
+                    label="申請人"
+                    field="submitter"
+                    currentSortBy={sortBy}
+                    currentSortDir={sortDir}
+                    basePath={`/projects/${id}/requests`}
+                    searchParams={filters}
+                    thClassName="px-4 py-3 text-left text-xs font-semibold text-gray-500"
+                  />
+                  <SortableHeader
+                    label="金額"
+                    field="amount"
+                    currentSortBy={sortBy}
+                    currentSortDir={sortDir}
+                    basePath={`/projects/${id}/requests`}
+                    searchParams={filters}
+                    align="right"
+                    thClassName="px-4 py-3 text-right text-xs font-semibold text-gray-500"
+                  />
+                  <SortableHeader
+                    label="狀態"
+                    field="status"
+                    currentSortBy={sortBy}
+                    currentSortDir={sortDir}
+                    basePath={`/projects/${id}/requests`}
+                    searchParams={filters}
+                    thClassName="px-4 py-3 text-left text-xs font-semibold text-gray-500"
+                  />
+                  <SortableHeader
+                    label="申請日期"
+                    field="requestDate"
+                    currentSortBy={sortBy}
+                    currentSortDir={sortDir}
+                    basePath={`/projects/${id}/requests`}
+                    searchParams={filters}
+                    thClassName="px-4 py-3 text-left text-xs font-semibold text-gray-500"
+                  />
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500">申請科目</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500">正式科目</th>
                   <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500">詳情</th>

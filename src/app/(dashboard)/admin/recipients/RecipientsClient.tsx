@@ -1,10 +1,14 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/Button";
 import { createPaymentRecipient, updatePaymentRecipient, togglePaymentRecipientActive } from "@/lib/actions/paymentRecipient";
 import { UserPlus, Pencil, CheckCircle2, XCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { ClientSortableHeader } from "@/components/ui/ClientSortableHeader";
+import { useSortToggle } from "@/hooks/useSortToggle";
+import { compareStrings } from "@/lib/sort";
 
 type Recipient = {
   id: string;
@@ -144,7 +148,8 @@ function EditModal({ recipient, onClose, onSaved }: { recipient: Recipient; onCl
     setError(null);
     startTransition(async () => {
       const result = await updatePaymentRecipient(recipient.id, form);
-      if (result?.error) { setError(result.error); return; }
+      if (result?.error) { setError(result.error); toast.error(result.error); return; }
+      toast.success("付款對象已更新");
       onSaved();
       onClose();
     });
@@ -177,7 +182,8 @@ function CreateModal({ onClose, onSaved }: { onClose: () => void; onSaved: () =>
     setError(null);
     startTransition(async () => {
       const result = await createPaymentRecipient(form);
-      if (result?.error) { setError(result.error); return; }
+      if (result?.error) { setError(result.error); toast.error(result.error); return; }
+      toast.success("已新增付款對象");
       onSaved();
       onClose();
     });
@@ -276,6 +282,7 @@ export function RecipientsClient({ recipients: initial }: { recipients: Recipien
     startTransition(async () => {
       await togglePaymentRecipientActive(id, !current);
       setRecipients((prev) => prev.map((r) => r.id === id ? { ...r, isActive: !current } : r));
+      toast.success(!current ? "已啟用此付款對象" : "已停用此付款對象");
     });
   }
 
@@ -297,13 +304,18 @@ export function RecipientsClient({ recipients: initial }: { recipients: Recipien
 
   const active = recipients.filter((r) => r.isActive);
 
-  // Sort groups: active names first
-  const sortedGroups = [...groups.entries()].sort(([, a], [, b]) => {
+  const { sortBy, sortDir, toggle } = useSortToggle("status", "desc");
+
+  // Sort groups: by name (stroke order) or by status (active first by default)
+  const sortedGroups = [...groups.entries()].sort(([nameA, a], [nameB, b]) => {
+    if (sortBy === "name") {
+      return compareStrings(nameA, nameB, sortDir);
+    }
     const aActive = a.some((r) => r.isActive);
     const bActive = b.some((r) => r.isActive);
-    if (aActive && !bActive) return -1;
-    if (!aActive && bActive) return 1;
-    return 0;
+    if (aActive === bActive) return 0;
+    const cmp = aActive ? -1 : 1;
+    return sortDir === "desc" ? cmp : -cmp;
   });
 
   return (
@@ -323,9 +335,23 @@ export function RecipientsClient({ recipients: initial }: { recipients: Recipien
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-gray-100 bg-gray-50">
-              <th className="text-left px-5 py-3 text-xs font-semibold text-gray-600">名稱</th>
+              <ClientSortableHeader
+                label="名稱"
+                field="name"
+                currentSortBy={sortBy}
+                currentSortDir={sortDir}
+                onSort={toggle}
+                thClassName="text-left px-5 py-3 text-xs font-semibold text-gray-600"
+              />
               <th className="text-left px-4 py-3 text-xs font-semibold text-gray-600">銀行資訊</th>
-              <th className="text-left px-4 py-3 text-xs font-semibold text-gray-600">狀態</th>
+              <ClientSortableHeader
+                label="狀態"
+                field="status"
+                currentSortBy={sortBy}
+                currentSortDir={sortDir}
+                onSort={toggle}
+                thClassName="text-left px-4 py-3 text-xs font-semibold text-gray-600"
+              />
               <th className="text-left px-4 py-3 text-xs font-semibold text-gray-600">建立日期</th>
               <th className="text-right px-5 py-3 text-xs font-semibold text-gray-600">操作</th>
             </tr>

@@ -2,12 +2,11 @@ export const dynamic = "force-dynamic";
 
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { StatusBadge, TypeBadge } from "@/components/ui/Badge";
-import Link from "next/link";
 import { CheckSquare, CheckCircle2, Clock } from "lucide-react";
 import type { UserRole } from "@prisma/client";
 import { APPROVAL_ROLES } from "@/lib/constants";
 import { redirect } from "next/navigation";
+import { BulkApprovalPanel } from "@/components/forms/BulkApprovalPanel";
 
 export default async function ApprovalsPage() {
   const session = await auth();
@@ -28,6 +27,19 @@ export default async function ApprovalsPage() {
       },
     },
   });
+
+  const items = pendingRequests.map((req) => ({
+    id: req.id,
+    stepId: req.approvalSteps[0]?.id ?? null,
+    requestNumber: req.requestNumber,
+    type: req.type,
+    title: req.title,
+    submitterName: req.submitter.name,
+    amount: Number(req.amount),
+    status: req.status,
+    neededBy: req.neededBy ? req.neededBy.toISOString() : null,
+    submittedAt: req.submittedAt ? req.submittedAt.toISOString() : null,
+  }));
 
   return (
     <div className="space-y-6">
@@ -54,50 +66,7 @@ export default async function ApprovalsPage() {
             <p className="text-sm text-gray-500 mt-1">所有申請都已處理完畢</p>
           </div>
         ) : (
-          <div className="space-y-2">
-            {pendingRequests.map((req) => (
-              <Link
-                key={req.id}
-                href={`/requests/${req.id}?from=/approvals`}
-                className="flex flex-col gap-3 bg-white rounded-xl border border-blue-200 px-5 py-4 hover:border-blue-400 hover:shadow-sm transition-all sm:flex-row sm:items-center sm:gap-4"
-              >
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <TypeBadge type={req.type} />
-                    {req.requestNumber && (
-                      <span className="font-mono text-xs text-gray-500">{req.requestNumber}</span>
-                    )}
-                  </div>
-                  <p className="font-semibold text-gray-900 mt-1">{req.title}</p>
-                  <p className="text-sm text-gray-600 mt-0.5">
-                    {req.submitter.name}
-                  </p>
-                  {req.neededBy && (
-                    <p className="text-xs text-amber-600 mt-0.5">
-                      需款期限：{req.neededBy.toLocaleDateString("zh-TW")}
-                    </p>
-                  )}
-                </div>
-
-                <div className="flex items-center justify-between flex-shrink-0 sm:flex-col sm:items-end sm:text-right">
-                  <div>
-                    <p className="text-lg font-bold text-gray-900 tabular-nums">
-                      {Number(req.amount).toLocaleString()} 元
-                    </p>
-                    {req.submittedAt && (
-                      <p className="text-xs text-gray-400 mt-0.5 sm:text-right">
-                        {req.submittedAt.toLocaleDateString("zh-TW")} 送出
-                      </p>
-                    )}
-                  </div>
-                  <div className="flex flex-col items-end gap-1">
-                    <StatusBadge status={req.status} />
-                    <p className="text-xs text-gray-400">點擊進入詳情頁簽核</p>
-                  </div>
-                </div>
-              </Link>
-            ))}
-          </div>
+          <BulkApprovalPanel items={items} />
         )}
       </section>
     </div>

@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { RotateCcw, Undo2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { returnApprovedRequest, withdrawRequest } from "@/lib/actions/request";
@@ -18,8 +19,10 @@ export function WithdrawRequestForm({ requestId }: { requestId: string }) {
       const result = await withdrawRequest(requestId);
       if (result?.error) {
         setError(result.error);
+        toast.error(result.error);
         return;
       }
+      toast.success("已抽回此申請單");
       router.refresh();
     });
   }
@@ -51,8 +54,10 @@ export function FinanceReturnForm({ requestId }: { requestId: string }) {
       const result = await returnApprovedRequest(requestId, comment);
       if (result?.error) {
         setError(result.error);
+        toast.error(result.error);
         return;
       }
+      toast.success("已退回此申請單");
       router.refresh();
     });
   }

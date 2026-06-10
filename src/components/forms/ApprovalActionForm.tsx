@@ -1,9 +1,12 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { toast } from "sonner";
 import { Check, X, RotateCcw, UserRoundCheck } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { approveRequest } from "@/lib/actions/request";
+
+const ACTION_LABEL = { APPROVED: "核准", REJECTED: "拒絕", RETURNED: "退回修改" } as const;
 
 type Props = {
   requestId: string;
@@ -19,7 +22,12 @@ export function ApprovalActionForm({ requestId, stepId }: Props) {
     setError(null);
     startTransition(async () => {
       const result = await approveRequest(requestId, stepId, action, comment);
-      if (result?.error) setError(result.error);
+      if (result?.error) {
+        setError(result.error);
+        toast.error(result.error);
+      } else {
+        toast.success(`已${ACTION_LABEL[action]}此申請單`);
+      }
     });
   }
 
@@ -32,7 +40,7 @@ export function ApprovalActionForm({ requestId, stepId }: Props) {
 
       <div>
         <label className="block text-xs font-medium text-gray-600 mb-1">
-          簽核意見（必填）
+          簽核意見（選填）
         </label>
         <textarea
           value={comment}

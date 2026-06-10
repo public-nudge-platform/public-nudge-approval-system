@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { NewRequestForm } from "@/components/forms/NewRequestForm";
 import { ChevronLeft } from "lucide-react";
 import Link from "next/link";
+import { Breadcrumb } from "@/components/ui/Breadcrumb";
 
 const EDITABLE_STATUSES = ["DRAFT", "WITHDRAWN", "RETURNED"] as const;
 
@@ -65,6 +66,14 @@ export default async function EditRequestPage({
 
   return (
     <div>
+      <Breadcrumb
+        items={[
+          { label: "首頁", href: "/dashboard" },
+          { label: "請款單管理", href: "/requests" },
+          { label: request.title, href: `/requests/${id}?from=${encodeURIComponent(returnTo)}` },
+          { label: "編輯" },
+        ]}
+      />
       <div className="flex items-center gap-2 mb-6">
         <Link href={`/requests/${id}?from=${encodeURIComponent(returnTo)}`} className="flex items-center gap-1 text-sm text-gray-400 hover:text-gray-600 transition-colors">
           <ChevronLeft size={14} />

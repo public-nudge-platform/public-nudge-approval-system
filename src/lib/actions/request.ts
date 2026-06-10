@@ -671,6 +671,30 @@ export async function approveRequest(requestId: string, stepId: string, action: 
   devLog("approveRequest total", t0);
 }
 
+export async function bulkApproveRequests(items: { requestId: string; stepId: string }[], comment?: string) {
+  const session = await auth();
+  if (!session) return { error: "未登入" };
+
+  const role = session.user.role as UserRole;
+  if (!["PRESIDENT", "FOUNDER_AGENT", "ADMIN"].includes(role)) {
+    return { error: "無簽核權限" };
+  }
+  if (!items.length) return { error: "未選擇任何申請單" };
+
+  let successCount = 0;
+  const errors: string[] = [];
+  for (const { requestId, stepId } of items) {
+    const result = await approveRequest(requestId, stepId, "APPROVED", comment);
+    if (result?.error) {
+      errors.push(result.error);
+    } else {
+      successCount++;
+    }
+  }
+
+  return { successCount, failCount: errors.length, errors };
+}
+
 export async function returnApprovedRequest(requestId: string, comment?: string) {
   const session = await auth();
   if (!session) return { error: "未登入" };
@@ -801,7 +825,7 @@ export async function updateFinalAccountingSubject(requestId: string, finalAccou
   return { ok: true };
 }
 
-type MarkAsPaidInput = {
+export type MarkAsPaidInput = {
   paymentMethod: string;
   paymentNote?: string;
   paidAt?: string;
@@ -947,6 +971,28 @@ export async function markAsPaid(requestId: string, input: MarkAsPaidInput) {
   revalidatePath("/dashboard");
   revalidatePath("/financial-accounts");
   devLog("markAsPaid total", t0);
+}
+
+export async function bulkMarkAsPaid(requestIds: string[], input: MarkAsPaidInput) {
+  const session = await auth();
+  if (!session) return { error: "未登入" };
+
+  const role = session.user.role;
+  if (!["FINANCE", "ADMIN"].includes(role)) return { error: "無財務權限" };
+  if (!requestIds.length) return { error: "未選擇任何申請單" };
+
+  let successCount = 0;
+  const errors: string[] = [];
+  for (const requestId of requestIds) {
+    const result = await markAsPaid(requestId, input);
+    if (result?.error) {
+      errors.push(result.error);
+    } else {
+      successCount++;
+    }
+  }
+
+  return { successCount, failCount: errors.length, errors };
 }
 
 export async function submitSettlement(requestId: string, data: { actualAmount: number; reimbursementNote?: string }) {

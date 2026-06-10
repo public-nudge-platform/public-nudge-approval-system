@@ -19,6 +19,9 @@ import { FINANCE_ROLES, PAYMENT_METHOD_LABEL } from "@/lib/constants";
 import { FilterSelect } from "@/components/ui/FilterSelect";
 import { FilterInput } from "@/components/ui/FilterInput";
 import { ExportButton } from "@/components/ui/ExportButton";
+import { BulkPaymentPanel } from "@/components/forms/BulkPaymentPanel";
+import { SortableHeader } from "@/components/ui/SortableHeader";
+import { STROKE_COLLATOR } from "@/lib/sort";
 import { Suspense } from "react";
 
 const VIEW_OPTIONS = [
@@ -33,7 +36,34 @@ type SearchParams = {
   project?: string;
   submitter?: string;
   view?: string; // "pending" | "offset" | "paid" | undefined (all)
+  offsetSortBy?: string;
+  offsetSortDir?: string;
+  paidSortBy?: string;
+  paidSortDir?: string;
 };
+
+type OffsetSortField = "title" | "submitter" | "amount" | "actualAmount" | "diff" | "reimbursementSubmittedAt";
+const OFFSET_SORT_FIELDS: string[] = ["title", "submitter", "amount", "actualAmount", "diff", "reimbursementSubmittedAt"];
+
+type PaidSortField =
+  | "title"
+  | "submitter"
+  | "paymentMethod"
+  | "paymentRecipientName"
+  | "bankLastFive"
+  | "paidBy"
+  | "amount"
+  | "paidAt";
+const PAID_SORT_FIELDS: string[] = [
+  "title",
+  "submitter",
+  "paymentMethod",
+  "paymentRecipientName",
+  "bankLastFive",
+  "paidBy",
+  "amount",
+  "paidAt",
+];
 
 export default async function FinancePage({
   searchParams,
@@ -62,6 +92,33 @@ export default async function FinancePage({
     }),
   };
 
+  // 預付款沖銷表格排序（申請人/差額需在程式中排序，無法交給資料庫）
+  const offsetSortBy: OffsetSortField = OFFSET_SORT_FIELDS.includes(params.offsetSortBy ?? "")
+    ? (params.offsetSortBy as OffsetSortField)
+    : "reimbursementSubmittedAt";
+  const offsetSortDir = params.offsetSortDir === "desc" ? "desc" : "asc";
+  const offsetOrderByMap: Partial<Record<OffsetSortField, object>> = {
+    title: { title: offsetSortDir },
+    amount: { amount: offsetSortDir },
+    actualAmount: { actualAmount: offsetSortDir },
+    reimbursementSubmittedAt: { reimbursementSubmittedAt: offsetSortDir },
+  };
+
+  // 已付款／已沖銷紀錄表格排序（申請人需在程式中排序）
+  const paidSortBy: PaidSortField = PAID_SORT_FIELDS.includes(params.paidSortBy ?? "")
+    ? (params.paidSortBy as PaidSortField)
+    : "paidAt";
+  const paidSortDir = params.paidSortDir === "asc" ? "asc" : "desc";
+  const paidOrderByMap: Partial<Record<PaidSortField, object>> = {
+    title: { title: paidSortDir },
+    paymentMethod: { paymentMethod: paidSortDir },
+    paymentRecipientName: { paymentRecipientName: { sort: paidSortDir, nulls: "last" } },
+    bankLastFive: { bankLastFive: { sort: paidSortDir, nulls: "last" } },
+    paidBy: { paidBy: { sort: paidSortDir, nulls: "last" } },
+    amount: { amount: paidSortDir },
+    paidAt: { paidAt: paidSortDir },
+  };
+
   const [pendingPayment, offsetSubmitted, pendingSettlement, offsetReturned, paidRequests, projects] =
     await Promise.all([
       prisma.request.findMany({
@@ -74,7 +131,7 @@ export default async function FinancePage({
       }),
       prisma.request.findMany({
         where: { status: "OFFSET_SUBMITTED", ...sharedWhere },
-        orderBy: { reimbursementSubmittedAt: "asc" },
+        orderBy: offsetOrderByMap[offsetSortBy] ?? { reimbursementSubmittedAt: "asc" },
         include: {
           submitter: { select: { name: true } },
           project: { select: { name: true } },
@@ -98,7 +155,7 @@ export default async function FinancePage({
       }),
       prisma.request.findMany({
         where: { status: { in: ["PAID", "CLOSED"] }, ...sharedWhere },
-        orderBy: { paidAt: "desc" },
+        orderBy: paidOrderByMap[paidSortBy] ?? { paidAt: "desc" },
         take: 100,
         include: {
           submitter: { select: { name: true } },
@@ -108,11 +165,65 @@ export default async function FinancePage({
       prisma.project.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } }),
     ]);
 
+  // 申請人（筆畫排序）／差額：無法交給資料庫排序，於取得資料後在程式中排序
+  if (offsetSortBy === "submitter") {
+    offsetSubmitted.sort((a, b) => {
+      const cmp = STROKE_COLLATOR.compare(a.submitter.name, b.submitter.name);
+      return offsetSortDir === "asc" ? cmp : -cmp;
+    });
+  } else if (offsetSortBy === "diff") {
+    offsetSubmitted.sort((a, b) => {
+      const diffA = a.actualAmount !== null ? Number(a.actualAmount) - Number(a.amount) : null;
+      const diffB = b.actualAmount !== null ? Number(b.actualAmount) - Number(b.amount) : null;
+      if (diffA === null && diffB === null) return 0;
+      if (diffA === null) return 1;
+      if (diffB === null) return -1;
+      const cmp = diffA - diffB;
+      return offsetSortDir === "asc" ? cmp : -cmp;
+    });
+  }
+
+  if (paidSortBy === "submitter") {
+    paidRequests.sort((a, b) => {
+      const cmp = STROKE_COLLATOR.compare(a.submitter.name, b.submitter.name);
+      return paidSortDir === "asc" ? cmp : -cmp;
+    });
+  }
+
   const totalOffsetCount = offsetSubmitted.length + pendingSettlement.length + offsetReturned.length;
   const hasFilters = !!(params.dateFrom || params.dateTo || params.project || params.submitter || params.view);
   const showPending = !params.view || params.view === "pending";
   const showOffset = !params.view || params.view === "offset";
   const showPaid = !params.view || params.view === "paid";
+
+  const canMarkPaid = ["FINANCE", "ADMIN"].includes(role);
+  const [recipients, financialAccounts] = await Promise.all([
+    canMarkPaid
+      ? prisma.paymentRecipient.findMany({
+          where: { isActive: true },
+          orderBy: { createdAt: "asc" },
+          select: { id: true, name: true },
+        })
+      : Promise.resolve([]),
+    canMarkPaid
+      ? prisma.financialAccount.findMany({
+          where: { isActive: true },
+          orderBy: { createdAt: "asc" },
+          select: { id: true, name: true },
+        })
+      : Promise.resolve([]),
+  ]);
+
+  const pendingPaymentItems = pendingPayment.map((req) => ({
+    id: req.id,
+    requestNumber: req.requestNumber,
+    type: req.type,
+    title: req.title,
+    submitterName: req.submitter.name,
+    amount: Number(req.amount),
+    status: req.status,
+    neededBy: req.neededBy ? req.neededBy.toISOString() : null,
+  }));
 
   return (
     <div className="space-y-6">
@@ -182,40 +293,12 @@ export default async function FinancePage({
             </p>
           </div>
         ) : (
-          <div className="space-y-2">
-            {pendingPayment.map((req) => (
-              <Link
-                key={req.id}
-                href={`/requests/${req.id}?from=/finance`}
-                className="flex flex-col gap-3 bg-white rounded-xl border border-gray-200 px-5 py-4 hover:border-gray-300 hover:shadow-sm transition-all sm:flex-row sm:items-center sm:gap-4"
-              >
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <TypeBadge type={req.type} />
-                    {req.requestNumber && (
-                      <span className="font-mono text-xs text-gray-500">{req.requestNumber}</span>
-                    )}
-                  </div>
-                  <p className="font-semibold text-gray-900 mt-1">{req.title}</p>
-                  <p className="text-sm text-gray-600 mt-0.5">{req.submitter.name}</p>
-                  {req.neededBy && (
-                    <p className="text-xs text-gray-500 mt-0.5">
-                      需款期限：{req.neededBy.toLocaleDateString("zh-TW")}
-                    </p>
-                  )}
-                </div>
-                <div className="flex items-center justify-between flex-shrink-0 sm:flex-col sm:items-end sm:text-right">
-                  <p className="text-lg font-bold text-gray-900 tabular-nums">
-                    {Number(req.amount).toLocaleString()} 元
-                  </p>
-                  <div className="flex flex-col items-end gap-1">
-                    <StatusBadge status={req.status} />
-                    <p className="text-xs text-gray-500">點擊進入詳情頁付款</p>
-                  </div>
-                </div>
-              </Link>
-            ))}
-          </div>
+          <BulkPaymentPanel
+            items={pendingPaymentItems}
+            canBulkMarkPaid={canMarkPaid}
+            recipients={recipients}
+            financialAccounts={financialAccounts}
+          />
         )}
       </section>}
 
@@ -302,12 +385,75 @@ export default async function FinancePage({
                     <table className="w-full text-sm min-w-[560px]">
                       <thead>
                         <tr className="border-b border-gray-100 bg-gray-50">
-                          <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-600">申請單</th>
-                          <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-600">申請人</th>
-                          <th className="text-right px-4 py-2.5 text-xs font-semibold text-gray-600">預付金額</th>
-                          <th className="text-right px-4 py-2.5 text-xs font-semibold text-gray-600">實際支出</th>
-                          <th className="text-right px-4 py-2.5 text-xs font-semibold text-gray-600">差額</th>
-                          <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-600">送出日期</th>
+                          <SortableHeader
+                            label="申請單"
+                            field="title"
+                            currentSortBy={offsetSortBy}
+                            currentSortDir={offsetSortDir}
+                            basePath="/finance"
+                            searchParams={params}
+                            sortByParam="offsetSortBy"
+                            sortDirParam="offsetSortDir"
+                            thClassName="text-left px-4 py-2.5 text-xs font-semibold uppercase tracking-wide"
+                          />
+                          <SortableHeader
+                            label="申請人"
+                            field="submitter"
+                            currentSortBy={offsetSortBy}
+                            currentSortDir={offsetSortDir}
+                            basePath="/finance"
+                            searchParams={params}
+                            sortByParam="offsetSortBy"
+                            sortDirParam="offsetSortDir"
+                            thClassName="text-left px-4 py-2.5 text-xs font-semibold uppercase tracking-wide"
+                          />
+                          <SortableHeader
+                            label="預付金額"
+                            field="amount"
+                            currentSortBy={offsetSortBy}
+                            currentSortDir={offsetSortDir}
+                            basePath="/finance"
+                            searchParams={params}
+                            sortByParam="offsetSortBy"
+                            sortDirParam="offsetSortDir"
+                            align="right"
+                            thClassName="text-right px-4 py-2.5 text-xs font-semibold uppercase tracking-wide"
+                          />
+                          <SortableHeader
+                            label="實際支出"
+                            field="actualAmount"
+                            currentSortBy={offsetSortBy}
+                            currentSortDir={offsetSortDir}
+                            basePath="/finance"
+                            searchParams={params}
+                            sortByParam="offsetSortBy"
+                            sortDirParam="offsetSortDir"
+                            align="right"
+                            thClassName="text-right px-4 py-2.5 text-xs font-semibold uppercase tracking-wide"
+                          />
+                          <SortableHeader
+                            label="差額"
+                            field="diff"
+                            currentSortBy={offsetSortBy}
+                            currentSortDir={offsetSortDir}
+                            basePath="/finance"
+                            searchParams={params}
+                            sortByParam="offsetSortBy"
+                            sortDirParam="offsetSortDir"
+                            align="right"
+                            thClassName="text-right px-4 py-2.5 text-xs font-semibold uppercase tracking-wide"
+                          />
+                          <SortableHeader
+                            label="送出日期"
+                            field="reimbursementSubmittedAt"
+                            currentSortBy={offsetSortBy}
+                            currentSortDir={offsetSortDir}
+                            basePath="/finance"
+                            searchParams={params}
+                            sortByParam="offsetSortBy"
+                            sortDirParam="offsetSortDir"
+                            thClassName="text-left px-4 py-2.5 text-xs font-semibold uppercase tracking-wide"
+                          />
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-50">
@@ -506,14 +652,96 @@ export default async function FinancePage({
               <table className="w-full text-sm min-w-[700px]">
                 <thead>
                   <tr className="border-b border-gray-100 bg-gray-50">
-                    <th className="text-left px-5 py-3 text-xs font-semibold text-gray-600">申請單</th>
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-600">申請人</th>
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-600">付款方式</th>
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-600">付款對象</th>
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-600">帳號後五碼</th>
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-600">付款人</th>
-                    <th className="text-right px-5 py-3 text-xs font-semibold text-gray-600">金額</th>
-                    <th className="text-right px-5 py-3 text-xs font-semibold text-gray-600">付款日期</th>
+                    <SortableHeader
+                      label="申請單"
+                      field="title"
+                      currentSortBy={paidSortBy}
+                      currentSortDir={paidSortDir}
+                      basePath="/finance"
+                      searchParams={params}
+                      sortByParam="paidSortBy"
+                      sortDirParam="paidSortDir"
+                      thClassName="text-left px-5 py-3 text-xs font-semibold uppercase tracking-wide"
+                    />
+                    <SortableHeader
+                      label="申請人"
+                      field="submitter"
+                      currentSortBy={paidSortBy}
+                      currentSortDir={paidSortDir}
+                      basePath="/finance"
+                      searchParams={params}
+                      sortByParam="paidSortBy"
+                      sortDirParam="paidSortDir"
+                      thClassName="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wide"
+                    />
+                    <SortableHeader
+                      label="付款方式"
+                      field="paymentMethod"
+                      currentSortBy={paidSortBy}
+                      currentSortDir={paidSortDir}
+                      basePath="/finance"
+                      searchParams={params}
+                      sortByParam="paidSortBy"
+                      sortDirParam="paidSortDir"
+                      thClassName="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wide"
+                    />
+                    <SortableHeader
+                      label="付款對象"
+                      field="paymentRecipientName"
+                      currentSortBy={paidSortBy}
+                      currentSortDir={paidSortDir}
+                      basePath="/finance"
+                      searchParams={params}
+                      sortByParam="paidSortBy"
+                      sortDirParam="paidSortDir"
+                      thClassName="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wide"
+                    />
+                    <SortableHeader
+                      label="帳號後五碼"
+                      field="bankLastFive"
+                      currentSortBy={paidSortBy}
+                      currentSortDir={paidSortDir}
+                      basePath="/finance"
+                      searchParams={params}
+                      sortByParam="paidSortBy"
+                      sortDirParam="paidSortDir"
+                      thClassName="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wide"
+                    />
+                    <SortableHeader
+                      label="付款人"
+                      field="paidBy"
+                      currentSortBy={paidSortBy}
+                      currentSortDir={paidSortDir}
+                      basePath="/finance"
+                      searchParams={params}
+                      sortByParam="paidSortBy"
+                      sortDirParam="paidSortDir"
+                      thClassName="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wide"
+                    />
+                    <SortableHeader
+                      label="金額"
+                      field="amount"
+                      currentSortBy={paidSortBy}
+                      currentSortDir={paidSortDir}
+                      basePath="/finance"
+                      searchParams={params}
+                      sortByParam="paidSortBy"
+                      sortDirParam="paidSortDir"
+                      align="right"
+                      thClassName="text-right px-5 py-3 text-xs font-semibold uppercase tracking-wide"
+                    />
+                    <SortableHeader
+                      label="付款日期"
+                      field="paidAt"
+                      currentSortBy={paidSortBy}
+                      currentSortDir={paidSortDir}
+                      basePath="/finance"
+                      searchParams={params}
+                      sortByParam="paidSortBy"
+                      sortDirParam="paidSortDir"
+                      align="right"
+                      thClassName="text-right px-5 py-3 text-xs font-semibold uppercase tracking-wide"
+                    />
                     <th className="px-3 py-3 text-xs font-semibold text-gray-600"></th>
                   </tr>
                 </thead>
