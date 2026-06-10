@@ -153,9 +153,9 @@ export default async function RequestsPage({
   return (
     <div className="space-y-4">
       {/* Page header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-xl font-semibold text-gray-900">請款單管理</h1>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           {FINANCE_ROLES.includes(role) && (
             <>
               <ExportButton projects={projects} label="匯出明細" />
@@ -299,7 +299,47 @@ export default async function RequestsPage({
             )}
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <>
+          {/* Mobile card list */}
+          <div className="md:hidden divide-y divide-gray-100">
+            {requests.map((req) => (
+              <Link
+                key={req.id}
+                href={`/requests/${req.id}?from=/requests`}
+                className="block px-4 py-3 hover:bg-gray-50/80 transition-colors"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="font-medium text-gray-900 truncate">{req.title}</p>
+                    {req.requestNumber && (
+                      <p className="text-xs text-gray-500 mt-0.5 font-mono">{req.requestNumber}</p>
+                    )}
+                  </div>
+                  <div className="text-right shrink-0">
+                    <span className="font-medium text-gray-900 tabular-nums">
+                      {Number(req.amount).toLocaleString()}
+                    </span>
+                    <span className="text-xs text-gray-500 ml-0.5">元</span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5 flex-wrap mt-2">
+                  <TypeBadge type={req.type} />
+                  <StatusBadge status={req.status} />
+                </div>
+                <div className="flex items-center justify-between gap-2 mt-2 text-xs text-gray-500">
+                  <span className="truncate">
+                    {req.project ? req.project.name : "—"} · {req.submitter.name}
+                  </span>
+                  <span className="tabular-nums shrink-0">
+                    {req.createdAt.toLocaleDateString("zh-TW")}
+                  </span>
+                </div>
+              </Link>
+            ))}
+          </div>
+
+          {/* Desktop table */}
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-200">
@@ -365,6 +405,7 @@ export default async function RequestsPage({
               </tbody>
             </table>
           </div>
+          </>
         )}
       </div>
 

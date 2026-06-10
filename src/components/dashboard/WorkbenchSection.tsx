@@ -8,6 +8,8 @@ import {
   REQUEST_STATUS_COLOR,
   REQUEST_TYPE_LABEL,
   REQUEST_TYPE_COLOR,
+  ACCENT_COLOR,
+  type AccentColor,
 } from "@/lib/constants";
 import type { RequestStatus, RequestType } from "@prisma/client";
 
@@ -28,7 +30,7 @@ export type WorkbenchCardConfig = {
   title: string;
   count: number;
   description: string;
-  color: "amber" | "blue" | "green" | "purple" | "slate" | "red" | "indigo";
+  color: AccentColor;
   href: string;
   items: WorkbenchRequest[];
   cardType: "task" | "tracking";
@@ -46,16 +48,6 @@ const NEXT_STEP: Record<RequestStatus, string> = {
   CLOSED:             "已沖銷",
   REJECTED:           "已拒絕",
   WITHDRAWN:          "已抽回",
-};
-
-const colorMap = {
-  amber:  { dot: "bg-amber-400",  badge: "bg-amber-50 text-amber-700 border-amber-200" },
-  blue:   { dot: "bg-blue-400",   badge: "bg-blue-50 text-blue-700 border-blue-200" },
-  green:  { dot: "bg-green-400",  badge: "bg-green-50 text-green-700 border-green-200" },
-  purple: { dot: "bg-purple-400", badge: "bg-purple-50 text-purple-700 border-purple-200" },
-  slate:  { dot: "bg-slate-400",  badge: "bg-slate-100 text-slate-700 border-slate-200" },
-  red:    { dot: "bg-red-400",    badge: "bg-red-50 text-red-700 border-red-200" },
-  indigo: { dot: "bg-indigo-400", badge: "bg-indigo-50 text-indigo-700 border-indigo-200" },
 };
 
 function RequestRow({ req, cardType }: { req: WorkbenchRequest; cardType: "task" | "tracking" }) {
@@ -105,7 +97,7 @@ function RequestRow({ req, cardType }: { req: WorkbenchRequest; cardType: "task"
 
 function WorkbenchCard({ card }: { card: WorkbenchCardConfig }) {
   const [open, setOpen] = useState(false);
-  const colors = colorMap[card.color];
+  const colors = ACCENT_COLOR[card.color];
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">

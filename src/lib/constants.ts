@@ -14,18 +14,25 @@ export const REQUEST_STATUS_LABEL: Record<RequestStatus, string> = {
   CLOSED:             "已沖銷",
 };
 
+// Status colors are grouped by meaning (not one hue per status) so the
+// whole app uses a small, consistent palette:
+//   灰 gray   = 草稿／已結束的中性狀態（不需任何人採取行動）
+//   琥珀 amber = 等待他人處理中
+//   橘 orange = 需要申請人修改後重新送出
+//   紅 red    = 已拒絕（終止）
+//   綠 green  = 已完成／成功
 export const REQUEST_STATUS_COLOR: Record<RequestStatus, string> = {
   DRAFT:              "bg-gray-100 text-gray-600",
-  WITHDRAWN:          "bg-slate-100 text-slate-700 ring-1 ring-slate-200",
+  WITHDRAWN:          "bg-gray-100 text-gray-600",
   PENDING:            "bg-amber-50 text-amber-700 ring-1 ring-amber-200",
-  APPROVED:           "bg-green-50 text-green-700 ring-1 ring-green-200",
+  APPROVED:           "bg-amber-50 text-amber-700 ring-1 ring-amber-200",
   REJECTED:           "bg-red-50 text-red-700 ring-1 ring-red-200",
   RETURNED:           "bg-orange-50 text-orange-700 ring-1 ring-orange-200",
-  PAID:               "bg-blue-50 text-blue-700 ring-1 ring-blue-200",
-  PENDING_SETTLEMENT: "bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200",
-  OFFSET_SUBMITTED:   "bg-violet-50 text-violet-700 ring-1 ring-violet-200",
+  PAID:               "bg-green-50 text-green-700 ring-1 ring-green-200",
+  PENDING_SETTLEMENT: "bg-amber-50 text-amber-700 ring-1 ring-amber-200",
+  OFFSET_SUBMITTED:   "bg-amber-50 text-amber-700 ring-1 ring-amber-200",
   OFFSET_RETURNED:    "bg-orange-50 text-orange-700 ring-1 ring-orange-200",
-  CLOSED:             "bg-purple-50 text-purple-700 ring-1 ring-purple-200",
+  CLOSED:             "bg-green-50 text-green-700 ring-1 ring-green-200",
 };
 
 export const REQUEST_TYPE_LABEL: Record<RequestType, string> = {
@@ -33,9 +40,26 @@ export const REQUEST_TYPE_LABEL: Record<RequestType, string> = {
   PREPAID:       "預付請款",
 };
 
+// Type is informational, not actionable — keep both neutral so it doesn't
+// compete with the status badge's color.
 export const REQUEST_TYPE_COLOR: Record<RequestType, string> = {
-  REIMBURSEMENT: "bg-slate-100 text-slate-600",
-  PREPAID:       "bg-indigo-50 text-indigo-600",
+  REIMBURSEMENT: "bg-gray-100 text-gray-600",
+  PREPAID:       "bg-gray-100 text-gray-600",
+};
+
+// Shared accent-color palette for dashboard cards (StatsCard, WorkbenchSection).
+// These colors are *categorical* (which section/queue a card represents),
+// distinct from REQUEST_STATUS_COLOR which is *semantic* (what stage/who acts).
+// Keeping one definition here ensures both components use the same shades.
+export type AccentColor = "blue" | "amber" | "green" | "red" | "purple" | "slate";
+
+export const ACCENT_COLOR: Record<AccentColor, { icon: string; value: string; dot: string; badge: string }> = {
+  blue:   { icon: "bg-blue-50 text-blue-600",    value: "text-blue-700",   dot: "bg-blue-400",   badge: "bg-blue-50 text-blue-700 border-blue-200" },
+  amber:  { icon: "bg-amber-50 text-amber-600",  value: "text-amber-700",  dot: "bg-amber-400",  badge: "bg-amber-50 text-amber-700 border-amber-200" },
+  green:  { icon: "bg-green-50 text-green-600",  value: "text-green-700",  dot: "bg-green-400",  badge: "bg-green-50 text-green-700 border-green-200" },
+  red:    { icon: "bg-red-50 text-red-600",      value: "text-red-700",    dot: "bg-red-400",    badge: "bg-red-50 text-red-700 border-red-200" },
+  purple: { icon: "bg-purple-50 text-purple-600", value: "text-purple-700", dot: "bg-purple-400", badge: "bg-purple-50 text-purple-700 border-purple-200" },
+  slate:  { icon: "bg-slate-100 text-slate-600", value: "text-slate-700",  dot: "bg-slate-400",  badge: "bg-slate-100 text-slate-700 border-slate-200" },
 };
 
 export const USER_ROLE_LABEL: Record<UserRole, string> = {

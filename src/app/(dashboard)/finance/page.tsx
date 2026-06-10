@@ -116,7 +116,7 @@ export default async function FinancePage({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-2">
           <Banknote size={20} className="text-blue-600" />
           <h1 className="text-xl font-semibold text-gray-900">財務管理</h1>
@@ -155,7 +155,7 @@ export default async function FinancePage({
             <FilterInput name="dateTo" type="date" value={params.dateTo} />
           </div>
           {hasFilters && (
-            <Link href="/finance" className="text-xs text-gray-500 hover:text-gray-700 underline">
+            <Link href="/finance" className="text-xs text-gray-400 hover:text-gray-600 underline">
               清除篩選
             </Link>
           )}
@@ -187,7 +187,7 @@ export default async function FinancePage({
               <Link
                 key={req.id}
                 href={`/requests/${req.id}?from=/finance`}
-                className="flex flex-col gap-3 bg-white rounded-xl border border-amber-200 px-5 py-4 hover:border-amber-400 hover:shadow-sm transition-all sm:flex-row sm:items-center sm:gap-4"
+                className="flex flex-col gap-3 bg-white rounded-xl border border-gray-200 px-5 py-4 hover:border-gray-300 hover:shadow-sm transition-all sm:flex-row sm:items-center sm:gap-4"
               >
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
@@ -199,7 +199,7 @@ export default async function FinancePage({
                   <p className="font-semibold text-gray-900 mt-1">{req.title}</p>
                   <p className="text-sm text-gray-600 mt-0.5">{req.submitter.name}</p>
                   {req.neededBy && (
-                    <p className="text-xs text-amber-600 mt-0.5">
+                    <p className="text-xs text-gray-500 mt-0.5">
                       需款期限：{req.neededBy.toLocaleDateString("zh-TW")}
                     </p>
                   )}
@@ -222,10 +222,10 @@ export default async function FinancePage({
       {/* Offset section */}
       {showOffset && <section className="space-y-3">
         <div className="flex items-center gap-2">
-          <Receipt size={15} className="text-indigo-500" />
+          <Receipt size={15} className="text-gray-400" />
           <h2 className="text-sm font-semibold text-gray-700">預付款沖銷</h2>
           {totalOffsetCount > 0 && (
-            <span className="bg-indigo-100 text-indigo-700 text-xs font-semibold px-2 py-0.5 rounded-full">
+            <span className="bg-amber-100 text-amber-700 text-xs font-semibold px-2 py-0.5 rounded-full">
               {totalOffsetCount}
             </span>
           )}
@@ -243,76 +243,128 @@ export default async function FinancePage({
             {/* OFFSET_SUBMITTED: ready for review */}
             {offsetSubmitted.length > 0 && (
               <div className="space-y-2">
-                <p className="text-xs text-indigo-700 font-medium flex items-center gap-1">
+                <p className="text-xs text-amber-700 font-medium flex items-center gap-1">
                   <AlertTriangle size={11} />
                   以下沖銷單已由申請人送出，待財務確認
                 </p>
-                <div className="bg-white rounded-xl border border-indigo-200 overflow-x-auto">
-                  <table className="w-full text-sm min-w-[560px]">
-                    <thead>
-                      <tr className="border-b border-gray-100 bg-indigo-50">
-                        <th className="text-left px-4 py-2.5 text-xs font-semibold text-indigo-700">申請單</th>
-                        <th className="text-left px-4 py-2.5 text-xs font-semibold text-indigo-700">申請人</th>
-                        <th className="text-right px-4 py-2.5 text-xs font-semibold text-indigo-700">預付金額</th>
-                        <th className="text-right px-4 py-2.5 text-xs font-semibold text-indigo-700">實際支出</th>
-                        <th className="text-right px-4 py-2.5 text-xs font-semibold text-indigo-700">差額</th>
-                        <th className="text-left px-4 py-2.5 text-xs font-semibold text-indigo-700">送出日期</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-50">
-                      {offsetSubmitted.map((req) => {
-                        const prepaid = Number(req.amount);
-                        const actual = req.actualAmount ? Number(req.actualAmount) : null;
-                        const diff = actual !== null ? actual - prepaid : null;
-                        return (
-                          <tr key={req.id} className="hover:bg-indigo-50/40 transition-colors">
-                            <td className="px-4 py-3">
-                              <Link href={`/requests/${req.id}?from=/finance`} className="hover:text-indigo-600">
-                                <p className="font-medium text-gray-900 truncate max-w-[160px]">
-                                  {req.title}
-                                </p>
-                                {req.requestNumber && (
-                                  <p className="font-mono text-xs text-gray-500">{req.requestNumber}</p>
-                                )}
-                                {req.project && (
-                                  <p className="text-xs text-gray-500 truncate max-w-[160px]">
-                                    {req.project.name}
+                <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+                  {/* Mobile card list */}
+                  <div className="md:hidden divide-y divide-gray-100">
+                    {offsetSubmitted.map((req) => {
+                      const prepaid = Number(req.amount);
+                      const actual = req.actualAmount ? Number(req.actualAmount) : null;
+                      const diff = actual !== null ? actual - prepaid : null;
+                      return (
+                        <Link
+                          key={req.id}
+                          href={`/requests/${req.id}?from=/finance`}
+                          className="block px-4 py-3 hover:bg-gray-50 transition-colors"
+                        >
+                          <p className="font-medium text-gray-900 truncate">{req.title}</p>
+                          <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                            {req.requestNumber && (
+                              <span className="font-mono text-xs text-gray-500">{req.requestNumber}</span>
+                            )}
+                            {req.project && (
+                              <span className="text-xs text-gray-500 truncate">{req.project.name}</span>
+                            )}
+                          </div>
+                          <div className="flex items-center justify-between mt-2 text-xs text-gray-600">
+                            <span>{req.submitter.name}</span>
+                            <span>{req.reimbursementSubmittedAt?.toLocaleDateString("zh-TW") ?? "—"}</span>
+                          </div>
+                          <div className="flex items-center justify-between mt-1.5 text-sm tabular-nums">
+                            <span className="text-gray-900 font-medium">
+                              預付 {prepaid.toLocaleString()}
+                              {actual !== null && (
+                                <span className="text-gray-500 font-normal"> ／ 實支 {actual.toLocaleString()}</span>
+                              )}
+                            </span>
+                            {diff === null ? (
+                              <span className="text-gray-500 text-xs">—</span>
+                            ) : diff === 0 ? (
+                              <span className="text-green-600 font-medium text-xs">相符</span>
+                            ) : diff < 0 ? (
+                              <span className="text-amber-600 font-medium text-xs">
+                                -{Math.abs(diff).toLocaleString()}
+                              </span>
+                            ) : (
+                              <span className="text-red-600 font-medium text-xs">+{diff.toLocaleString()}</span>
+                            )}
+                          </div>
+                        </Link>
+                      );
+                    })}
+                  </div>
+
+                  {/* Desktop table */}
+                  <div className="hidden md:block overflow-x-auto">
+                    <table className="w-full text-sm min-w-[560px]">
+                      <thead>
+                        <tr className="border-b border-gray-100 bg-gray-50">
+                          <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-600">申請單</th>
+                          <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-600">申請人</th>
+                          <th className="text-right px-4 py-2.5 text-xs font-semibold text-gray-600">預付金額</th>
+                          <th className="text-right px-4 py-2.5 text-xs font-semibold text-gray-600">實際支出</th>
+                          <th className="text-right px-4 py-2.5 text-xs font-semibold text-gray-600">差額</th>
+                          <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-600">送出日期</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-50">
+                        {offsetSubmitted.map((req) => {
+                          const prepaid = Number(req.amount);
+                          const actual = req.actualAmount ? Number(req.actualAmount) : null;
+                          const diff = actual !== null ? actual - prepaid : null;
+                          return (
+                            <tr key={req.id} className="hover:bg-gray-50 transition-colors">
+                              <td className="px-4 py-3">
+                                <Link href={`/requests/${req.id}?from=/finance`} className="hover:text-indigo-600">
+                                  <p className="font-medium text-gray-900 truncate max-w-[160px]">
+                                    {req.title}
                                   </p>
+                                  {req.requestNumber && (
+                                    <p className="font-mono text-xs text-gray-500">{req.requestNumber}</p>
+                                  )}
+                                  {req.project && (
+                                    <p className="text-xs text-gray-500 truncate max-w-[160px]">
+                                      {req.project.name}
+                                    </p>
+                                  )}
+                                </Link>
+                              </td>
+                              <td className="px-4 py-3 text-gray-600 text-sm">{req.submitter.name}</td>
+                              <td className="px-4 py-3 text-right font-medium text-gray-900 tabular-nums">
+                                {prepaid.toLocaleString()}
+                              </td>
+                              <td className="px-4 py-3 text-right tabular-nums">
+                                {actual !== null ? (
+                                  <span className="font-medium text-gray-900">{actual.toLocaleString()}</span>
+                                ) : (
+                                  <span className="text-gray-500">—</span>
                                 )}
-                              </Link>
-                            </td>
-                            <td className="px-4 py-3 text-gray-600 text-sm">{req.submitter.name}</td>
-                            <td className="px-4 py-3 text-right font-medium text-gray-900 tabular-nums">
-                              {prepaid.toLocaleString()}
-                            </td>
-                            <td className="px-4 py-3 text-right tabular-nums">
-                              {actual !== null ? (
-                                <span className="font-medium text-gray-900">{actual.toLocaleString()}</span>
-                              ) : (
-                                <span className="text-gray-500">—</span>
-                              )}
-                            </td>
-                            <td className="px-4 py-3 text-right tabular-nums text-xs">
-                              {diff === null ? (
-                                <span className="text-gray-500">—</span>
-                              ) : diff === 0 ? (
-                                <span className="text-green-600 font-medium">相符</span>
-                              ) : diff < 0 ? (
-                                <span className="text-amber-600 font-medium">
-                                  -{Math.abs(diff).toLocaleString()}
-                                </span>
-                              ) : (
-                                <span className="text-red-600 font-medium">+{diff.toLocaleString()}</span>
-                              )}
-                            </td>
-                            <td className="px-4 py-3 text-gray-600 text-xs">
-                              {req.reimbursementSubmittedAt?.toLocaleDateString("zh-TW") ?? "—"}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
+                              </td>
+                              <td className="px-4 py-3 text-right tabular-nums text-xs">
+                                {diff === null ? (
+                                  <span className="text-gray-500">—</span>
+                                ) : diff === 0 ? (
+                                  <span className="text-green-600 font-medium">相符</span>
+                                ) : diff < 0 ? (
+                                  <span className="text-amber-600 font-medium">
+                                    -{Math.abs(diff).toLocaleString()}
+                                  </span>
+                                ) : (
+                                  <span className="text-red-600 font-medium">+{diff.toLocaleString()}</span>
+                                )}
+                              </td>
+                              <td className="px-4 py-3 text-gray-600 text-xs">
+                                {req.reimbursementSubmittedAt?.toLocaleDateString("zh-TW") ?? "—"}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               </div>
             )}
@@ -359,7 +411,7 @@ export default async function FinancePage({
                   <Link
                     key={req.id}
                     href={`/requests/${req.id}?from=/finance`}
-                    className="flex flex-col gap-3 bg-white rounded-xl border border-orange-200 px-5 py-4 hover:border-orange-400 hover:shadow-sm transition-all sm:flex-row sm:items-center sm:gap-4"
+                    className="flex flex-col gap-3 bg-white rounded-xl border border-gray-200 px-5 py-4 hover:border-gray-300 hover:shadow-sm transition-all sm:flex-row sm:items-center sm:gap-4"
                   >
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
@@ -404,63 +456,110 @@ export default async function FinancePage({
             </p>
           </div>
         ) : (
-          <div className="bg-white rounded-xl border border-gray-200 overflow-x-auto">
-            <table className="w-full text-sm min-w-[700px]">
-              <thead>
-                <tr className="border-b border-gray-100 bg-gray-50">
-                  <th className="text-left px-5 py-3 text-xs font-semibold text-gray-600">申請單</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-600">申請人</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-600">付款方式</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-600">付款對象</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-600">帳號後五碼</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-600">付款人</th>
-                  <th className="text-right px-5 py-3 text-xs font-semibold text-gray-600">金額</th>
-                  <th className="text-right px-5 py-3 text-xs font-semibold text-gray-600">付款日期</th>
-                  <th className="px-3 py-3 text-xs font-semibold text-gray-600"></th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50">
-                {paidRequests.map((req) => (
-                  <tr key={req.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-5 py-3">
-                      <Link href={`/requests/${req.id}?from=/finance`} className="hover:text-blue-600 transition-colors">
-                        <p className="font-medium text-gray-900">{req.title}</p>
-                        {req.requestNumber && (
-                          <p className="font-mono text-xs text-gray-500">{req.requestNumber}</p>
-                        )}
-                        {req.project && (
-                          <p className="text-xs text-gray-500">{req.project.name}</p>
-                        )}
-                      </Link>
-                      <StatusBadge status={req.status} />
-                    </td>
-                    <td className="px-4 py-3 text-gray-600">{req.submitter.name}</td>
-                    <td className="px-4 py-3 text-gray-600">
-                      {req.paymentMethod ? (PAYMENT_METHOD_LABEL[req.paymentMethod] ?? req.paymentMethod) : "—"}
-                    </td>
-                    <td className="px-4 py-3 text-gray-600">{req.paymentRecipientName || "—"}</td>
-                    <td className="px-4 py-3 text-gray-600 font-mono text-xs">
-                      {req.bankLastFive ? `*${req.bankLastFive}` : "—"}
-                    </td>
-                    <td className="px-4 py-3 text-gray-600">{req.paidBy || "—"}</td>
-                    <td className="px-5 py-3 text-right font-semibold text-gray-900 tabular-nums">
+          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+            {/* Mobile card list */}
+            <div className="md:hidden divide-y divide-gray-100">
+              {paidRequests.map((req) => (
+                <div key={req.id} className="px-4 py-3">
+                  <Link href={`/requests/${req.id}?from=/finance`} className="block hover:text-blue-600 transition-colors">
+                    <p className="font-medium text-gray-900">{req.title}</p>
+                    <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                      {req.requestNumber && (
+                        <span className="font-mono text-xs text-gray-500">{req.requestNumber}</span>
+                      )}
+                      {req.project && (
+                        <span className="text-xs text-gray-500 truncate">{req.project.name}</span>
+                      )}
+                    </div>
+                  </Link>
+                  <div className="flex items-center gap-2 mt-1.5">
+                    <StatusBadge status={req.status} />
+                    <span className="text-xs text-gray-500">{req.submitter.name}</span>
+                  </div>
+                  <div className="flex items-center justify-between mt-2">
+                    <p className="text-base font-semibold text-gray-900 tabular-nums">
                       {Number(req.amount).toLocaleString()} 元
-                    </td>
-                    <td className="px-5 py-3 text-right text-gray-600 text-xs">
+                    </p>
+                    <p className="text-xs text-gray-500">
                       {req.paidAt?.toLocaleDateString("zh-TW") || "—"}
-                    </td>
-                    <td className="px-3 py-3">
-                      <Link
-                        href={`/requests/${req.id}?from=/finance#payment-adjustments`}
-                        className="whitespace-nowrap text-xs text-blue-600 hover:text-blue-800 border border-blue-200 rounded px-2 py-1 hover:bg-blue-50 transition-colors"
-                      >
-                        回填對帳
-                      </Link>
-                    </td>
+                    </p>
+                  </div>
+                  <div className="flex items-center justify-between mt-1.5 text-xs text-gray-500">
+                    <span>
+                      {req.paymentMethod ? (PAYMENT_METHOD_LABEL[req.paymentMethod] ?? req.paymentMethod) : "—"}
+                      {req.paymentRecipientName ? ` · ${req.paymentRecipientName}` : ""}
+                      {req.bankLastFive ? ` · *${req.bankLastFive}` : ""}
+                    </span>
+                    <Link
+                      href={`/requests/${req.id}?from=/finance#payment-adjustments`}
+                      className="whitespace-nowrap text-xs text-blue-600 hover:text-blue-800 border border-blue-200 rounded px-2 py-1 hover:bg-blue-50 transition-colors"
+                    >
+                      回填對帳
+                    </Link>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop table */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-sm min-w-[700px]">
+                <thead>
+                  <tr className="border-b border-gray-100 bg-gray-50">
+                    <th className="text-left px-5 py-3 text-xs font-semibold text-gray-600">申請單</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-600">申請人</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-600">付款方式</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-600">付款對象</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-600">帳號後五碼</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-600">付款人</th>
+                    <th className="text-right px-5 py-3 text-xs font-semibold text-gray-600">金額</th>
+                    <th className="text-right px-5 py-3 text-xs font-semibold text-gray-600">付款日期</th>
+                    <th className="px-3 py-3 text-xs font-semibold text-gray-600"></th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {paidRequests.map((req) => (
+                    <tr key={req.id} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-5 py-3">
+                        <Link href={`/requests/${req.id}?from=/finance`} className="hover:text-blue-600 transition-colors">
+                          <p className="font-medium text-gray-900">{req.title}</p>
+                          {req.requestNumber && (
+                            <p className="font-mono text-xs text-gray-500">{req.requestNumber}</p>
+                          )}
+                          {req.project && (
+                            <p className="text-xs text-gray-500">{req.project.name}</p>
+                          )}
+                        </Link>
+                        <StatusBadge status={req.status} />
+                      </td>
+                      <td className="px-4 py-3 text-gray-600">{req.submitter.name}</td>
+                      <td className="px-4 py-3 text-gray-600">
+                        {req.paymentMethod ? (PAYMENT_METHOD_LABEL[req.paymentMethod] ?? req.paymentMethod) : "—"}
+                      </td>
+                      <td className="px-4 py-3 text-gray-600">{req.paymentRecipientName || "—"}</td>
+                      <td className="px-4 py-3 text-gray-600 font-mono text-xs">
+                        {req.bankLastFive ? `*${req.bankLastFive}` : "—"}
+                      </td>
+                      <td className="px-4 py-3 text-gray-600">{req.paidBy || "—"}</td>
+                      <td className="px-5 py-3 text-right font-semibold text-gray-900 tabular-nums">
+                        {Number(req.amount).toLocaleString()} 元
+                      </td>
+                      <td className="px-5 py-3 text-right text-gray-600 text-xs">
+                        {req.paidAt?.toLocaleDateString("zh-TW") || "—"}
+                      </td>
+                      <td className="px-3 py-3">
+                        <Link
+                          href={`/requests/${req.id}?from=/finance#payment-adjustments`}
+                          className="whitespace-nowrap text-xs text-blue-600 hover:text-blue-800 border border-blue-200 rounded px-2 py-1 hover:bg-blue-50 transition-colors"
+                        >
+                          回填對帳
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </section>}

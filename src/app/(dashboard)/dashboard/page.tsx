@@ -145,7 +145,7 @@ async function getWorkbenchCards(userId: string, role: UserRole): Promise<Workbe
     ]);
     return [
       { id: "pending", title: "待簽核", count: pendingCount, description: "等待您審核的申請單", color: "amber", href: "/approvals", items: pendingList.map(toItem), cardType: "task" },
-      { id: "offset-review", title: "沖銷待確認", count: offsetReviewCount, description: "申請人已送出沖銷，等待您確認", color: "indigo", href: "/finance", items: offsetReviewList.map(toItem), cardType: "task" },
+      { id: "offset-review", title: "沖銷待確認", count: offsetReviewCount, description: "申請人已送出沖銷，等待您確認", color: "amber", href: "/finance", items: offsetReviewList.map(toItem), cardType: "task" },
       { id: "track", title: "流程追蹤", count: trackCount, description: "我審核過且仍在流程中的案件", color: "slate", href: "/requests", items: trackList.map(toItem), cardType: "tracking" },
     ];
   }
@@ -171,7 +171,7 @@ async function getWorkbenchCards(userId: string, role: UserRole): Promise<Workbe
     return [
       { id: "pay", title: "待付款", count: payCount, description: "已核准，等待標記付款", color: "blue", href: "/finance", items: payList.map(toItem), cardType: "task" },
       { id: "offset-pending", title: "待沖銷", count: offsetPendingCount, description: "等待申請人送出沖銷資料", color: "purple", href: "/finance", items: offsetPendingList.map(toItem), cardType: "task" },
-      { id: "offset-review", title: "沖銷待確認", count: offsetReviewCount, description: "申請人已送出沖銷，等待確認", color: "indigo", href: "/finance", items: offsetReviewList.map(toItem), cardType: "task" },
+      { id: "offset-review", title: "沖銷待確認", count: offsetReviewCount, description: "申請人已送出沖銷，等待確認", color: "amber", href: "/finance", items: offsetReviewList.map(toItem), cardType: "task" },
       { id: "track", title: "流程追蹤", count: trackCount, description: "財務相關進行中案件", color: "slate", href: "/finance", items: trackList.map(toItem), cardType: "tracking" },
     ];
   }

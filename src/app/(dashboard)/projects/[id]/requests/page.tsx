@@ -155,7 +155,7 @@ export default async function ProjectRequestsPage({
               name="q"
               value={filters.q}
               placeholder="搜尋標題、流水編號、申請人…"
-              className="w-full pl-8 pr-3 py-1.5 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full pl-8 pr-3 py-1.5 text-sm text-gray-800 border border-slate-300 rounded-lg bg-white placeholder:text-slate-400 hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
           </div>
           <FilterSelect
@@ -165,7 +165,7 @@ export default async function ProjectRequestsPage({
             options={ALL_STATUSES.map((s) => ({ value: s, label: REQUEST_STATUS_LABEL[s] }))}
           />
           <FilterInput name="dateFrom" type="date" value={filters.dateFrom} />
-          <span className="text-xs text-gray-400">—</span>
+          <span className="text-xs text-gray-500">—</span>
           <FilterInput name="dateTo" type="date" value={filters.dateTo} />
           <FilterSelect name="sortBy" value={filters.sortBy} label="排序依據" options={SORT_OPTIONS} />
           <FilterSelect name="sortDir" value={filters.sortDir} label="降冪" options={SORT_DIR_OPTIONS} />
