@@ -41,6 +41,19 @@ export async function createPaymentRecipient(input: PaymentRecipientInput) {
   revalidatePath("/admin/recipients");
 }
 
+// Any authenticated user can save a recipient from the request form
+export async function saveRecipientFromForm(input: PaymentRecipientInput) {
+  const session = await auth();
+  if (!session) return { error: "未登入" };
+
+  const data = normalizeRecipientInput(input);
+  if (!data.name) return { error: "名稱不可空白" };
+
+  await prisma.paymentRecipient.create({ data });
+  revalidatePath("/admin/recipients");
+  return { success: true };
+}
+
 export async function updatePaymentRecipient(id: string, input: PaymentRecipientInput) {
   const session = await auth();
   if (!session) return { error: "未登入" };

@@ -131,19 +131,9 @@ function buildTimeline(request: Awaited<ReturnType<typeof getRequest>>): Timelin
     } else {
       steps.push({ id: "settlement", title: "沖銷", status: "pending" });
     }
-
-    steps.push({
-      id: "closed",
-      title: "案件結案",
-      status: status === "CLOSED" ? "completed" : "pending",
-    });
-  } else {
-    steps.push({
-      id: "closed",
-      title: "案件結案",
-      status: status === "CLOSED" ? "completed" : "pending",
-    });
+    // "沖銷完成" is the final step for PREPAID — no separate "案件結案" step needed.
   }
+  // For REIMBURSEMENT, "財務付款完成" is the final step — no separate "案件結案" step needed.
 
   return steps;
 }

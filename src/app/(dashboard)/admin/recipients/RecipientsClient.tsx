@@ -200,11 +200,68 @@ function CreateModal({ onClose, onSaved }: { onClose: () => void; onSaved: () =>
   );
 }
 
+function BankInfo({ r }: { r: Recipient }) {
+  const hasBankInfo = r.bankName || r.bankCode || r.branchName || r.branchCode || r.bankAccountNumber || r.paymentInfoNote;
+  if (!hasBankInfo) return <span className="text-gray-300">—</span>;
+  return (
+    <div className="space-y-0.5 text-xs text-gray-600">
+      {(r.bankName || r.bankCode) && <p>{[r.bankCode, r.bankName].filter(Boolean).join(" ")}</p>}
+      {(r.branchName || r.branchCode) && <p>{[r.branchCode, r.branchName].filter(Boolean).join(" ")}</p>}
+      {r.bankAccountNumber && <p className="font-mono">{r.bankAccountNumber}</p>}
+      {r.paymentInfoNote && <p className="text-gray-400 truncate max-w-[220px]" title={r.paymentInfoNote}>{r.paymentInfoNote}</p>}
+    </div>
+  );
+}
+
+function RecipientRow({
+  r,
+  indent,
+  onEdit,
+  onToggle,
+  togglePending,
+}: {
+  r: Recipient;
+  indent?: boolean;
+  onEdit: (r: Recipient) => void;
+  onToggle: (id: string, current: boolean) => void;
+  togglePending: boolean;
+}) {
+  return (
+    <tr className={`transition-colors ${r.isActive ? "hover:bg-gray-50" : "bg-gray-50/50 opacity-60"}`}>
+      <td className={`px-5 py-3 font-medium text-gray-900 ${indent ? "pl-9 text-gray-600 font-normal" : ""}`}>
+        {indent ? "↳" : r.name}
+      </td>
+      <td className="px-4 py-3"><BankInfo r={r} /></td>
+      <td className="px-4 py-3">
+        {r.isActive
+          ? <span className="inline-flex items-center gap-1 text-xs text-green-700 bg-green-50 px-2 py-0.5 rounded-full ring-1 ring-green-200"><CheckCircle2 size={11} />啟用</span>
+          : <span className="inline-flex items-center gap-1 text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full"><XCircle size={11} />停用</span>}
+      </td>
+      <td className="px-4 py-3 text-xs text-gray-500">{r.createdAt.toLocaleDateString("zh-TW")}</td>
+      <td className="px-5 py-3 text-right">
+        <div className="flex gap-2 justify-end">
+          <button onClick={() => onEdit(r)} className="text-xs text-gray-500 hover:text-gray-800 flex items-center gap-1">
+            <Pencil size={12} />編輯
+          </button>
+          <button
+            onClick={() => onToggle(r.id, r.isActive)}
+            disabled={togglePending}
+            className={`text-xs flex items-center gap-1 ${r.isActive ? "text-orange-500 hover:text-orange-700" : "text-green-600 hover:text-green-800"}`}
+          >
+            {r.isActive ? <><XCircle size={12} />停用</> : <><CheckCircle2 size={12} />啟用</>}
+          </button>
+        </div>
+      </td>
+    </tr>
+  );
+}
+
 export function RecipientsClient({ recipients: initial }: { recipients: Recipient[] }) {
   const [showCreate, setShowCreate] = useState(false);
   const [editTarget, setEditTarget] = useState<Recipient | null>(null);
   const [pending, startTransition] = useTransition();
   const [recipients, setRecipients] = useState(initial);
+  const [expandedNames, setExpandedNames] = useState<Set<string>>(new Set());
   const router = useRouter();
 
   useEffect(() => {
@@ -222,8 +279,32 @@ export function RecipientsClient({ recipients: initial }: { recipients: Recipien
     });
   }
 
+  function toggleExpand(name: string) {
+    setExpandedNames((prev) => {
+      const next = new Set(prev);
+      if (next.has(name)) next.delete(name);
+      else next.add(name);
+      return next;
+    });
+  }
+
+  // Group by name, preserve insertion order
+  const groups = recipients.reduce<Map<string, Recipient[]>>((map, r) => {
+    if (!map.has(r.name)) map.set(r.name, []);
+    map.get(r.name)!.push(r);
+    return map;
+  }, new Map());
+
   const active = recipients.filter((r) => r.isActive);
-  const inactive = recipients.filter((r) => !r.isActive);
+
+  // Sort groups: active names first
+  const sortedGroups = [...groups.entries()].sort(([, a], [, b]) => {
+    const aActive = a.some((r) => r.isActive);
+    const bActive = b.some((r) => r.isActive);
+    if (aActive && !bActive) return -1;
+    if (!aActive && bActive) return 1;
+    return 0;
+  });
 
   return (
     <>
@@ -250,52 +331,57 @@ export function RecipientsClient({ recipients: initial }: { recipients: Recipien
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
-            {[...active, ...inactive].map((r) => (
-              <tr key={r.id} className={`transition-colors ${r.isActive ? "hover:bg-gray-50" : "bg-gray-50/50 opacity-60"}`}>
-                <td className="px-5 py-3 font-medium text-gray-900">{r.name}</td>
-                <td className="px-4 py-3 text-xs text-gray-600">
-                  {r.bankName || r.bankCode || r.branchName || r.branchCode || r.bankAccountNumber || r.paymentInfoNote ? (
-                    <div className="space-y-0.5">
-                      {(r.bankName || r.bankCode) && <p>{[r.bankCode, r.bankName].filter(Boolean).join(" ")}</p>}
-                      {(r.branchName || r.branchCode) && <p>{[r.branchCode, r.branchName].filter(Boolean).join(" ")}</p>}
-                      {r.bankAccountNumber && <p className="font-mono">{r.bankAccountNumber}</p>}
-                      {r.paymentInfoNote && <p className="text-gray-400 truncate max-w-[220px]" title={r.paymentInfoNote}>{r.paymentInfoNote}</p>}
-                    </div>
-                  ) : (
-                    <span className="text-gray-300">—</span>
-                  )}
-                </td>
-                <td className="px-4 py-3">
-                  {r.isActive
-                    ? <span className="inline-flex items-center gap-1 text-xs text-green-700 bg-green-50 px-2 py-0.5 rounded-full ring-1 ring-green-200"><CheckCircle2 size={11} />啟用</span>
-                    : <span className="inline-flex items-center gap-1 text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full"><XCircle size={11} />停用</span>}
-                </td>
-                <td className="px-4 py-3 text-xs text-gray-500">{r.createdAt.toLocaleDateString("zh-TW")}</td>
-                <td className="px-5 py-3 text-right">
-                  <div className="flex gap-2 justify-end">
-                    <button
-                      onClick={() => setEditTarget(r)}
-                      className="text-xs text-gray-500 hover:text-gray-800 flex items-center gap-1"
-                    >
-                      <Pencil size={12} />
-                      編輯
-                    </button>
-                    <button
-                      onClick={() => handleToggle(r.id, r.isActive)}
-                      disabled={pending}
-                      className={`text-xs flex items-center gap-1 ${r.isActive ? "text-orange-500 hover:text-orange-700" : "text-green-600 hover:text-green-800"}`}
-                    >
-                      {r.isActive ? <><XCircle size={12} />停用</> : <><CheckCircle2 size={12} />啟用</>}
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
             {recipients.length === 0 && (
               <tr>
                 <td colSpan={5} className="px-5 py-10 text-center text-sm text-gray-500">尚無付款對象</td>
               </tr>
             )}
+            {sortedGroups.map(([name, group]) => {
+              if (group.length === 1) {
+                return (
+                  <RecipientRow
+                    key={group[0].id}
+                    r={group[0]}
+                    onEdit={setEditTarget}
+                    onToggle={handleToggle}
+                    togglePending={pending}
+                  />
+                );
+              }
+
+              // Multiple entries for same name
+              const expanded = expandedNames.has(name);
+              const activeCount = group.filter((r) => r.isActive).length;
+              return [
+                <tr
+                  key={`group-${name}`}
+                  onClick={() => toggleExpand(name)}
+                  className="cursor-pointer hover:bg-blue-50/50 transition-colors border-b border-gray-100"
+                >
+                  <td className="px-5 py-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium text-gray-900">{name}</span>
+                      <span className="text-xs text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded-full">{group.length} 組帳戶</span>
+                      <span className="text-gray-400 text-xs ml-auto">{expanded ? "▲" : "▼"}</span>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 text-xs text-gray-400">
+                    {activeCount > 0 ? `${activeCount} 筆啟用` : "全部停用"}
+                  </td>
+                  <td colSpan={3} />
+                </tr>,
+                ...(expanded ? group.map((r) => (
+                  <RecipientRow
+                    key={r.id}
+                    r={r}
+                    indent
+                    onEdit={setEditTarget}
+                    onToggle={handleToggle}
+                    togglePending={pending}
+                  />
+                )) : []),
+              ];
+            })}
           </tbody>
         </table>
       </div>

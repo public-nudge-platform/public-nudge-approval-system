@@ -1,12 +1,17 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { clsx } from "clsx";
 import { PlusCircle, Trash2, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { UploadZone } from "@/components/ui/UploadZone";
 import { createRequest, updateRequest } from "@/lib/actions/request";
+import { saveRecipientFromForm } from "@/lib/actions/paymentRecipient";
+import { BookmarkPlus, Check } from "lucide-react";
 import type { RequestType } from "@prisma/client";
 import { useRouter } from "next/navigation";
+import { DatePicker } from "@/components/ui/DatePicker";
+import { CollapsibleSection } from "@/components/ui/CollapsibleSection";
 
 type ActiveProject = { id: string; name: string };
 type ActiveRecipient = {
@@ -64,13 +69,27 @@ function formatNumber(n: number) {
   return n.toLocaleString("zh-TW");
 }
 
+type ItemFieldErrors = { description?: boolean; quantity?: boolean; unitPrice?: boolean };
+type FieldErrors = {
+  title?: boolean;
+  projectId?: boolean;
+  items?: Record<string, ItemFieldErrors>;
+};
+
+const INPUT_BASE = "w-full px-3 py-2 text-sm text-gray-800 border rounded-lg placeholder:text-slate-400 hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500";
+const INPUT_ERROR = "border-red-300 focus:ring-red-500 focus:border-red-500";
+const INPUT_NORMAL = "border-slate-300";
+
+function inputClass(hasError?: boolean, extra?: string) {
+  return clsx(INPUT_BASE, hasError ? INPUT_ERROR : INPUT_NORMAL, extra);
+}
+
 export function NewRequestForm({ projects = [], recipients = [], accountingSubjects = [], initialRequest, returnTo }: { projects?: ActiveProject[]; recipients?: ActiveRecipient[]; accountingSubjects?: ActiveAccountingSubject[]; initialRequest?: InitialRequest; returnTo?: string }) {
   const isEdit = !!initialRequest;
   const [type, setType] = useState<RequestType>(initialRequest?.type ?? "REIMBURSEMENT");
   const [title, setTitle] = useState(initialRequest?.title ?? "");
   const [projectId, setProjectId] = useState(initialRequest?.projectId ?? "");
   const [purpose, setPurpose] = useState(initialRequest?.purpose ?? "");
-  const [neededBy, setNeededBy] = useState(initialRequest?.neededBy ? initialRequest.neededBy.toISOString().slice(0, 10) : "");
   const [paymentMethod, setPaymentMethod] = useState(initialRequest?.paymentMethod ?? "");
   const [recipientName, setRecipientName] = useState(initialRequest?.recipientName ?? "");
   const [bankName, setBankName] = useState(initialRequest?.bankName ?? "");
@@ -92,8 +111,25 @@ export function NewRequestForm({ projects = [], recipients = [], accountingSubje
   );
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [isPending, startTransition] = useTransition();
+  const [bankSelectorName, setBankSelectorName] = useState<string | null>(null); // name of recipient with multiple banks
+  const [savedRecipient, setSavedRecipient] = useState(false); // success flash
+  const [savingRecipient, setSavingRecipient] = useState(false);
   const router = useRouter();
+
+  // Group recipients by name
+  const recipientGroups = recipients.reduce<Record<string, ActiveRecipient[]>>((acc, r) => {
+    if (!acc[r.name]) acc[r.name] = [];
+    acc[r.name].push(r);
+    return acc;
+  }, {});
+  const recipientNames = Object.keys(recipientGroups);
+
+  const hasPaymentInfo = !!(
+    paymentMethod || recipientName || bankName || bankCode ||
+    branchName || branchCode || bankAccountNumber || paymentInfoNote
+  );
 
   const total = items.reduce((sum, item) => sum + (item.quantity || 0) * (item.unitPrice || 0), 0);
 
@@ -114,15 +150,64 @@ export function NewRequestForm({ projects = [], recipients = [], accountingSubje
     setBranchCode(recipient.branchCode ?? "");
     setBankAccountNumber(recipient.bankAccountNumber ?? "");
     setPaymentInfoNote(recipient.paymentInfoNote ?? "");
+    setBankSelectorName(null);
+  }
+
+  function handleChipClick(name: string) {
+    const group = recipientGroups[name] ?? [];
+    if (group.length === 1) {
+      applyRecipient(group[0]);
+    } else {
+      setBankSelectorName((prev) => prev === name ? null : name);
+      setRecipientName(name);
+    }
+  }
+
+  async function saveAsRecipient() {
+    if (!recipientName.trim()) return;
+    setSavingRecipient(true);
+    const result = await saveRecipientFromForm({
+      name: recipientName,
+      bankName: bankName || undefined,
+      bankCode: bankCode || undefined,
+      branchName: branchName || undefined,
+      branchCode: branchCode || undefined,
+      bankAccountNumber: bankAccountNumber || undefined,
+      paymentInfoNote: paymentInfoNote || undefined,
+    });
+    setSavingRecipient(false);
+    if (!result?.error) {
+      setSavedRecipient(true);
+      setTimeout(() => setSavedRecipient(false), 2500);
+    }
   }
 
   function handleSubmit(submit: boolean) {
     setError(null);
 
-    if (!title.trim()) { setError("請填寫標題"); return; }
-    if (!projectId) { setError("請選擇專案"); return; }
-    if (items.some((i) => !i.description.trim())) { setError("請填寫所有品項說明"); return; }
-    if (items.some((i) => !i.quantity || i.quantity <= 0 || i.unitPrice === "" || i.unitPrice < 0)) { setError("請填寫所有品項的數量與單價"); return; }
+    const errors: FieldErrors = {};
+    if (!title.trim()) errors.title = true;
+    if (!projectId) errors.projectId = true;
+
+    const itemErrors: Record<string, ItemFieldErrors> = {};
+    for (const i of items) {
+      const e: ItemFieldErrors = {};
+      if (!i.description.trim()) e.description = true;
+      if (!i.quantity || i.quantity <= 0) e.quantity = true;
+      if (i.unitPrice === "" || i.unitPrice < 0) e.unitPrice = true;
+      if (Object.keys(e).length > 0) itemErrors[i.id] = e;
+    }
+    if (Object.keys(itemErrors).length > 0) errors.items = itemErrors;
+
+    setFieldErrors(errors);
+
+    if (errors.title) { setError("請填寫申請標題"); return; }
+    if (errors.projectId) { setError("請選擇專案"); return; }
+    if (errors.items) {
+      const hasDescriptionError = Object.values(errors.items).some((e) => e.description);
+      setError(hasDescriptionError ? "請填寫所有品項說明" : "請填寫所有品項的數量與單價");
+      return;
+    }
 
     startTransition(async () => {
       const payload = {
@@ -130,7 +215,6 @@ export function NewRequestForm({ projects = [], recipients = [], accountingSubje
         title: title.trim(),
         projectId: projectId || undefined,
         purpose: purpose.trim() || undefined,
-        neededBy: neededBy || undefined,
         paymentMethod: paymentMethod || undefined,
         recipientName: recipientName.trim() || undefined,
         bankName: bankName.trim() || undefined,
@@ -155,6 +239,8 @@ export function NewRequestForm({ projects = [], recipients = [], accountingSubje
         : await createRequest(payload);
 
       if (!result || "error" in result) { setError(("error" in result ? result.error : null) ?? "建立失敗"); return; }
+
+      setFieldErrors({});
 
       await Promise.all(pendingFiles.map((file) => {
         const fd = new FormData();
@@ -203,10 +289,14 @@ export function NewRequestForm({ projects = [], recipients = [], accountingSubje
           </label>
           <input
             value={title}
-            onChange={(e) => setTitle(e.target.value)}
+            onChange={(e) => {
+              setTitle(e.target.value);
+              if (fieldErrors.title) setFieldErrors((prev) => ({ ...prev, title: false }));
+            }}
             placeholder="例：2026 年度會員大會餐費"
-            className="w-full px-3 py-2 text-sm text-gray-800 border border-slate-300 rounded-lg placeholder:text-slate-400 hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            className={inputClass(fieldErrors.title)}
           />
+          {fieldErrors.title && <p className="text-xs text-red-600 mt-1">請填寫申請標題</p>}
         </div>
 
         <div className="grid grid-cols-2 gap-4">
@@ -216,25 +306,18 @@ export function NewRequestForm({ projects = [], recipients = [], accountingSubje
             </label>
             <select
               value={projectId}
-              onChange={(e) => setProjectId(e.target.value)}
-              className="w-full px-3 py-2 text-sm text-gray-800 border border-slate-300 rounded-lg bg-white hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              onChange={(e) => {
+                setProjectId(e.target.value);
+                if (fieldErrors.projectId) setFieldErrors((prev) => ({ ...prev, projectId: false }));
+              }}
+              className={inputClass(fieldErrors.projectId, "bg-white")}
             >
               <option value="">請選擇專案</option>
               {projects.map((p) => (
                 <option key={p.id} value={p.id}>{p.name}</option>
               ))}
             </select>
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">
-              {type === "PREPAID" ? "預計需款日期" : "需款期限"}
-            </label>
-            <input
-              type="date"
-              value={neededBy}
-              onChange={(e) => setNeededBy(e.target.value)}
-              className="w-full px-3 py-2 text-sm text-gray-800 border border-slate-300 rounded-lg placeholder:text-slate-400 hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            />
+            {fieldErrors.projectId && <p className="text-xs text-red-600 mt-1">請選擇專案</p>}
           </div>
         </div>
 
@@ -279,21 +362,40 @@ export function NewRequestForm({ projects = [], recipients = [], accountingSubje
             <span className="col-span-1" />
           </div>
 
-          {items.map((item) => (
-            <div key={item.id} className="grid grid-cols-12 gap-2 items-center">
+          {items.map((item) => {
+            const itemError = fieldErrors.items?.[item.id];
+            const itemInputClass = (hasError?: boolean, extra?: string) => clsx(
+              "px-2.5 py-1.5 text-sm text-gray-800 border rounded-lg placeholder:text-slate-400 hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500",
+              hasError ? INPUT_ERROR : INPUT_NORMAL,
+              extra
+            );
+
+            function clearItemError(field: keyof ItemFieldErrors) {
+              if (!fieldErrors.items?.[item.id]?.[field]) return;
+              setFieldErrors((prev) => {
+                if (!prev.items?.[item.id]) return prev;
+                const { [field]: _removed, ...rest } = prev.items[item.id];
+                const items = { ...prev.items, [item.id]: rest };
+                if (Object.keys(rest).length === 0) delete items[item.id];
+                return { ...prev, items };
+              });
+            }
+
+            return (
+            <div key={item.id} className="grid grid-cols-12 gap-2 items-start">
               <input
                 value={item.description}
-                onChange={(e) => updateItem(item.id, "description", e.target.value)}
+                onChange={(e) => { updateItem(item.id, "description", e.target.value); clearItemError("description"); }}
                 placeholder="品項說明"
-                className="col-span-5 px-2.5 py-1.5 text-sm text-gray-800 border border-slate-300 rounded-lg placeholder:text-slate-400 hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className={itemInputClass(itemError?.description, "col-span-5")}
               />
               <input
                 type="number"
                 min="1"
                 value={item.quantity}
                 placeholder="數量"
-                onChange={(e) => updateItem(item.id, "quantity", e.target.value === "" ? "" : Number(e.target.value))}
-                className="col-span-2 px-2.5 py-1.5 text-sm text-gray-800 border border-slate-300 rounded-lg placeholder:text-slate-400 hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-center"
+                onChange={(e) => { updateItem(item.id, "quantity", e.target.value === "" ? "" : Number(e.target.value)); clearItemError("quantity"); }}
+                className={itemInputClass(itemError?.quantity, "col-span-2 text-center")}
               />
               <input
                 type="number"
@@ -301,10 +403,10 @@ export function NewRequestForm({ projects = [], recipients = [], accountingSubje
                 step="1"
                 value={item.unitPrice}
                 placeholder="單價"
-                onChange={(e) => updateItem(item.id, "unitPrice", e.target.value === "" ? "" : Number(e.target.value))}
-                className="col-span-2 px-2.5 py-1.5 text-sm text-gray-800 border border-slate-300 rounded-lg placeholder:text-slate-400 hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-right"
+                onChange={(e) => { updateItem(item.id, "unitPrice", e.target.value === "" ? "" : Number(e.target.value)); clearItemError("unitPrice"); }}
+                className={itemInputClass(itemError?.unitPrice, "col-span-2 text-right")}
               />
-              <div className="col-span-2 text-right">
+              <div className="col-span-2 text-right py-1.5">
                 <span className="text-sm font-medium text-gray-700 tabular-nums">
                   {formatNumber((item.quantity || 0) * (item.unitPrice || 0))}
                 </span>
@@ -320,15 +422,15 @@ export function NewRequestForm({ projects = [], recipients = [], accountingSubje
 
               <div className="col-span-12 flex items-center gap-2 pl-1">
                 <span className="text-xs text-gray-400 whitespace-nowrap">憑證日期（發票/收據日期）</span>
-                <input
-                  type="date"
+                <DatePicker
                   value={item.voucherDate}
-                  onChange={(e) => updateItem(item.id, "voucherDate", e.target.value)}
-                  className="px-2.5 py-1 text-sm text-gray-800 border border-slate-300 rounded-lg hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  onChange={(v) => updateItem(item.id, "voucherDate", v)}
+                  placeholder="選擇日期"
                 />
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
 
         <button
@@ -351,9 +453,11 @@ export function NewRequestForm({ projects = [], recipients = [], accountingSubje
       </div>
 
       {/* Payment info */}
-      <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-4">
-        <h2 className="text-sm font-semibold text-gray-700">收款資訊（選填）</h2>
-
+      <CollapsibleSection
+        title="收款資訊（選填）"
+        subtitle="希望付款方式、收款人與銀行帳戶資訊"
+        defaultOpen={hasPaymentInfo}
+      >
         <div>
           <label className="block text-xs font-medium text-gray-600 mb-1">希望付款方式</label>
           <select
@@ -372,27 +476,67 @@ export function NewRequestForm({ projects = [], recipients = [], accountingSubje
 
         <div>
           <label className="block text-xs font-medium text-gray-600 mb-1">收款人姓名</label>
-          {recipients.length > 0 && (
+          {recipientNames.length > 0 && (
             <div className="flex flex-wrap gap-1.5 mb-2">
-              {recipients.map((r) => (
+              {recipientNames.map((name) => {
+                const group = recipientGroups[name];
+                const isActive = recipientName === name;
+                return (
+                  <button
+                    key={name}
+                    type="button"
+                    onClick={() => handleChipClick(name)}
+                    className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
+                      isActive
+                        ? "bg-blue-600 text-white border-blue-600"
+                        : "bg-white text-gray-700 border-slate-300 hover:border-blue-400 hover:text-blue-600"
+                    }`}
+                  >
+                    {name}
+                    {group.length > 1 && (
+                      <span className={`ml-1 ${isActive ? "text-blue-200" : "text-gray-400"}`}>
+                        · {group.length} 組帳戶
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Bank selector for recipients with multiple accounts */}
+          {bankSelectorName && (recipientGroups[bankSelectorName]?.length ?? 0) > 1 && (
+            <div className="mb-2 border border-blue-100 rounded-lg bg-blue-50 p-3 space-y-1.5">
+              <p className="text-xs font-medium text-blue-700 mb-2">選擇銀行帳戶</p>
+              {recipientGroups[bankSelectorName].map((r) => (
                 <button
                   key={r.id}
                   type="button"
                   onClick={() => applyRecipient(r)}
-                  className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
-                    recipientName === r.name
-                      ? "bg-blue-600 text-white border-blue-600"
-                      : "bg-white text-gray-700 border-slate-300 hover:border-blue-400 hover:text-blue-600"
-                  }`}
+                  className="w-full text-left text-xs px-3 py-2 rounded-lg bg-white border border-blue-200 hover:border-blue-400 hover:bg-blue-50 transition-colors"
                 >
-                  {r.name}
+                  <span className="font-medium text-gray-800">
+                    {[r.bankCode, r.bankName].filter(Boolean).join(" ")}
+                  </span>
+                  {(r.branchName || r.branchCode) && (
+                    <span className="text-gray-500 ml-1.5">
+                      {[r.branchCode, r.branchName].filter(Boolean).join(" ")}
+                    </span>
+                  )}
+                  {r.bankAccountNumber && (
+                    <span className="ml-1.5 font-mono text-gray-500">{r.bankAccountNumber}</span>
+                  )}
+                  {!r.bankName && !r.bankCode && !r.bankAccountNumber && (
+                    <span className="text-gray-400">（無銀行資訊）</span>
+                  )}
                 </button>
               ))}
             </div>
           )}
+
           <input
             value={recipientName}
-            onChange={(e) => setRecipientName(e.target.value)}
+            onChange={(e) => { setRecipientName(e.target.value); setBankSelectorName(null); }}
             placeholder="王小明（可手動輸入）"
             className="w-full px-3 py-2 text-sm text-gray-800 border border-slate-300 rounded-lg placeholder:text-slate-400 hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           />
@@ -460,14 +604,34 @@ export function NewRequestForm({ projects = [], recipients = [], accountingSubje
             className="w-full px-3 py-2 text-sm text-gray-800 border border-slate-300 rounded-lg placeholder:text-slate-400 hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
           />
         </div>
-      </div>
+
+        {recipientName.trim() && (bankName || bankAccountNumber) && (
+          <button
+            type="button"
+            onClick={saveAsRecipient}
+            disabled={savingRecipient || savedRecipient}
+            className="flex items-center gap-1.5 text-xs text-blue-600 hover:text-blue-700 disabled:text-gray-400 transition-colors"
+          >
+            {savedRecipient ? (
+              <><Check size={12} />已加入常用收款人</>
+            ) : savingRecipient ? (
+              "儲存中…"
+            ) : (
+              <><BookmarkPlus size={12} />加入常用收款人</>
+            )}
+          </button>
+        )}
+      </CollapsibleSection>
 
       {/* Attachments */}
-      <div className="bg-white rounded-xl border border-gray-200 p-5">
-        <h2 className="text-sm font-semibold text-gray-700 mb-3">附件上傳</h2>
+      <CollapsibleSection
+        title="附件上傳"
+        subtitle="選填，建議附上發票、收據或相關憑證"
+        defaultOpen={isEdit}
+      >
         <UploadZone onFilesChange={setPendingFiles} />
         <p className="text-xs text-gray-500 mt-2">* 請附上發票、收據或相關憑證</p>
-      </div>
+      </CollapsibleSection>
 
       {/* Error */}
       {error && (
